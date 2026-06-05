@@ -493,12 +493,18 @@ html, body {
 .np-sum-box{background:var(--s2);border:1px solid var(--ol);padding:12px 16px;margin-top:12px}
 .np-pb{page-break-after:always}
 @media print{
+  @page{size:A4 portrait;margin:0}
+  /* Globale Overflow- und Höhen-Beschränkungen aufheben — verhindert Abschneiden nach Seite 1 */
+  html,body{overflow:visible!important;height:auto!important;background:white!important}
+  .app{height:auto!important;overflow:visible!important;display:block!important}
+  .workspace{overflow:visible!important;height:auto!important;display:block!important}
   body>*:not(#ov-nachweisplot){display:none!important}
-  #ov-nachweisplot{position:static!important;overflow:visible!important;height:auto!important}
-  .nw-plot-overlay{overflow:visible!important;height:auto!important}
+  #ov-nachweisplot{position:static!important;display:block!important;overflow:visible!important;height:auto!important;width:100%!important}
+  .nw-plot-overlay{position:static!important;display:block!important;overflow:visible!important;height:auto!important}
   .nw-plot-topbar{display:none!important}
-  .nw-plot-body{overflow:visible!important;padding:0!important;height:auto!important;flex:none!important;background:white!important}
-  .np-wrap{padding:0}
+  .nw-plot-body{display:block!important;overflow:visible!important;padding:0!important;height:auto!important;flex:none!important;background:white!important}
+  .np-wrap{padding:0;display:block!important}
+  .np-doc{display:block!important;overflow:visible!important}
   .np-page{box-shadow:none!important;border:none!important;margin:0!important;width:100%!important;padding:14mm 18mm!important;page-break-after:always;break-after:page}
   .np-nw{page-break-inside:avoid;break-inside:avoid}
   .np-fml{white-space:pre-wrap!important}
@@ -757,7 +763,12 @@ html, body {
 
       <!-- PROJEKT -->
       <div id="tab-projekt" class="tab-panel active">
-        <div class="sec">Projektdaten</div>
+        <!-- Hidden p_name für FDS-Kompatibilität; wird per JS gesetzt -->
+        <input id="p_name" type="hidden" value=""/>
+
+        <div class="sec">Speichern</div>
+
+        <!-- 1. Projekt-Dropdown (Ordner/Gruppe) -->
         <div class="field">
           <label>Projekt</label>
           <select id="proj-sel" onchange="onProjSelChange()" style="width:100%;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:11px;cursor:pointer;outline:none">
@@ -765,30 +776,46 @@ html, body {
           </select>
         </div>
 
-        <fieldset id="proj-fields" disabled style="border:none;padding:0;margin:0">
-          <div class="field"><label>Projekt <em style="font-style:normal;color:var(--xdim);font-size:9.5px">(Gruppe)</em></label><input id="p_name" type="text" value="Fahrleitungsmast FM-01" oninput="updateSB()"/></div>
-          <div class="field"><label>Fundamentbezeichnung</label><input id="p_fundname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="updateSB()"/></div>
-          <div class="g2">
-            <div class="field"><label>Projektnummer</label><input id="p_nr" type="text" value="2024-001"/></div>
-            <div class="field"><label>Datum</label><input id="p_datum" type="date"/></div>
-          </div>
-          <div class="g2">
-            <div class="field"><label>KM</label><input id="p_km" type="text" placeholder="000.000" style="font-family:var(--f-mono)"/></div>
-            <div class="field"><label>Mast-Nr.</label><input id="p_mastnr" type="text" placeholder="M-001"/></div>
-          </div>
-          <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text"/></div>
-          <div class="field"><label>Bemerkung</label><input id="p_bemerk" type="text"/></div>
+        <!-- 2. Neuer Projektname (nur bei "+ Neues Projekt") -->
+        <div id="new-proj-name-field" class="field" style="display:none">
+          <label>Projektname</label>
+          <input id="new-proj-name" type="text" placeholder="z.B. Fahrleitungsmast FM-01" oninput="si('p_name',this.value);updateSB()"/>
+        </div>
 
-          <div class="sec">Templates</div>
-          <div class="hint">Grundkonfiguration laden oder eigenes Template speichern.</div>
-          <div class="tpl-grid" id="tpl-grid"></div>
-          <button class="btn btn-tonal btn-full btn-sm" style="margin-top:8px" onclick="saveAsTemplate()">
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
-            Aktuellen Stand als Template speichern
-          </button>
-        </fieldset>
+        <!-- 3. Fundamentbezeichnung (immer sichtbar) -->
+        <div class="field">
+          <label>Fundamentbezeichnung</label>
+          <input id="p_fundname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="updateSB()"/>
+        </div>
 
-        <div class="sec"><span>Gespeicherte Projekte</span><button class="btn-expand-inp" onclick="toggleInpWide(this)" title="Breite Ansicht">⤢</button></div>
+        <!-- 4. Weitere Angaben -->
+        <div class="g2">
+          <div class="field"><label>Projektnummer</label><input id="p_nr" type="text"/></div>
+          <div class="field"><label>Datum</label><input id="p_datum" type="date"/></div>
+        </div>
+        <div class="g2">
+          <div class="field"><label>KM</label><input id="p_km" type="text" placeholder="000.000" style="font-family:var(--f-mono)"/></div>
+          <div class="field"><label>Mast-Nr.</label><input id="p_mastnr" type="text" placeholder="M-001"/></div>
+        </div>
+        <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text"/></div>
+        <div class="field"><label>Bemerkung</label><input id="p_bemerk" type="text"/></div>
+
+        <!-- 5. Speichern-Button (immer neuer Eintrag) -->
+        <button class="btn btn-filled btn-full btn-sm" style="margin-top:4px;margin-bottom:4px" onclick="saveNewEntry()">
+          + Neuer Eintrag
+        </button>
+
+        <!-- Templates -->
+        <div class="sec" style="margin-top:8px">Templates</div>
+        <div class="hint">Grundkonfiguration laden oder eigenes Template speichern.</div>
+        <div class="tpl-grid" id="tpl-grid"></div>
+        <button class="btn btn-tonal btn-full btn-sm" style="margin-top:8px" onclick="saveAsTemplate()">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
+          Aktuellen Stand als Template speichern
+        </button>
+
+        <!-- Gespeicherte Projekte -->
+        <div class="sec" style="margin-top:12px"><span>Gespeicherte Projekte</span><button class="btn-expand-inp" onclick="toggleInpWide(this)" title="Breite Ansicht">⤢</button></div>
         <div id="proj-list"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
           <button class="btn btn-tonal btn-full btn-sm" onclick="importJSON()">
@@ -1506,15 +1533,15 @@ html, body {
 <!-- Projekt-Zuweisung Modal -->
 <div class="overlay-panel" id="ov-reassign" style="align-items:center;justify-content:center">
   <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r3);padding:28px 32px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.4)">
-    <div style="font-family:var(--f-mono);font-size:13px;font-weight:600;margin-bottom:4px">Projekt zuweisen</div>
+    <div style="font-family:var(--f-mono);font-size:13px;font-weight:600;margin-bottom:4px">In Projekt verschieben</div>
     <div id="reassign-cur" style="font-size:10px;color:var(--dim);font-family:var(--f-mono);margin-bottom:16px"></div>
     <div class="field" style="margin-bottom:8px">
       <label>Bestehendes Projekt wählen</label>
       <select id="reassign-sel" style="width:100%;font-family:var(--f-mono);font-size:11px"></select>
     </div>
     <div class="field" style="margin-bottom:20px">
-      <label>Oder neue Projektnummer eingeben</label>
-      <input id="reassign-nr" type="text" style="font-size:12px;font-family:var(--f-mono)" placeholder="z.B. 2024-003"/>
+      <label>Oder neuen Projektnamen eingeben</label>
+      <input id="reassign-nr" type="text" style="font-size:12px;font-family:var(--f-mono)" placeholder="z.B. Fahrleitungsmast FM-02"/>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-tonal btn-sm" onclick="closeOverlay('ov-reassign')">Abbrechen</button>
@@ -2629,7 +2656,8 @@ function rebuildScene(){
     const beta_deg=+gi('bg_beta'), bfuss=+gi('bg_bfuss'), btyp=gi('bg_btyp');
     const beta=beta_deg*Math.PI/180;
     const _lt=SETTINGS.theme==='light';
-    const gndMat=new THREE.MeshBasicMaterial({color:0x6fcf8e,transparent:true,opacity:0.42,side:THREE.DoubleSide,depthWrite:false});
+    const _gndCol = _lt ? 0xb8b8c4 : 0x3a3c48;
+    const gndMat=new THREE.MeshBasicMaterial({color:_gndCol,transparent:true,opacity:0.45,side:THREE.DoubleSide,depthWrite:false});
 
     const gndW=bx+2.5, gndD=by+2.5;
     // Hilfsfunktion: ShapeGeometry mit Aussparung — ein einziger Mesh, keine Nahtprobleme
@@ -2800,9 +2828,8 @@ function rebuildScene(){
     // Auflasten: separate Pfeile pro Auflast (nur Stahl-Flachfundament)
     if(CALC_MODEL==='flach' && FLACH_MAT==='stahl' && AUFLASTEN.length){
       AUFLASTEN.forEach((a,ai)=>{
-        if(a.Pk<=0) return;
-        const isOn = a.active !== false;
-        const mAuf=new THREE.MeshLambertMaterial({color: isOn ? 0x7a7a8a : 0xaaaaaa, transparent:!isOn, opacity: isOn?1:0.35});
+        if(a.Pk<=0 || a.active===false) return;  // inaktive Auflasten komplett ausblenden
+        const mAuf=new THREE.MeshLambertMaterial({color:0x7a7a8a});
         const s=Math.max(S_MIN*0.85, Math.min(S_MAX,a.Pk/50));
         const grp=new THREE.Group(); grp.name='arAuf'+ai;
         // Pfeil von oben nach unten auf Plattenoberkante (y = -ue + hb/2 ≈ 0)
@@ -3751,7 +3778,7 @@ function buildPfahlViz(){
        new THREE.Vector3(x_ex_edge + ex_sign_v*0.42, 0,     z_ex_ref), matDex);
     ln(new THREE.Vector3(x_ex_edge + ex_sign_v*0.18, -d_ex, z_ex_ref),
        new THREE.Vector3(x_ex_edge + ex_sign_v*0.42, -d_ex, z_ex_ref), matDex);
-    _vlAdd(`d_ex = ${d_ex.toFixed(1)} m`,
+    if(!showPfahl) _vlAdd(`d_ex = ${d_ex.toFixed(1)} m`,
       new THREE.Vector3(x_ex_edge + ex_sign_v*0.65, -d_ex/2, z_ex_ref), 'vl-dim');
   }
 
@@ -4538,6 +4565,12 @@ function setModel(m, silent){
   if(!isBlock && document.getElementById('tab-sicherung')?.classList.contains('active')){
     switchTab('lasten');
   }
+  // Bei Flachfundament: Sicherung immer deaktivieren (keine Pfahlsicherung für Flach)
+  if(!isBlock && showPfahl){
+    showPfahl = false;
+    if(typeof _updateSicherungBtn === 'function') _updateSicherungBtn();
+  }
+  scheduleCalc();
 }
 
 function onFlachMaterial(val){
@@ -4592,7 +4625,7 @@ function renderAuflasten(){
   }).join('');
 }
 function addAuflast(){ AUFLASTEN.push({Pk:10, dx:0, dy:0, active:true}); renderAuflasten(); scheduleCalc(); }
-function delAuflast(i){ AUFLASTEN.splice(i,1); renderAuflasten(); scheduleCalc(); }
+function delAuflast(i){ AUFLASTEN.splice(i,1); renderAuflasten(); updateViewer(); scheduleCalc(); }
 
 // ════════════════════════════════════════════
 // LASTNIVEAUS
@@ -5662,7 +5695,7 @@ function calculate(){
       etaGL = Rgl / (Hd>0.001 ? Hd : 0.001);
     }
 
-    // ── 4. KIPPEN / AUSMITTE — SIA 267 Typ 1 (Stabilität)
+    // ── 4. KIPPNACHWEIS (klaffende Fuge) — SIA 267 GZT Typ 1 (Stabilität)
     // γ_G,sup (1.20) für destabilisierende Momente, γ_G,inf (0.80) für stabilisierende Normalkraft
     // Normalkraft mit günstigem Faktor (stabilisierend → kleiner N = ungünstiger für Ausmitte)
     const Nd_kipp  = _gG1inf*(NG_lf + Gk) + _gG1inf*N_auf_k;
@@ -5674,6 +5707,11 @@ function calculate(){
     const ey_kipp  = Mxd_kipp / Math.max(0.001, Nd_kipp);
     const etaKx=kB/Math.max(0.001,Math.abs(ex_kipp));
     const etaKy=kL/Math.max(0.001,Math.abs(ey_kipp));
+    // SIA 267 klaffende Fuge (Flachfundament): (ea/a)² + (eb/b)² ≤ 1/9
+    const ea_a  = Math.abs(ex_kipp) / B;
+    const eb_b  = Math.abs(ey_kipp) / L;
+    const klaf_val  = ea_a**2 + eb_b**2;
+    const eta_klaf  = !isBlock ? (1/9) / Math.max(1e-6, klaf_val) : Infinity;
 
     // ── 5. VERKIPPEN (Mast)
     // Steckner: stabilisierendes Moment = N·B/2 + M_Ep (Erdwiderstandsmoment)
@@ -5993,14 +6031,14 @@ function calculate(){
       if(NW.sohlsp) chk.push(etaSIG>=1);
       if(NW.grundb) chk.push(etaGB>=1);
       if(NW.gleiten)chk.push(etaGL>=1);
-      if(NW.kippen) chk.push(inKern);
+      if(NW.kippen) chk.push(isBlock ? inKern : eta_klaf >= 1);
     }
 
     return {
       name:lf.name, comp:lf.comp, nw:_lfNW, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y,
       ex:ex_, ey:ey_, inKern, smax, smin, s0, Wx:Wx_, Wy:Wy_,
       ex_kipp, ey_kipp,
-      etaGB, etaGL, etaKx, etaKy, etaVK, etaSIG, etaGZG, etaGZT,
+      etaGB, etaGL, etaKx, etaKy, eta_klaf, klaf_val, ea_a, eb_b, etaVK, etaSIG, etaGZG, etaGZT,
       tan_a1_GZG, tan_a2_GZG, M1_GZG_val, M2_GZG_val,
       Malpha_GZG_val, Mu_char_GZG, M_ok_char_GZG, alpha_GZG_calc,
       Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d,
@@ -6046,8 +6084,10 @@ function calculate(){
   });
   lastRes={smax:worst.smax, smin:worst.smin};
   renderResults(results, worst, {B,L,Hb:t,qu,beta_deg,btyp,isBlock,uberd:+gi('g_uberd'),
-    ue: ue,  // Überdeckung — für GZT Hebelarm-Berechnung
-    Bk:+gi('g_kx')||B, Hkopf:+gi('g_hkopf')||0});
+    ue: ue, Bk:+gi('g_kx')||B, Hkopf:+gi('g_hkopf')||0,
+    Gk, gb, gauf,
+    G_platte: B*L*Hb*gb,
+    G_hinterfuel: ue>0 ? B*L*ue*gauf : 0});
 
   // Bemessungswerte in Flachfundament-Panel anzeigen
   if(!isBlock){
@@ -7067,15 +7107,24 @@ function buildNachweisDocFlach(results, G){
   // ── Nachweisseiten pro LF ──────────────────────────────────────
   var nwPages = results.map(function(r){
     var gf = getGF(LF.find(function(l){return l.name===r.name;})||{nw:'gzt'});
-    var Gk_est = B*L*d*(+st.g_gbeton||24);
     var A = B*L;
+    var G_plt  = G.G_platte    !== undefined ? G.G_platte    : B*L*d*(+st.g_gbeton||24);
+    var G_hint = G.G_hinterfuel !== undefined ? G.G_hinterfuel : 0;
+    var Gk_tot = G.Gk           !== undefined ? G.Gk          : G_plt + G_hint;
 
     return '<div class="np-page np-pb">'+ph()+
       '<div class="np-lfh">'+r.name+'</div>'+
+      sh2('Eigengewicht Fundament')+
+      '<table class="np-tbl" style="margin-bottom:10px">'+
+        '<tr><th>Anteil</th><th>Formel</th><th class="r">Wert [kN]</th></tr>'+
+        '<tr><td>G_Platte = B×L×d×γ_F</td><td class="di">'+B+'×'+L+'×'+d+'×'+st.g_gbeton+'</td><td class="r">'+G_plt.toFixed(1)+'</td></tr>'+
+        (G_hint>0?'<tr><td>G_Hinterfüll = B×L×ü×γ_auff</td><td class="di">'+B+'×'+L+'×'+ue.toFixed(2)+'×'+(st.g_gauf||20)+'</td><td class="r">'+G_hint.toFixed(1)+'</td></tr>':'')+
+        '<tr class="hl"><td><b>G_k (gesamt)</b></td><td class="di">Eigengewicht Fundament</td><td class="r"><b>'+Gk_tot.toFixed(1)+'</b></td></tr>'+
+      '</table>'+
       sh2('Bemessungslasten')+
       '<table class="np-tbl" style="margin-bottom:10px">'+
         '<tr><th>Grösse</th><th class="r">Wert</th><th>Einheit</th><th>Bemerkung</th></tr>'+
-        '<tr><td>N_d</td><td class="r">'+r.Nd.toFixed(1)+'</td><td>kN</td><td>γ_G·(N_k+G_k)</td></tr>'+
+        '<tr><td>N_d</td><td class="r">'+r.Nd.toFixed(1)+'</td><td>kN</td><td>γ_G·(N_k + G_k = '+Gk_tot.toFixed(1)+' kN)</td></tr>'+
         '<tr><td>H_xd / H_yd</td><td class="r">'+r.Hxd.toFixed(1)+' / '+r.Hyd.toFixed(1)+'</td><td>kN</td><td>Resultierende H_d = '+r.Hd.toFixed(1)+' kN</td></tr>'+
         '<tr><td>M_xd / M_yd</td><td class="r">'+r.Mxd.toFixed(1)+' / '+r.Myd.toFixed(1)+'</td><td>kNm</td><td>in der Sohle</td></tr>'+
         '<tr><td>e_x = M_yd/N_d</td><td class="r">'+r.ex.toFixed(3)+'</td><td>m</td><td>Ausmitte (Typ 2)</td></tr>'+
@@ -7123,19 +7172,37 @@ function buildNachweisDocFlach(results, G){
         '</div>'
       :'')+
 
-      // ── Nachweis 4: Kippen/Ausmitte ───────────────────────────
+      // ── Nachweis 4: Kippnachweis (SIA 267) ─────────────────
       (NW.kippen?
-        '<div class="np-nw">'+
-        nwh('4.','Kippen / Ausmitte','SIA 267 §7.4 — GZT Typ 1, γ_G,sup='+st.lw_G1_sup+' / γ_G,inf='+st.lw_G1_inf)+
-        sh2('Ausmitten mit Typ-1-Faktoren')+
-        diagWrap(buildKippDiagram(r,G,false), true)+
-        '<table class="np-tbl">'+
-          '<tr><th>Richtung</th><th class="r">e [m]</th><th class="r">Kern [m]</th><th class="r">η</th><th>Status</th></tr>'+
-          '<tr><td>e_x (→ B/6)</td><td class="r">'+(r.ex_kipp!==undefined?r.ex_kipp.toFixed(3):r.ex.toFixed(3))+'</td><td class="r">'+(G.B/6).toFixed(3)+'</td><td class="r '+(r.etaKx>=1?'ok':'fail')+'">'+(r.etaKx<99?r.etaKx.toFixed(2):'—')+'</td><td class="'+(r.etaKx>=1?'ok':'fail')+'">'+(r.etaKx>=1?'✓':'✗')+'</td></tr>'+
-          '<tr><td>e_y (→ L/6)</td><td class="r">'+(r.ey_kipp!==undefined?r.ey_kipp.toFixed(3):r.ey.toFixed(3))+'</td><td class="r">'+(G.L/6).toFixed(3)+'</td><td class="r '+(r.etaKy>=1?'ok':'fail')+'">'+(r.etaKy<99?r.etaKy.toFixed(2):'—')+'</td><td class="'+(r.etaKy>=1?'ok':'fail')+'">'+(r.etaKy>=1?'✓':'✗')+'</td></tr>'+
-        '</table>'+
-        eta(Math.min(r.etaKx,r.etaKy))+
-        '</div>'
+        (function(){
+          var ex_k = r.ex_kipp!==undefined ? r.ex_kipp : r.ex||0;
+          var ey_k = r.ey_kipp!==undefined ? r.ey_kipp : r.ey||0;
+          var kv   = r.klaf_val!==undefined ? r.klaf_val : (ex_k/G.B)**2+(ey_k/G.L)**2;
+          var eklaf = r.eta_klaf!==undefined ? r.eta_klaf : (1/9)/Math.max(1e-6,kv);
+          var ok_k = kv <= 1/9+0.00001;
+          return '<div class="np-nw">'+
+          nwh('4.','Kippnachweis (klaffende Fuge)','SIA 267 — GZT Typ 1, γ_G,sup='+st.lw_G1_sup+' / γ_G,inf='+st.lw_G1_inf)+
+          sh2('Ausmitten mit Typ-1-Faktoren')+
+          diagWrap(buildKippDiagram(r,G,false), true)+
+          fml('(ea/a)² + (eb/b)² ≤ 1/9  (SIA 267 — klaffende Fuge)',
+              '('+Math.abs(ex_k).toFixed(3)+'/'+G.B+')²+('+Math.abs(ey_k).toFixed(3)+'/'+G.L+')²',
+              kv.toFixed(5)+'  '+(ok_k?'≤ 1/9 = 0.1111  ✓':'> 1/9 = 0.1111  ✗'),'')+
+          '<table class="np-tbl">'+
+            '<tr><th>Grösse</th><th class="r">Wert [m]</th><th class="r">a = B/3 [m]</th><th class="r">η</th><th>Status</th></tr>'+
+            '<tr><td>Ausmitte e_x (Typ 1)</td><td class="r">'+ex_k.toFixed(3)+'</td><td class="r">'+(G.B/3).toFixed(3)+'</td>'+
+              '<td class="r '+(r.etaKx>=1?'ok':'fail')+'">'+(r.etaKx<99?r.etaKx.toFixed(2):'—')+'</td>'+
+              '<td class="'+(r.etaKx>=1?'ok':'fail')+'">'+(Math.abs(ex_k)<=(G.B/3)+0.0001?'✓':'✗')+'</td></tr>'+
+            '<tr><td>Ausmitte e_y (Typ 1)</td><td class="r">'+ey_k.toFixed(3)+'</td><td class="r">'+(G.L/3).toFixed(3)+'</td>'+
+              '<td class="r '+(r.etaKy>=1?'ok':'fail')+'">'+(r.etaKy<99?r.etaKy.toFixed(2):'—')+'</td>'+
+              '<td class="'+(r.etaKy>=1?'ok':'fail')+'">'+(Math.abs(ey_k)<=(G.L/3)+0.0001?'✓':'✗')+'</td></tr>'+
+            '<tr class="hl"><td><b>(ea/a)²+(eb/b)²</b></td><td class="r '+(ok_k?'ok':'fail')+'"><b>'+kv.toFixed(5)+'</b></td>'+
+              '<td class="r">0.1111 (= 1/9)</td>'+
+              '<td class="r '+(ok_k?'ok':'fail')+'"><b>'+eklaf.toFixed(2)+'</b></td>'+
+              '<td class="'+(ok_k?'ok':'fail')+'"><b>'+(ok_k?'✓':'✗')+'</b></td></tr>'+
+          '</table>'+
+          eta(eklaf)+
+          '</div>';
+        })()
       :'')+
     '</div>';
   });
@@ -7157,11 +7224,11 @@ function buildNachweisDocFlach(results, G){
       sumRow('1. Sohlspannung  (informativ)', function(r){return r.etaSIG;}, NW.sohlsp)+
       sumRow('2. Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb)+
       sumRow('3. Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten)+
-      sumRow('4. Kippen / Ausmitte — GZT Typ 1', function(r){return Math.min(r.etaKx,r.etaKy);}, NW.kippen)+
+      sumRow('4. Kippnachweis (klaffende Fuge) — GZT Typ 1 (SIA 267)', function(r){return r.eta_klaf!==undefined ? r.eta_klaf : Math.min(r.etaKx,r.etaKy);}, NW.kippen)+
     '</table>'+
     '<div class="np-verdict '+(allOk?'ok':'fail')+'">'+
       '<div class="np-verdict-v">'+(allOk?'✓  Alle massgebenden Nachweise sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt')+'</div>'+
-      '<div class="np-verdict-s">Massgebend: '+results.reduce(function(a,b){return Math.min(a,Math.min(b.etaGB,b.etaGL,Math.min(b.etaKx,b.etaKy))); },99).toFixed(2)+' · Methode: Starre Methode · SIA 267:2013</div>'+
+      '<div class="np-verdict-s">Massgebend: '+results.reduce(function(a,b){var k=b.eta_klaf!==undefined?b.eta_klaf:Math.min(b.etaKx,b.etaKy);return Math.min(a,Math.min(b.etaGB,b.etaGL,k)); },99).toFixed(2)+' · Methode: Starre Methode · SIA 267:2013</div>'+
     '</div>'+
     '<div style="margin-top:40px;border-top:.5px solid var(--ol);padding-top:6px;font-size:7.5px;color:var(--xdim)">BlockCalc · SIA 267:2013 · '+now.toLocaleDateString('de-CH')+'</div>'+
   '</div>';
@@ -8319,11 +8386,16 @@ function buildKippDiagram(r, g, wide=false){
   const pl_cx = diagW/2;
   const pl_cy = H/2 + 5;
   const pl_x0 = pl_cx-pl_bpx/2, pl_y0 = pl_cy-pl_lpx/2;
+  const isFlach = !r.inKern && r.eta_klaf !== undefined || (r.eta_klaf !== undefined && isFinite(r.eta_klaf));
+  const useKlaf = r.eta_klaf !== undefined && isFinite(r.eta_klaf);
   const kb = (B/6)*sc, kl = (L/6)*sc;
+  // SIA 267 Ellipse: Halbachsen B/3 × L/3
+  const ke_x = (B/3)*sc, ke_y = (L/3)*sc;
   const kern_pts=`${pl_cx},${pl_cy-kl} ${pl_cx+kb},${pl_cy} ${pl_cx},${pl_cy+kl} ${pl_cx-kb},${pl_cy}`;
   const ep_x = pl_cx + ex_k*sc;
   const ep_y = pl_cy + ey_k*sc;
-  const ep_col = inKern_k ? c_ok : c_fail;
+  const klaf_ok = useKlaf ? r.eta_klaf >= 1 : inKern_k;
+  const ep_col = (useKlaf ? klaf_ok : inKern_k) ? c_ok : c_fail;
   const fs = wide ? 9 : 7.5;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"
@@ -8339,13 +8411,23 @@ function buildKippDiagram(r, g, wide=false){
     stroke="${c_dim}" stroke-width="0.6" stroke-dasharray="5,2.5" opacity="0.45"/>
   <line x1="${pl_cx}" y1="${pl_y0-5}" x2="${pl_cx}" y2="${pl_y0+pl_lpx+5}"
     stroke="${c_dim}" stroke-width="0.6" stroke-dasharray="5,2.5" opacity="0.45"/>
-  <!-- Kern (1. Kernweite) -->
-  <polygon points="${kern_pts}" fill="${c_ok}" fill-opacity="0.18" stroke="${c_ok}" stroke-width="1.5"/>
-  <!-- Bemaßungslinien Kern -->
+  <!-- Kern (1. Kernweite — Referenz, dünn gestrichelt) -->
+  <polygon points="${kern_pts}" fill="none" stroke="${c_ok}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.4"/>
+  ${useKlaf ? `
+  <!-- SIA 267 Ellipse: Halbachsen B/3 × L/3 -->
+  <ellipse cx="${pl_cx}" cy="${pl_cy}" rx="${ke_x}" ry="${ke_y}"
+    fill="${c_ok}" fill-opacity="0.14" stroke="${c_ok}" stroke-width="1.5"/>
+  <line x1="${pl_cx}" y1="${pl_cy}" x2="${pl_cx+ke_x}" y2="${pl_cy}" stroke="${c_ok}" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <line x1="${pl_cx}" y1="${pl_cy}" x2="${pl_cx}" y2="${pl_cy-ke_y}" stroke="${c_ok}" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <text x="${pl_cx+ke_x/2}" y="${pl_cy-3}" text-anchor="middle" font-size="${fs}" fill="${c_ok}">B/3=${(B/3).toFixed(2)}m</text>
+  <text x="${pl_cx+ke_x+3}" y="${pl_cy-ke_y/2+3}" font-size="${fs}" fill="${c_ok}">L/3=${(L/3).toFixed(2)}m</text>
+  ` : `
+  <!-- Kernweite (B/6, L/6) -->
   <line x1="${pl_cx}" y1="${pl_cy}" x2="${pl_cx+kb}" y2="${pl_cy}" stroke="${c_ok}" stroke-width="0.8" stroke-dasharray="2,2"/>
   <line x1="${pl_cx}" y1="${pl_cy}" x2="${pl_cx}" y2="${pl_cy-kl}" stroke="${c_ok}" stroke-width="0.8" stroke-dasharray="2,2"/>
   <text x="${pl_cx+kb/2}" y="${pl_cy-3}" text-anchor="middle" font-size="${fs}" fill="${c_ok}">B/6=${(B/6).toFixed(2)}m</text>
   <text x="${pl_cx+kb+3}" y="${pl_cy-kl/2+3}" font-size="${fs}" fill="${c_ok}">L/6=${(L/6).toFixed(2)}m</text>
+  `}
   <!-- Achsenbeschriftung -->
   <text x="${pl_x0+pl_bpx+5}" y="${pl_cy+4}" font-size="${fs+1}" fill="${c_dim}">x</text>
   <text x="${pl_cx+4}" y="${pl_y0-3}" font-size="${fs+1}" fill="${c_dim}">y</text>
@@ -8368,8 +8450,8 @@ function buildKippDiagram(r, g, wide=false){
   <!-- Legende / Status rechts (wide) oder unten (normal) -->
   ${wide ? `
   <text x="${legX}" y="32" font-size="9" fill="${c_dim}" font-weight="500">Nachweis</text>
-  <text x="${legX}" y="48" font-size="8.5" fill="${ep_col}" font-weight="500">${inKern_k?'Im Kern':'Ausserhalb Kern'}</text>
-  <text x="${legX}" y="64" font-size="11" fill="${ep_col}" font-weight="500">η = ${isFinite(eta)&&eta<99?eta.toFixed(2):'—'}</text>
+  <text x="${legX}" y="48" font-size="8.5" fill="${ep_col}" font-weight="500">${useKlaf?(klaf_ok?'Kippnachweis erf.':'Kippnachweis n.e.'):(inKern_k?'Im Kern':'Ausserhalb Kern')}</text>
+  <text x="${legX}" y="64" font-size="11" fill="${ep_col}" font-weight="500">η = ${isFinite(useKlaf?r.eta_klaf:eta)&&(useKlaf?r.eta_klaf:eta)<99?(useKlaf?r.eta_klaf:eta).toFixed(2):'—'}</text>
   <line x1="${legX}" y1="74" x2="${W-12}" y2="74" stroke="var(--ol)" stroke-width="0.6" opacity="0.5"/>
   <text x="${legX}" y="90" font-size="8.5" fill="${c_dim}">Typ-1-Faktoren (Kippen):</text>
   <text x="${legX}" y="104" font-size="8" fill="var(--on2)">γ_G,sup = ${+gi('lw_G1_sup')||1.20}  ·  γ_G,inf = ${+gi('lw_G1_inf')||0.80}</text>
@@ -8378,12 +8460,12 @@ function buildKippDiagram(r, g, wide=false){
   <text x="${legX}" y="143" font-size="8.5" fill="${c_dim}">Ausmitten (Typ 1):</text>
   <text x="${legX}" y="157" font-size="8" fill="${ep_col}">e_x = ${ex_k.toFixed(3)} m</text>
   <text x="${legX}" y="170" font-size="8" fill="${ep_col}">e_y = ${ey_k.toFixed(3)} m</text>
-  <text x="${legX}" y="184" font-size="8" fill="${c_dim}">Kern B/6 = ${(B/6).toFixed(3)} m</text>
-  <text x="${legX}" y="197" font-size="8" fill="${c_dim}">Kern L/6 = ${(L/6).toFixed(3)} m</text>
-  <text x="${legX}" y="211" font-size="8" fill="${c_dim}">η_x = ${etaKx<99?etaKx.toFixed(2):'—'}  ·  η_y = ${etaKy<99?etaKy.toFixed(2):'—'}</text>
+  <text x="${legX}" y="184" font-size="8" fill="${c_dim}">${useKlaf?'Ellipse B/3 = '+(B/3).toFixed(3)+' m':'Kern B/6 = '+(B/6).toFixed(3)+' m'}</text>
+  <text x="${legX}" y="197" font-size="8" fill="${c_dim}">${useKlaf?'Ellipse L/3 = '+(L/3).toFixed(3)+' m':'Kern L/6 = '+(L/6).toFixed(3)+' m'}</text>
+  <text x="${legX}" y="211" font-size="8" fill="${c_dim}">${useKlaf?'(ea/B)²+(eb/L)² = '+(r.klaf_val!==undefined?r.klaf_val.toFixed(4):'—'):'η_x = '+(etaKx<99?etaKx.toFixed(2):'—')+'  ·  η_y = '+(etaKy<99?etaKy.toFixed(2):'—')}</text>
   ` : `
   <text x="${diagW/2}" y="${H-5}" text-anchor="middle" font-size="8.5"
-    fill="${ep_col}" font-weight="500">${inKern_k?'Im Kern':'Ausserhalb Kern'} — η = ${isFinite(eta)&&eta<99?eta.toFixed(2):'—'}</text>
+    fill="${ep_col}" font-weight="500">${useKlaf?(klaf_ok?'Kippnachweis erf.':'Kippnachweis n.e.'):(inKern_k?'Im Kern':'Ausserhalb')} — η =${isFinite(useKlaf?r.eta_klaf:eta)&&(useKlaf?r.eta_klaf:eta)<99?(useKlaf?r.eta_klaf:eta).toFixed(2):'—'}</text>
   `}
 </svg>`;
 }
@@ -8953,7 +9035,10 @@ ${sigLbl(cx-r0pbw-4, ukY-1, s0_uk, 'end')}`;
 let _lastResults=null, _lastG=null;
 function renderResults(res,worst,g){
   _lastResults=res; _lastG=g;
-  const scroll=document.getElementById('res-scroll');scroll.innerHTML='';
+  const scroll=document.getElementById('res-scroll');
+  // Defensiv: res-scroll immer einblenden (kann durch Pfahlsicherung ausgeblendet gewesen sein)
+  if(!g.isBlock){ scroll.style.display=''; }
+  scroll.innerHTML='';
   const allOk=res.every(r=>r.ok),anyFail=res.some(r=>!r.ok);
   const pill=document.getElementById('overall-pill');
   pill.className='pill '+(allOk?'pill-ok':anyFail?'pill-f':'pill-w');
@@ -8971,7 +9056,7 @@ function renderResults(res,worst,g){
       if(NW.sohlsp && worst && worst.etaSIG<1) failNames.push('σ_max');
       if(NW.grundb && worst && worst.etaGB <1) failNames.push('Grundbruch');
       if(NW.gleiten && worst && worst.etaGL<1) failNames.push('Gleiten');
-      if(NW.kippen  && worst && !worst.inKern) failNames.push('Ausmitte');
+      if(NW.kippen  && worst && (g.isBlock ? !worst.inKern : (worst.eta_klaf??1) < 1)) failNames.push(g.isBlock ? 'Ausmitte' : 'Kippnachweis');
     }
     pill.textContent = failNames.length ? `Nicht erfüllt · ${failNames.join(', ')}` : 'Nicht erfüllt';
   } else {
@@ -9110,13 +9195,14 @@ function renderResults(res,worst,g){
         {id:'grundb',t:'Grundbruch',e:r.etaGB,f:grundbFormula,rows:grundbRows,
          svg:buildGrundbDiagram(r,g,_gztExpanded), diagR:r, diagG:g, diagFn:'buildGrundbDiagram'},
         {id:'gleiten',t:'Gleiten',e:r.etaGL,f:gleitenFormula,rows:gleitenRows},
-        {id:'kippen',t:'Kippen / Ausmitte',e:Math.min(r.etaKx,r.etaKy),
-         f:'e = M_d / N_d ≤ B/6  (Kernweite) — Typ-1-Faktoren: γ_G,sup/inf',
-         rows:[['e_x (Typ1)',r.ex_kipp!==undefined?r.ex_kipp.toFixed(3)+' m':r.ex.toFixed(3)+' m'],
-               ['e_y (Typ1)',r.ey_kipp!==undefined?r.ey_kipp.toFixed(3)+' m':r.ey.toFixed(3)+' m'],
-               ['Kern B/6',(g.B/6).toFixed(3)+' m'],['Kern L/6',(g.L/6).toFixed(3)+' m'],
-               ['η_x',(g.B/6/Math.max(0.001,Math.abs(r.ex_kipp||r.ex))).toFixed(2)],
-               ['η_y',(g.L/6/Math.max(0.001,Math.abs(r.ey_kipp||r.ey))).toFixed(2)]],
+        {id:'kippen',t:'Kippnachweis',e:r.eta_klaf!==undefined?r.eta_klaf:Math.min(r.etaKx,r.etaKy),
+         f:'SIA 267 GZT Typ 1  ·  N_d = γ_G,inf·(N_G+G_k)  ·  e_x = M_y,d/N_d  ·  e_y = M_x,d/N_d  →  (e_x/B)² + (e_y/L)² ≤ 1/9',
+         rows:[['e_x (Typ1)',(r.ex_kipp!==undefined?r.ex_kipp:r.ex||0).toFixed(3)+' m'],
+               ['e_y (Typ1)',(r.ey_kipp!==undefined?r.ey_kipp:r.ey||0).toFixed(3)+' m'],
+               ['Grenze B/3',(g.B/3).toFixed(3)+' m'],['Grenze L/3',(g.L/3).toFixed(3)+' m'],
+               ['(ea/B)²+(eb/L)²',r.klaf_val!==undefined?r.klaf_val.toFixed(4):'—'],
+               ['Grenzwert 1/9','0.1111'],
+               ['η',r.eta_klaf!==undefined?r.eta_klaf.toFixed(2):'—']],
          svg: buildKippDiagram(r, g, _gztExpanded),
          diagR:r, diagG:g, diagFn:'buildKippDiagram'},
       ]:[]),
@@ -9285,20 +9371,14 @@ function saveProject(){
     // Bestehendes Fundament überschreiben
     const st=collectState(); st._k=_currentProjKey; st._d=new Date().toLocaleDateString('de-CH');
     dbSet(_currentProjKey,st); renderProjList();
-    const sel=document.getElementById('proj-sel'); if(sel) sel.value=_currentProjKey;
+    // Dropdown auf p_name des aktuellen Projekts setzen
+    const sel=document.getElementById('proj-sel'); if(sel) sel.value=st.p_name||'';
     updateSaveBtnTitle();
-    toast('Gespeichert: '+st.p_name); return;
+    toast('Gespeichert: '+st.p_name+(st.p_fundname?' · '+st.p_fundname:'')); return;
   }
-  // Kein Projekt geladen → Speichern-Dialog öffnen
-  document.getElementById('dlg-fname').value = gi('p_name')||'Neues Fundament';
-  // Projekt-Dropdown befüllen
-  const sel=document.getElementById('dlg-proj-sel');
-  const nrs=[...new Set(dbKeys().filter(k=>k.startsWith('proj_')).map(k=>dbGet(k)?.p_nr).filter(Boolean))];
-  sel.innerHTML='<option value="">— Neues Projekt (Projektnummer aus Eingabe) —</option>'+
-    nrs.map(nr=>`<option value="${nr}">${nr}</option>`).join('');
-  // Aktuell eingegebene Projektnummer vorselektieren falls vorhanden
-  const curNr=gi('p_nr'); if(curNr&&nrs.includes(curNr)) sel.value=curNr;
-  document.getElementById('ov-save-dlg').classList.add('open');
+  // Kein Projekt geladen → zum Projekt-Tab leiten
+  switchTab('projekt');
+  toast('Projekt auswählen und Speichern drücken');
 }
 
 function doSaveDlg(){
@@ -9319,60 +9399,78 @@ function doSaveDlg(){
 function updateSaveBtnTitle(){
   const btn = document.getElementById('btn-save');
   if(!btn) return;
-  btn.title = _currentProjKey ? 'Projekt überspeichern' : 'Neues Projekt speichern';
+  btn.title = _currentProjKey ? 'Berechnung überspeichern' : 'Projekt-Tab → Speichern';
 }
 function renderProjSel(){
   const sel=document.getElementById('proj-sel'); if(!sel) return;
-  const cur=_currentProjKey||sel.value;
-  // Komplett neu aufbauen (inkl. optgroup-Elemente entfernen)
+  const prevVal=sel.value;
   sel.innerHTML='<option value="">— Projekt auswählen —</option>';
+  // Eindeutige p_name-Werte als flache Optionen (value = p_name-String)
   const keys=dbKeys().filter(k=>k.startsWith('proj_')).sort().reverse();
-  const groups={};
+  const seen=new Map(); // p_name → p_nr (für Anzeige)
   keys.forEach(k=>{
     const p=dbGet(k);
-    const grpKey=p.p_nr||'—';
-    if(!groups[grpKey]) groups[grpKey]={nr:grpKey, name:p.p_name||'', entries:[]};
-    groups[grpKey].entries.push({k,p});
+    if(p.p_name && !seen.has(p.p_name)) seen.set(p.p_name, p.p_nr||'');
   });
-  Object.values(groups).forEach(grp=>{
-    const og=document.createElement('optgroup');
-    og.label=(grp.name||'Projekt')+(grp.nr!=='—'?' · '+grp.nr:'');
-    grp.entries.forEach(({k,p})=>{
-      const opt=document.createElement('option');
-      opt.value=k;
-      opt.textContent=(p.p_fundname||p.p_name||'Fundament')+(p.p_nr?' ('+p.p_nr+')':'');
-      og.appendChild(opt);
-    });
-    sel.add(og);
+  seen.forEach((nr,name)=>{
+    const opt=document.createElement('option');
+    opt.value=name;
+    opt.textContent=name+(nr?' · '+nr:'');
+    sel.add(opt);
   });
   const newOpt=document.createElement('option');
   newOpt.value='__new__'; newOpt.textContent='+ Neues Projekt';
   sel.add(newOpt);
-  // Aktuellen Wert wiederherstellen
-  if(cur) sel.value=cur;
+  if(prevVal) sel.value=prevVal;
 }
 function onProjSelChange(){
-  const sel=document.getElementById('proj-sel');
-  const val=sel.value;
-  const fs=document.getElementById('proj-fields');
-  if(!val){
-    fs.disabled=true; _currentProjKey=null; updateSaveBtnTitle(); return;
-  }
+  const val=document.getElementById('proj-sel').value;
+  const nf=document.getElementById('new-proj-name-field');
   if(val==='__new__'){
-    _currentProjKey=null; loadTemplate('empty');
-    // Projektnummer bestimmen: höchste vorhandene "Projekt N" + 1
-    const existing=dbKeys().filter(k=>k.startsWith('proj_')).map(k=>dbGet(k)?.p_name||'');
-    const nums=existing.map(n=>{ const m=n.match(/^Projekt\s+(\d+)$/i); return m?+m[1]:0; });
-    const next=(nums.length?Math.max(...nums):0)+1;
-    si('p_name','Projekt '+next); updateSB();
-    // Alle anderen Projektfelder leeren
-    ['p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_bemerk'].forEach(f=>si(f,''));
+    if(nf) nf.style.display='';
+    si('p_name','');
+    // Datum vorausfüllen
     si('p_datum', new Date().toISOString().slice(0,10));
-    fs.disabled=false; updateSaveBtnTitle();
-    toast('Neues Fundament'); return;
+  } else if(val){
+    if(nf) nf.style.display='none';
+    si('p_name', val);
+    // Datum vorausfüllen falls leer
+    const datEl=document.getElementById('p_datum');
+    if(datEl && !datEl.value) si('p_datum', new Date().toISOString().slice(0,10));
+  } else {
+    if(nf) nf.style.display='none';
+    si('p_name','');
   }
-  loadProj(val);
-  fs.disabled=false;
+  updateSB();
+}
+function saveNewEntry(){
+  const projSelVal=document.getElementById('proj-sel').value;
+  const newName=(document.getElementById('new-proj-name')?.value||'').trim();
+  const fundname=(document.getElementById('p_fundname')?.value||'').trim();
+  let projName;
+  if(projSelVal==='__new__'){
+    projName=newName;
+    if(!projName){ toast('Projektname eingeben'); return; }
+  } else if(projSelVal){
+    projName=projSelVal;
+  } else {
+    toast('Projekt auswählen'); return;
+  }
+  if(!fundname){ toast('Fundamentbezeichnung eingeben'); return; }
+  si('p_name', projName);
+  const k='proj_'+Date.now();
+  const st=collectState(); st._k=k; st._d=new Date().toLocaleDateString('de-CH');
+  dbSet(k,st);
+  _currentProjKey=k;
+  renderProjList(); // ruft intern renderProjSel() auf
+  // Dropdown auf gespeichertes Projekt setzen
+  const sel=document.getElementById('proj-sel');
+  if(sel) sel.value=projName;
+  // Neues-Projekt-Feld ausblenden
+  const nf=document.getElementById('new-proj-name-field');
+  if(nf) nf.style.display='none';
+  updateSaveBtnTitle();
+  toast('Gespeichert: '+projName+' · '+fundname);
 }
 function renderProjList(){
   const list=document.getElementById('proj-list'); list.innerHTML='';
@@ -9382,12 +9480,12 @@ function renderProjList(){
     list.innerHTML='<div style="color:var(--xdim);font-size:9.5px;font-family:var(--f-mono);padding:8px 0">Keine gespeicherten Projekte</div>';
     return;
   }
-  // Gruppieren nach Projektnummer (p_nr); leer → eigene Gruppe '—'
+  // Gruppieren nach Projektname (p_name)
   const groups={};
   keys.forEach(k=>{
     const p=dbGet(k);
-    const grpKey=p.p_nr||'—';
-    if(!groups[grpKey]) groups[grpKey]={nr:grpKey, name:p.p_name||'', entries:[]};
+    const grpKey=p.p_name||'—';
+    if(!groups[grpKey]) groups[grpKey]={name:grpKey, entries:[]};
     groups[grpKey].entries.push({k,p});
   });
 
@@ -9398,7 +9496,6 @@ function renderProjList(){
     card.innerHTML=`
       <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
         <span style="font-weight:500;font-size:11px">${grp.name||'Projekt'}</span>
-        <span style="font-family:var(--f-mono);font-size:9px;color:var(--dim);margin-left:6px">${grp.nr!=='—'?grp.nr:''}</span>
         <span style="flex:1"></span>
         <span style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);margin-right:6px">${grp.entries.length} Fundament${grp.entries.length!==1?'e':''}</span>
         <svg class="lf-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M6 8l4 4 4-4"/></svg>
@@ -9454,11 +9551,13 @@ function loadProj(k){
   const p=dbGet(k); if(!p) return;
   applyState(p);
   _currentProjKey = k;
-  const sel=document.getElementById('proj-sel'); if(sel) sel.value=k;
-  const fs=document.getElementById('proj-fields'); if(fs) fs.disabled=false;
+  // Dropdown auf p_name des geladenen Projekts setzen
+  const sel=document.getElementById('proj-sel'); if(sel) sel.value=p.p_name||'';
+  // Neues-Projekt-Feld ausblenden
+  const nf=document.getElementById('new-proj-name-field'); if(nf) nf.style.display='none';
   updateSB(); updateSaveBtnTitle();
   setTimeout(histInit, 200); // Neuen History-Stack für dieses Projekt
-  toast('Geladen: '+p.p_name);
+  toast('Geladen: '+p.p_name+(p.p_fundname?' · '+p.p_fundname:''));
 }
 function delProj(k){
   const p=dbGet(k);
@@ -9622,14 +9721,14 @@ function reassignProj(k){
   _reassignKey=k;
   // Info-Zeile
   document.getElementById('reassign-cur').textContent=
-    'Fundament: '+(p.p_name||k)+(p.p_nr?' · aktuell: '+p.p_nr:'');
-  // Dropdown mit bestehenden Projekten
+    'Fundament: '+(p.p_fundname||k)+' · aktuell in: '+(p.p_name||'—');
+  // Dropdown mit bestehenden Projektnamen
   const sel=document.getElementById('reassign-sel');
-  const nrs=[...new Set(dbKeys().filter(j=>j.startsWith('proj_')).map(j=>dbGet(j)?.p_nr).filter(Boolean))];
+  const names=[...new Set(dbKeys().filter(j=>j.startsWith('proj_')).map(j=>dbGet(j)?.p_name).filter(Boolean))];
   sel.innerHTML='<option value="">(kein Projekt)</option>'+
-    nrs.map(nr=>`<option value="${nr}"${nr===p.p_nr?' selected':''}>${nr}</option>`).join('');
-  // Freitextfeld auf aktuelle Nummer setzen
-  document.getElementById('reassign-nr').value=p.p_nr||'';
+    names.map(n=>`<option value="${n}"${n===p.p_name?' selected':''}>${n}</option>`).join('');
+  // Freitextfeld auf aktuellen Projektnamen setzen
+  document.getElementById('reassign-nr').value=p.p_name||'';
   // Sync: Dropdown → Freitext
   sel.oninput=()=>{ document.getElementById('reassign-nr').value=sel.value; };
   document.getElementById('ov-reassign').classList.add('open');
@@ -9637,10 +9736,10 @@ function reassignProj(k){
 function doReassign(){
   if(!_reassignKey) return;
   const p=dbGet(_reassignKey); if(!p) return;
-  const newNr=document.getElementById('reassign-nr').value.trim();
-  p.p_nr=newNr; dbSet(_reassignKey,p); renderProjList();
+  const newName=document.getElementById('reassign-nr').value.trim();
+  p.p_name=newName; dbSet(_reassignKey,p); renderProjList();
   closeOverlay('ov-reassign');
-  toast('Zugewiesen zu Projekt: '+(newNr||'(kein)'));
+  toast('Verschoben zu Projekt: '+(newName||'(kein)'));
 }
 
 // ── Export als JSON ─────────────────────────────────────────────────
