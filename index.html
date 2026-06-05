@@ -797,11 +797,11 @@ html, body {
           <div class="field"><label>KM</label><input id="p_km" type="text" placeholder="000.000" style="font-family:var(--f-mono)"/></div>
           <div class="field"><label>Mast-Nr.</label><input id="p_mastnr" type="text" placeholder="M-001"/></div>
         </div>
-        <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text"/></div>
+        <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text" oninput="SETTINGS.bearbeiter=this.value;dbSet('bc_settings',SETTINGS)"/></div>
         <div class="field"><label>Bemerkung</label><input id="p_bemerk" type="text"/></div>
 
         <!-- 5. Speichern-Button (immer neuer Eintrag) -->
-        <button class="btn btn-filled btn-full btn-sm" style="margin-top:4px;margin-bottom:4px" onclick="saveNewEntry()">
+        <button class="btn btn-tonal btn-full btn-sm" style="margin-top:4px;margin-bottom:4px" onclick="saveNewEntry()">
           + Neuer Eintrag
         </button>
 
@@ -2464,13 +2464,10 @@ function rebuildScene(){
   // Auflasten (Stahl-Platte) als graue Quader auf der Platte
   if(CALC_MODEL==='flach' && FLACH_MAT==='stahl'){
     AUFLASTEN.forEach(a=>{
-      if(a.Pk<=0) return;
-      const isOn = a.active !== false;
+      if(a.Pk<=0 || a.active===false) return;  // inaktive Auflasten komplett ausblenden
       const asz=Math.max(0.1, Math.cbrt(a.Pk/25)*0.5);
       const aGeo=new THREE.BoxGeometry(asz,asz,asz);
-      const aMesh=new THREE.Mesh(aGeo,new THREE.MeshLambertMaterial({
-        color:0x888890, transparent:true, opacity: isOn ? 0.75 : 0.25
-      }));
+      const aMesh=new THREE.Mesh(aGeo,new THREE.MeshLambertMaterial({color:0x888890}));
       aMesh.position.set(a.dx, -ue+hb+asz/2, -a.dy);
       bg.add(aMesh);
     });
@@ -9036,8 +9033,8 @@ let _lastResults=null, _lastG=null;
 function renderResults(res,worst,g){
   _lastResults=res; _lastG=g;
   const scroll=document.getElementById('res-scroll');
-  // Defensiv: res-scroll immer einblenden (kann durch Pfahlsicherung ausgeblendet gewesen sein)
-  if(!g.isBlock){ scroll.style.display=''; }
+  // Defensiv: res-scroll immer einblenden wenn Pfahlsicherung nicht aktiv
+  if(!showPfahl){ scroll.style.display=''; }
   scroll.innerHTML='';
   const allOk=res.every(r=>r.ok),anyFail=res.some(r=>!r.ok);
   const pill=document.getElementById('overall-pill');
@@ -9919,6 +9916,12 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey) && e.key==='s'){ e.preventDefault(); saveProject(); }
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='z'){ e.preventDefault(); histUndo(); }
   if((e.ctrlKey||e.metaKey) && (e.key==='y' || (e.shiftKey && e.key==='z'))){ e.preventDefault(); histRedo(); }
+  // Enter in Eingabefeld: Wert bestätigen (Feld verlassen + sofortige Neuberechnung)
+  if(e.key==='Enter' && e.target.matches('input[type="number"],input[type="text"],input[type="date"]')){
+    e.preventDefault();
+    e.target.blur();
+    scheduleCalc(0);
+  }
 });
 document.addEventListener('DOMContentLoaded',async()=>{
   await dbInit();
