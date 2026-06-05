@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlockCalc — Benutzerhandbuch</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS — Dark & Light (identisch index.html)
+   ═══════════════════════════════════════════ */
+:root {
+  --ease: cubic-bezier(0.2,0,0,1);
+  --f-ui:   'DM Sans', system-ui, sans-serif;
+  --f-mono: 'DM Mono', monospace;
+  --r1:4px; --r2:10px; --r3:16px;
+}
+[data-theme="dark"] {
+  --bg:   #0e0f11; --s1:#15161a; --s2:#1c1d22; --s3:#232428; --s4:#2a2c32;
+  --ol:   #353740; --ol2:#44464f;
+  --on:   #e1e2e8; --on2:#b8bac4; --dim:#787a84; --xdim:#4e5058;
+  --acc:  #7c8de0;
+  --ok:   #6fcf8e;
+  --warn: #c9a84c;
+  --fail: #cf7070;
+}
+[data-theme="light"] {
+  --bg:   #f4f4f6; --s1:#ffffff; --s2:#f0f0f4; --s3:#e8e8ee; --s4:#dddde6;
+  --ol:   #d0d0da; --ol2:#b8b8c8;
+  --on:   #111218; --on2:#3a3c48; --dim:#70727e; --xdim:#9a9caa;
+  --acc:  #4a5cb8;
+  --ok:   #1a7a40;
+  --warn: #8a6010;
+  --fail: #a02020;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-family:var(--f-ui); background:var(--s1); color:var(--on);
+  -webkit-font-smoothing:antialiased; font-size:13px; }
+body { background:var(--s1); }
+
+/* ── Topbar ─────────────────────────────── */
+.hb-topbar {
+  position:sticky; top:0; z-index:100;
+  display:flex; align-items:center; gap:10px;
+  padding:0 20px; height:48px;
+  background:var(--s1); border-bottom:1px solid var(--ol);
+  font-family:var(--f-mono);
+}
+.hb-logo { font-size:13px; font-weight:500; letter-spacing:.04em; }
+.hb-title { font-size:10px; color:var(--dim); }
+.hb-sep { flex:1; }
+.hb-theme {
+  height:28px; padding:0 10px; border-radius:var(--r1);
+  background:var(--s2); border:1px solid var(--ol); color:var(--dim);
+  font-family:var(--f-mono); font-size:9px; cursor:pointer;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.hb-theme:hover { background:var(--s3); color:var(--on); }
+
+/* ── Navigation (linke Leiste) ───────────── */
+.hb-layout { display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 48px); }
+.hb-nav {
+  position:sticky; top:48px; height:calc(100vh - 48px); overflow-y:auto;
+  border-right:1px solid var(--ol); padding:20px 0 40px;
+  background:var(--s1); font-family:var(--f-mono); font-size:9px;
+}
+.hb-nav::-webkit-scrollbar { width:2px; }
+.hb-nav::-webkit-scrollbar-thumb { background:var(--ol); }
+.hb-nav-sec {
+  font-size:8px; color:var(--xdim); letter-spacing:.1em; text-transform:uppercase;
+  padding:14px 18px 4px; font-weight:500;
+}
+.hb-nav a {
+  display:block; padding:5px 18px 5px 26px; color:var(--dim);
+  text-decoration:none; font-size:9px; line-height:1.4;
+  border-left:2px solid transparent; margin-left:0;
+  transition:color .12s, border-color .12s;
+}
+.hb-nav a:hover { color:var(--on); border-left-color:var(--ol2); }
+.hb-nav a.active { color:var(--acc); border-left-color:var(--acc); }
+.hb-nav a.top { padding-left:18px; font-weight:500; color:var(--on2); font-size:9.5px; }
+
+/* ── Hauptinhalt ────────────────────────── */
+.hb-main { padding:0 0 80px; overflow-x:hidden; }
+
+/* ── A4-Seiten ──────────────────────────── */
+.np-wrap { padding:28px 40px; max-width:860px; }
+.np-page {
+  width:100%; max-width:760px; margin:0 auto 28px; padding:38px 46px;
+  background:var(--bg); border:1px solid var(--ol);
+  box-shadow:0 1px 8px rgba(0,0,0,.07);
+  font-family:var(--f-mono); font-size:9px; color:var(--on2);
+  line-height:1.55; box-sizing:border-box;
+}
+/* Seitenkopf */
+.np-ph {
+  display:flex; justify-content:space-between; align-items:baseline;
+  border-bottom:.5px solid var(--ol2); padding-bottom:4px; margin-bottom:20px;
+  font-size:7.5px; color:var(--xdim);
+}
+.np-ph strong { color:var(--dim); font-weight:600; }
+/* Kapitelheader */
+.np-ch {
+  font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  border-bottom:1px solid var(--on2); padding:2px 0; margin:18px 0 9px; color:var(--on2);
+}
+.np-ch:first-child { margin-top:0; }
+.np-sh {
+  font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 0; border-bottom:1px solid var(--on2); margin:0 0 9px; color:var(--on2);
+}
+.np-sh2 {
+  font-size:8px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--dim); margin:9px 0 5px;
+}
+/* Tabellen */
+.np-tbl { width:100%; border-collapse:collapse; font-size:8.5px; margin-bottom:8px; }
+.np-tbl th {
+  background:var(--s2); padding:3px 7px; text-align:left;
+  font-weight:600; border:.5px solid var(--ol2); font-size:8px; letter-spacing:.03em;
+}
+.np-tbl td { padding:2.5px 7px; border:.5px solid var(--ol); }
+.np-tbl .r { text-align:right; font-variant-numeric:tabular-nums; }
+.np-tbl .sym { color:var(--dim); font-size:8px; }
+.np-tbl .hl td { background:var(--s2); font-weight:500; }
+.np-tbl .di { color:var(--xdim); font-style:italic; font-size:8px; }
+/* Spalten-Layout */
+.np-g2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px; }
+.np-g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:8px; }
+/* Formelblöcke — dreizeilig */
+.np-calc {
+  background:var(--s2); border-left:2px solid var(--acc);
+  padding:5px 10px 6px; font-size:8.5px; margin:4px 0;
+  line-height:1.65; font-family:var(--f-mono);
+}
+.np-cf { color:var(--dim); }
+.np-cv { color:var(--on2); padding-left:14px; }
+.np-cr { color:var(--acc); font-weight:700; padding-left:14px; }
+/* Hinweisbox */
+.np-note {
+  background:var(--s2); border-left:2px solid var(--warn);
+  padding:6px 10px; font-size:8.5px; margin:6px 0; line-height:1.6;
+  color:var(--dim);
+}
+.np-note strong { color:var(--on2); }
+/* Eta-Badges */
+.np-eta {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; font-weight:700; font-size:9.5px; border:.5px solid; margin-top:5px;
+}
+.np-eta.ok  { color:var(--ok);   border-color:var(--ok);   background:rgba(34,139,34,.06); }
+.np-eta.fail{ color:var(--fail); border-color:var(--fail); background:rgba(200,0,0,.06); }
+.np-eta.inf { color:var(--xdim); border-color:var(--ol); font-weight:400; font-style:italic; font-size:8px; }
+/* Trennlinie */
+.np-hr { border:none; border-top:.5px solid var(--ol); margin:10px 0; }
+/* Bild-Platzhalter */
+.np-img-ph {
+  border:1px dashed var(--ol2); background:var(--s2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; color:var(--xdim); font-size:8.5px; font-family:var(--f-mono);
+  text-align:center; padding:20px;
+}
+.np-img-ph svg { opacity:.35; }
+#hb-system-svg, #hb-gzt-svg { display:block; }
+#hb-system-svg svg, #hb-gzt-svg svg { display:block; width:100%; height:auto; }
+/* Deckblatt */
+.np-firma { font-size:8px; color:var(--xdim); letter-spacing:.1em; text-transform:uppercase; margin-bottom:52px; }
+.np-ct { font-size:20px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; line-height:1.2; margin:0 0 4px; color:var(--on); }
+.np-cs { font-size:10px; color:var(--dim); margin-bottom:40px; }
+.np-cblock { border-top:1.5px solid var(--on2); padding-top:14px; }
+.np-cmeta { display:grid; grid-template-columns:100px 1fr 100px 1fr; row-gap:8px; font-size:8.5px; margin-bottom:20px; }
+.np-cmeta .k { font-size:7.5px; color:var(--xdim); text-transform:uppercase; letter-spacing:.05em; }
+.np-cmeta .v { font-weight:600; border-bottom:.5px solid var(--ol); padding-bottom:2px; }
+.np-badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:14px; }
+.np-badge { font-size:7.5px; padding:2px 8px; border:.5px solid var(--ol2); color:var(--xdim); }
+/* Paragraph-Text */
+.np-p { font-size:8.5px; line-height:1.7; color:var(--dim); margin-bottom:7px; font-family:var(--f-mono); }
+.np-p strong { color:var(--on2); }
+/* Nummerierte Liste */
+.np-ol { padding-left:16px; font-size:8.5px; line-height:1.85; color:var(--dim); margin-bottom:7px; }
+.np-ol li { margin-bottom:2px; }
+.np-ol strong { color:var(--on2); }
+/* Flussdiagramm-Schritte */
+.np-flow { display:flex; flex-direction:column; gap:0; margin:8px 0; }
+.np-flow-step {
+  display:flex; align-items:center; gap:10px;
+  padding:5px 10px; background:var(--s2); border:1px solid var(--ol);
+  font-size:8.5px; color:var(--on2);
+}
+.np-flow-step .nr {
+  min-width:20px; height:20px; background:var(--acc);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:700; font-size:8px; flex-shrink:0; border-radius:2px;
+}
+.np-flow-arrow {
+  display:flex; justify-content:center; align-items:center;
+  height:14px; color:var(--xdim); font-size:10px;
+}
+/* Abschnitts-Divider für Navigation */
+.np-div-sec {
+  font-size:8px; color:var(--xdim); letter-spacing:.1em; text-transform:uppercase;
+  margin:20px 0 4px; font-family:var(--f-mono);
+}
+
+/* ── Drucken ────────────────────────────── */
+@media print {
+  .hb-topbar, .hb-nav { display:none !important; }
+  .hb-layout { display:block; }
+  .np-wrap { padding:0; }
+  .np-page { box-shadow:none; border:none; margin:0; width:100%; padding:14mm 18mm; page-break-after:always; }
+}
+
+@media (max-width:700px) {
+  .hb-layout { grid-template-columns:1fr; }
+  .hb-nav { display:none; }
+  .np-wrap { padding:16px; }
+  .np-page { padding:22px 18px; }
+  .np-g2, .np-g3 { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────── -->
+<div class="hb-topbar">
+  <span class="hb-logo">BlockCalc</span>
+  <span class="hb-title">Benutzerhandbuch · v1.0</span>
+  <span class="hb-sep"></span>
+  <button class="hb-theme" onclick="toggleTheme()">Hell / Dunkel</button>
+</div>
+
+<div class="hb-layout">
+
+<!-- ── Navigation ──────────────────────────── -->
+<nav class="hb-nav">
+  <div class="hb-nav-sec">Handbuch</div>
+  <a href="#deckblatt" class="top">Titelblatt</a>
+
+  <div class="hb-nav-sec">1 · Übersicht</div>
+  <a href="#s11">1.1 Benutzeroberfläche</a>
+  <a href="#s12">1.2 Projektverwaltung</a>
+  <a href="#s13">1.3 Berechnungsablauf</a>
+
+  <div class="hb-nav-sec">2 · Eingabe</div>
+  <a href="#s21">2.1 Geometrie</a>
+  <a href="#s22">2.2 Bodenprofil</a>
+  <a href="#s23">2.3 Einwirkungen</a>
+  <a href="#s24">2.4 Teilsicherheiten</a>
+
+  <div class="hb-nav-sec">3 · Berechnung</div>
+  <a href="#s31">3.1 Systemmodell</a>
+  <a href="#s32">3.2 Bemessungswerte</a>
+  <a href="#s33">3.3 GZT Standsicherheit</a>
+  <a href="#s331">3.3.1 Erddruckbeiwerte</a>
+  <a href="#s332">3.3.2 Erddruckkräfte</a>
+  <a href="#s333">3.3.3 Reibungskräfte &amp; Ew</a>
+  <a href="#s334">3.3.4 Nulllinie y_NL</a>
+  <a href="#s335">3.3.5 Sohlkräfte N_u, R_u</a>
+  <a href="#s336">3.3.6 Grenzmoment M_u</a>
+  <a href="#s34">3.4 GZG Gebrauchstauglichkeit</a>
+  <a href="#s35">3.5 Ergänzende Nachweise</a>
+
+  <div class="hb-nav-sec">4 · Ergebnisse</div>
+  <a href="#s41">4.1 Nachweismatrix</a>
+  <a href="#s42">4.2 GZT-Diagramm</a>
+  <a href="#s43">4.3 Statusanzeige</a>
+
+  <div class="hb-nav-sec">Anhang</div>
+  <a href="#anhA">A · Normen & Literatur</a>
+  <a href="#anhB">B · Formelzeichen</a>
+</nav>
+
+<!-- ── Hauptinhalt ──────────────────────────── -->
+<main class="hb-main">
+<div class="np-wrap">
+
+<!-- ════════════════════════════════════════════
+     DECKBLATT
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="deckblatt">
+  <div class="np-firma">Benutzerhandbuch — Standsicherheitsnachweis Blockfundament</div>
+  <div class="np-ct">BlockCalc</div>
+  <div class="np-cs">Standsicherheitsnachweis für Blockfundamente nach SIA 267 / Steckner 1989</div>
+
+  <div class="np-cblock">
+    <div class="np-cmeta">
+      <div class="k">Dokument</div><div class="v">Benutzerhandbuch</div>
+      <div class="k">Version</div><div class="v">1.0</div>
+      <div class="k">Datum</div><div class="v">2026</div>
+      <div class="k">Anwendung</div><div class="v">Web-App (Desktop &amp; Android)</div>
+    </div>
+
+    <div class="np-p" style="margin-top:14px">
+      <strong>BlockCalc</strong> ist eine Web-Applikation zur Standsicherheitsberechnung von tief eingespannten Blockfundamenten
+      für Fahrleitungsmasten. Die Berechnungen erfolgen nach dem analytischen Verfahren von Steckner (1989)
+      in Verbindung mit den Normen SIA 267:2013 (Geotechnik) und SIA 261:2020 (Einwirkungen).
+    </div>
+    <div class="np-p">
+      Das Programm läuft vollständig im Browser — ohne Installation, ohne Serververbindung.
+      Alle Projektdaten werden lokal im Gerät gespeichert (IndexedDB).
+    </div>
+
+    <div class="np-badges">
+      <span class="np-badge">SIA 267:2013</span>
+      <span class="np-badge">SIA 261:2020</span>
+      <span class="np-badge">Steckner 1989</span>
+      <span class="np-badge">Three.js r128</span>
+      <span class="np-badge">Single-File App</span>
+    </div>
+  </div>
+
+  <div style="margin-top:32px">
+    <div class="np-sh2">Inhalt</div>
+    <table class="np-tbl">
+      <thead><tr><th>Nr.</th><th>Abschnitt</th><th>Inhalt</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Programmübersicht &amp; Workflow</td><td style="color:var(--dim)">Benutzeroberfläche, Projektverwaltung, Ablauf</td></tr>
+        <tr><td>2</td><td>Eingabeparameter</td><td style="color:var(--dim)">Geometrie, Boden, Einwirkungen, Sicherheiten</td></tr>
+        <tr><td>3</td><td>Berechnungsgrundlagen</td><td style="color:var(--dim)">Systemmodell, GZT Steckner Gl.66, GZG Winkler</td></tr>
+        <tr><td>4</td><td>Ergebnisinterpretation</td><td style="color:var(--dim)">Nachweismatrix, GZT-Diagramm, Statusanzeige</td></tr>
+        <tr><td>A</td><td>Normen &amp; Literatur</td><td style="color:var(--dim)">Normverweise, Literaturangaben</td></tr>
+        <tr><td>B</td><td>Formelzeichen</td><td style="color:var(--dim)">Vollständige Symbolliste mit Einheiten</td></tr>
+        <tr><td>C</td><td>Validierungsbeispiele</td><td style="color:var(--dim)">Typ A / C / D mit Referenzwerten</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /deckblatt -->
+
+
+<!-- ════════════════════════════════════════════
+     1 · PROGRAMMÜBERSICHT & WORKFLOW
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap1">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>1 · Programmübersicht</span></div>
+
+  <div class="np-ch" id="s11">1 · Programmübersicht &amp; Workflow</div>
+
+  <div class="np-sh">1.1 · Benutzeroberfläche</div>
+
+  <div class="np-p">
+    BlockCalc verwendet auf dem Desktop ein <strong>3-Spalten-Layout</strong>: links die Eingabe, mittig
+    der interaktive 3D-Viewer, rechts das Ergebnispanel. Auf Mobilgeräten (Smartphone, Tablet) wird
+    eine <strong>Bottom-Navigation</strong> mit drei Tabs verwendet (Eingabe / 3D / Nachweise).
+  </div>
+
+  <div class="np-g2" style="margin:10px 0">
+    <div>
+      <div class="np-sh2">Desktop (≥ 768 px)</div>
+      <div class="np-img-ph" style="height:160px">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="2" y="3" width="20" height="14" rx="1"/><line x1="8" y1="3" x2="8" y2="17"/><line x1="16" y1="3" x2="16" y2="17"/>
+          <line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+        <span>Screenshot Desktop-Layout<br><span style="font-size:7.5px;color:var(--xdim)">Topbar · 3-Spalten · Statusbar</span></span>
+      </div>
+    </div>
+    <div>
+      <div class="np-sh2">Mobil (&lt; 768 px)</div>
+      <div class="np-img-ph" style="height:160px">
+        <svg width="32" height="48" viewBox="0 0 16 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1" y="0.5" width="14" height="23" rx="2"/>
+          <line x1="1" y1="19" x2="15" y2="19"/>
+          <circle cx="8" cy="21.5" r="1"/>
+        </svg>
+        <span>Screenshot Mobile-Layout<br><span style="font-size:7.5px;color:var(--xdim)">Bottom-Nav · Tab-Panels</span></span>
+      </div>
+    </div>
+  </div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Bereich</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Topbar</strong></td><td>Programmname, Projektname, Einstellungen, Speichern, Nachweisplot, Berechnen</td></tr>
+      <tr><td><strong>Linke Spalte</strong></td><td>Tabs: Projekt / Geometrie / Boden / Lasten — alle Eingabeparameter</td></tr>
+      <tr><td><strong>Mittlere Spalte</strong></td><td>Interaktiver 3D-Viewer (Orbit/Zoom), zeigt Fundament mit Bodenschichten</td></tr>
+      <tr><td><strong>Rechte Spalte</strong></td><td>Ergebnisse je Lastfall: Nachweise mit Auslastungswerten, GZT-Diagramm</td></tr>
+      <tr><td><strong>Statusbar</strong></td><td>Projektname, Gesamtstatus (Erfüllt / Nicht erfüllt), Bearbeitungshinweise</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s12">1.2 · Projektverwaltung</div>
+
+  <div class="np-p">
+    Projekte werden lokal im Browser gespeichert (<strong>IndexedDB</strong>).
+    Kein Internet erforderlich. Projekte können als JSON-Datei exportiert und auf anderen Geräten importiert werden.
+  </div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Aktion</th><th>Bedienung</th><th>Hinweis</th></tr></thead>
+    <tbody>
+      <tr><td>Neues Projekt</td><td>Topbar · ··· · Neu</td><td>Legt leeres Projekt an oder aus Template</td></tr>
+      <tr><td>Speichern</td><td>Topbar · Diskette-Icon</td><td>Überschreibt das geladene Projekt</td></tr>
+      <tr><td>Laden</td><td>Tab "Projekt" · Projektliste</td><td>Klick auf Projekteintrag</td></tr>
+      <tr><td>Templates</td><td>Tab "Projekt" · Neue aus Template</td><td>Eingebaute Beispiele Typ A / C / D</td></tr>
+      <tr><td>Exportieren</td><td>Einstellungen · Datenaustausch</td><td>JSON-Download aller Projekte</td></tr>
+      <tr><td>Importieren</td><td>Einstellungen · Datenaustausch</td><td>JSON-Upload, Projekte werden ergänzt</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s13">1.3 · Berechnungsablauf</div>
+
+  <div class="np-flow">
+    <div class="np-flow-step"><span class="nr">1</span><span><strong>Geometrie eingeben</strong> — B, L, H_Block, H_Kopf, Überdeckung ü, Exzentrizitäten e_x/e_y</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">2</span><span><strong>Bodenprofil definieren</strong> — Schichten mit φ', c', γ, M_E; Grundwasser; Neigung</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">3</span><span><strong>Lasten eingeben</strong> — charakteristische Normalkraft, Horizontalkräfte, Momente je Richtung</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">4</span><span><strong>Lastfälle konfigurieren</strong> — Lastfallkombinationen (Quer- und Längsrichtung), γ_G / γ_W</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">5</span><span><strong>Berechnen</strong> — Schaltfläche in der Topbar auslösen</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">6</span><span><strong>Ergebnisse prüfen</strong> — Auslastungswerte η je Lastfall, GZT-Diagramm</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">7</span><span><strong>Nachweisplot exportieren</strong> — vollständiger A4-Bericht, druckbar / PDF</span></div>
+  </div>
+
+</div><!-- /kap1 -->
+
+
+<!-- ════════════════════════════════════════════
+     2 · EINGABEPARAMETER
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap2">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>2 · Eingabeparameter</span></div>
+
+  <div class="np-ch">2 · Eingabeparameter</div>
+
+  <div class="np-sh" id="s21">2.1 · Geometrie</div>
+
+  <div class="np-geo" style="display:flex; gap:16px; align-items:flex-start; margin-bottom:10px">
+    <div id="hb-system-svg" style="width:240px; min-width:200px"></div>
+    <div style="flex:1">
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Parameter</th><th>Einheit</th><th>Beschreibung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">B</td><td>Fundamentbreite</td><td>[m]</td><td>Aussenabmessung in x-Richtung</td></tr>
+          <tr><td class="sym">L</td><td>Fundamentlänge</td><td>[m]</td><td>Aussenabmessung in y-Richtung</td></tr>
+          <tr><td class="sym">H_Block</td><td>Blockhöhe</td><td>[m]</td><td>Höhe des Betonfundaments inkl. Überdeckung</td></tr>
+          <tr><td class="sym">B_Kopf</td><td>Kopfbreite</td><td>[m]</td><td>Breite des Maststumpfs über GOK</td></tr>
+          <tr><td class="sym">L_Kopf</td><td>Kopflänge</td><td>[m]</td><td>Länge des Maststumpfs über GOK</td></tr>
+          <tr><td class="sym">H_Kopf</td><td>Kopfhöhe</td><td>[m]</td><td>Höhe des Maststumpfs über GOK</td></tr>
+          <tr><td class="sym">ü</td><td>Überdeckung</td><td>[m]</td><td>Erdüberdeckung über Blockoberkante</td></tr>
+          <tr><td class="sym">e_x</td><td>Exzentrizität x</td><td>[m]</td><td>Versatz Mastachse gegenüber Fundamentachse</td></tr>
+          <tr><td class="sym">e_y</td><td>Exzentrizität y</td><td>[m]</td><td>Versatz Mastachse in y-Richtung</td></tr>
+          <tr><td class="sym">γ_Beton</td><td>Wichte Beton</td><td>[kN/m³]</td><td>Typisch 24–25 kN/m³</td></tr>
+          <tr><td class="sym">γ_Auff.</td><td>Wichte Auffüllung</td><td>[kN/m³]</td><td>Erdreich über Fundamentoberkante</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="np-note">
+    <strong>t_eff = H_Block + ü</strong> — die effektive Einbindetiefe t ergibt sich automatisch aus der Summe
+    von Blockhöhe und Überdeckung. Sie wird in der App als <em>t</em> angezeigt und in allen
+    Berechnungen direkt verwendet.
+  </div>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s22">2.2 · Bodenprofil &amp; Schichten</div>
+
+  <div class="np-p">
+    Das Bodenprofil besteht aus einer oder mehreren Schichten. Jede Schicht wird durch
+    eine aufklappbare Karte erfasst. Die letzte Schicht gilt als halbunendlich (d = ∞).
+  </div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Symbol</th><th>Parameter</th><th>Einheit</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td class="sym">φ'</td><td>Reibungswinkel (charakteristisch)</td><td>[°]</td><td>Effektiver innerer Reibungswinkel</td></tr>
+      <tr><td class="sym">c'</td><td>Kohäsion (charakteristisch)</td><td>[kPa]</td><td>Effektive Kohäsion; für Sand/Kies = 0</td></tr>
+      <tr><td class="sym">γ</td><td>Wichte (trocken/feucht)</td><td>[kN/m³]</td><td>Oberhalb Grundwasser</td></tr>
+      <tr><td class="sym">γ'</td><td>Wichte (aufgetrieben)</td><td>[kN/m³]</td><td>Unterhalb Grundwasserspiegel</td></tr>
+      <tr><td class="sym">M_E</td><td>Steifemodul</td><td>[MN/m²]</td><td>Für Bettungsziffer C₁ (GZG Winkler)</td></tr>
+      <tr><td class="sym">d</td><td>Schichtdicke</td><td>[m]</td><td>Letzte Schicht: d = ∞ (unbegrenzt)</td></tr>
+      <tr><td class="sym">GW-Tiefe</td><td>Grundwasserstand</td><td>[m u. GOK]</td><td>Tiefe unter Geländeoberkante</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-sh2">Standard-Bodenpresets</div>
+  <table class="np-tbl">
+    <thead><tr><th>Preset</th><th>φ' [°]</th><th>c' [kPa]</th><th>γ [kN/m³]</th><th>γ' [kN/m³]</th><th>M_E [MN/m²]</th></tr></thead>
+    <tbody>
+      <tr><td>Kies</td><td class="r">38</td><td class="r">0</td><td class="r">20.0</td><td class="r">10.5</td><td class="r">80</td></tr>
+      <tr><td>Sand</td><td class="r">32</td><td class="r">0</td><td class="r">19.0</td><td class="r">9.5</td><td class="r">40</td></tr>
+      <tr><td>Schluff</td><td class="r">28</td><td class="r">5</td><td class="r">18.5</td><td class="r">8.5</td><td class="r">15</td></tr>
+      <tr><td>Ton</td><td class="r">20</td><td class="r">20</td><td class="r">18.0</td><td class="r">8.0</td><td class="r">8</td></tr>
+      <tr><td>Fels</td><td class="r">45</td><td class="r">100</td><td class="r">26.0</td><td class="r">16.0</td><td class="r">500</td></tr>
+    </tbody>
+  </table>
+
+</div><!-- /kap2a -->
+
+<div class="np-page" id="kap2b">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>2 · Eingabeparameter (Forts.)</span></div>
+
+  <div class="np-sh" id="s23">2.3 · Einwirkungen &amp; Lastfälle</div>
+
+  <div class="np-p">
+    Einwirkungen werden als <strong>charakteristische Werte</strong> am Mastfuss (= Fundamentkopf-Oberkante)
+    eingegeben. Die Bemessungswerte werden durch Multiplikation mit den Teilsicherheitsbeiwerten berechnet.
+  </div>
+
+  <table class="np-tbl" style="margin-bottom:10px">
+    <thead><tr><th>Symbol</th><th>Einwirkung</th><th>Einheit</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Ständige Einwirkungen (Index G)</td></tr>
+      <tr><td class="sym">N_G</td><td>Normalkraft (ständig)</td><td>[kN]</td><td>Mastgewicht, Leitungsgewicht, Isolatoren</td></tr>
+      <tr><td class="sym">H_Gx</td><td>Horizontalkraft x (ständig)</td><td>[kN]</td><td>Z.B. einseitiger Seilzug</td></tr>
+      <tr><td class="sym">H_Gy</td><td>Horizontalkraft y (ständig)</td><td>[kN]</td><td>Längsrichtung Gleis</td></tr>
+      <tr><td class="sym">M_Gx</td><td>Moment x (ständig)</td><td>[kNm]</td><td>Am Mastfuss; positiv = belastende Richtung</td></tr>
+      <tr><td class="sym">M_Gy</td><td>Moment y (ständig)</td><td>[kNm]</td><td></td></tr>
+      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Veränderliche Einwirkungen (Index W = Wind)</td></tr>
+      <tr><td class="sym">H_Wx</td><td>Windkraft x</td><td>[kN]</td><td>Windlast auf Mast + Leiter quer</td></tr>
+      <tr><td class="sym">H_Wy</td><td>Windkraft y</td><td>[kN]</td><td>Windlast längs</td></tr>
+      <tr><td class="sym">M_Wx</td><td>Windmoment x</td><td>[kNm]</td><td>Am Mastfuss</td></tr>
+      <tr><td class="sym">M_Wy</td><td>Windmoment y</td><td>[kNm]</td><td></td></tr>
+      <tr><td class="sym">h_mast</td><td>Masthöhe</td><td>[m]</td><td>Hebelarm für Horizontalkräfte</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-sh2">Lastfallkombinationen</div>
+  <div class="np-p">
+    Pro Lastfall werden die Einwirkungskomponenten (x / y / beide) aktiviert und die Teilsicherheitsbeiwerte
+    γ_G und γ_W festgelegt. Typische Kombinationen nach SIA 261:
+  </div>
+  <table class="np-tbl">
+    <thead><tr><th>Lastfall</th><th>Richtung</th><th>γ_G</th><th>γ_W</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr><td>LF 1</td><td>Quer (x)</td><td class="r">1.35</td><td class="r">1.50</td><td>Massgebend quer zur Gleisachse</td></tr>
+      <tr><td>LF 2</td><td>Längs (y)</td><td class="r">1.35</td><td class="r">1.50</td><td>Massgebend längs der Gleisachse</td></tr>
+      <tr><td>LF 3</td><td>Schief (x+y)</td><td class="r">1.35</td><td class="r">1.50</td><td>Kombinierte Windrichtung</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s24">2.4 · Teilsicherheitsbeiwerte</div>
+
+  <div class="np-p">Standard-Werte nach SIA 267:2013. Können in den Einstellungen projektspezifisch angepasst werden.</div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Symbol</th><th>Bedeutung</th><th>Standard</th><th>Norm</th></tr></thead>
+    <tbody>
+      <tr><td class="sym">γ_G</td><td>Ständige Einwirkungen</td><td class="r">1.35</td><td>SIA 261 §4.4</td></tr>
+      <tr><td class="sym">γ_Q</td><td>Veränderliche Einwirkungen</td><td class="r">1.50</td><td>SIA 261 §4.4</td></tr>
+      <tr><td class="sym">γ_φ</td><td>Reibungswinkel φ'</td><td class="r">1.20</td><td>SIA 267 §2.4</td></tr>
+      <tr><td class="sym">γ_c</td><td>Kohäsion c'</td><td class="r">1.50</td><td>SIA 267 §2.4</td></tr>
+      <tr><td class="sym">γ_Ea</td><td>Aktiver Erddruck</td><td class="r">1.00</td><td>SIA 267 §7.3</td></tr>
+      <tr><td class="sym">γ_Ep</td><td>Passiver Erddruck / Erdwiderstand</td><td class="r">1.50</td><td>SIA 267 §7.3</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-note">
+    <strong>Bemessungswerte der Scherfestigkeit:</strong><br>
+    tan(φ_d) = tan(φ_k) / γ_φ &nbsp;→&nbsp; φ_d = arctan(tan(φ_k) / γ_φ)<br>
+    c_d = c_k / γ_c
+  </div>
+
+</div><!-- /kap2b -->
+
+
+<!-- ════════════════════════════════════════════
+     3 · BERECHNUNGSGRUNDLAGEN
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap3a">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>3 · Berechnungsgrundlagen</span></div>
+
+  <div class="np-ch">3 · Berechnungs- &amp; Nachweisgrundlagen</div>
+
+  <div class="np-sh" id="s31">3.1 · Systemmodell Blockfundament</div>
+
+  <div class="np-g2">
+    <div class="np-img-ph" style="height:220px">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M4 20 L4 8 L20 8 L20 20 Z"/><rect x="8" y="3" width="8" height="5"/>
+        <line x1="0" y1="8" x2="24" y2="8" stroke-dasharray="2,2"/>
+      </svg>
+      <span>3D-Modell des Fundaments<br><span style="font-size:7.5px;color:var(--xdim)">aus App-Viewer exportiert</span></span>
+    </div>
+    <div>
+      <div class="np-p">
+        Das Blockfundament ist ein tief eingebetteter Betonkörper (Rechteck-Querschnitt B × L),
+        der den Mastfuss aufnimmt. Unter Biegebelastung dreht sich der Block um eine
+        <strong>Nulllinie y_NL</strong> innerhalb der Einbindungstiefe.
+      </div>
+      <div class="np-p">
+        Oberhalb der Nulllinie wirken destabilisierende Erddrücke (aktiv Ea, mobilisierter
+        Erdwiderstand Ew). Unterhalb der Nulllinie wirken stabilisierende Kräfte (passiver
+        Erdwiderstand Ep, Ruhedruck E0'). An der Sohle wirken Normalreaktion N_u und Sohlreibung R_u.
+      </div>
+      <div class="np-p">
+        <strong>Nachweiskonzept Blockfundament:</strong>
+      </div>
+      <table class="np-tbl">
+        <thead><tr><th>Grenzzustand</th><th>Kriterium</th></tr></thead>
+        <tbody>
+          <tr><td>GZT Standsicherheit</td><td>η = M_u / M_d ≥ 1.0 &nbsp;(Steckner Gl.66)</td></tr>
+          <tr><td>GZG Gebrauchstauglichkeit</td><td>tan(α) ≤ tan(α)_zul &nbsp;(Winkler)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s32">3.2 · Bemessungsgrössen &amp; Schnittgrössen</div>
+
+  <div class="np-sh2">Einbindetiefe &amp; Querschnittsbreite</div>
+  <div class="np-calc">
+    <div class="np-cf">t = H_Block + ü &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[m]  Effektive Einbindetiefe (Blockhöhe + Überdeckung)</div>
+    <div class="np-cf">b_id = B + 2 · 0.3·t · tan(φ_d) &nbsp;&nbsp;[m]  Wirksame Querschnittsbreite nach Steckner</div>
+  </div>
+
+  <div class="np-sh2">Eigengewicht &amp; Normalkraft</div>
+  <div class="np-calc">
+    <div class="np-cf">G_k = (B·L·H_Block + B_k·L_k·(H_Kopf+ü)) · γ_Beton + (B·L − B_k·L_k) · ü · γ_Auff.</div>
+    <div class="np-cf">N_d = γ_G · (N_G + G_k) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kN]  Bemessungsnormalkraft</div>
+  </div>
+
+  <div class="np-sh2">Bemessungsmoment am OK Fundament</div>
+  <div class="np-calc">
+    <div class="np-cf">arm = t + H_Kopf &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[m]  Hebelarm für Horizontalkräfte</div>
+    <div class="np-cf">M_xd = H_xd·arm + γ_G·M_Gx + γ_W·M_Wx + N_d·e_y &nbsp;[kNm]</div>
+    <div class="np-cf">M_yd = H_yd·arm + γ_G·M_Gy + γ_W·M_Wy + N_d·e_x &nbsp;[kNm]</div>
+    <div class="np-cf">M_d  = sqrt(M_xd² + M_yd²) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kNm]  Massgebendes Bemessungsmoment</div>
+  </div>
+
+  <div class="np-note">
+    Das massgebende Bemessungsmoment M_d wird am Fundament-OK (Blockoberkante = GOK − ü) ausgewertet.
+    Bei mehreren aktiven Richtungen wird die vektorielle Resultierende verwendet.
+  </div>
+</div><!-- /kap3a -->
+
+<!-- GZT Seite 1: Erddruckbeiwerte + Erddruckkräfte -->
+<div class="np-page" id="kap3b">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>3 · GZT Standsicherheitsnachweis</span></div>
+
+  <div class="np-ch" id="s33">3.3 · GZT — Standsicherheitsnachweis nach Steckner (1989)</div>
+
+  <div class="np-p">
+    Das Verfahren nach <strong>Steckner (Bautechnik 2/1989)</strong> bestimmt das Grenzmoment M_u, das der eingebettete Block dem Bemessungsmoment M_d entgegenstellen kann. Der Block dreht sich um eine <strong>Nulllinie y_NL</strong> (Drehpunkt, gemessen von UK). Oberhalb widersteht der Boden passiv, unterhalb kehren sich die Druckfiguren um.
+  </div>
+  <div class="np-p">Berechnungsablauf (Steckner Bild 5): Beiwerte → b_id → Erddrücke → Reibung → y_NL → Sohlkräfte → M_u → η</div>
+
+  <div class="np-sh" id="s331">3.3.1 · Erddruckbeiwerte (Gl.27–30)</div>
+
+  <div class="np-p">Alle Erddrücke verwenden die <strong>horizontale Komponente</strong> des Coulomb-Erddrucks. Der Wandreibungswinkel δ₁ gilt für aktiven und passiv-unter-NL Druck; für passiv-über-NL wird δ_p separat bestimmt.</div>
+
+  <div class="np-sh2">Wandreibungswinkel</div>
+  <div class="np-calc">
+    <div class="np-cf">δ₁ = φ'_k / 2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Wandreibung aktiv (positiv) + passiv unter NL &nbsp;[nach Steckner §5.3]</div>
+    <div class="np-cf">δ_p = δ₁ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Wandreibung passiv über NL (Startannahme); Reduktion wenn N_u &lt; 0 &nbsp;(Gl.49/50)</div>
+  </div>
+
+  <div class="np-sh2">λ_a — aktiver Erddruckbeiwert (Gl.27, Coulomb mit δ=+δ₁, β_a=0)</div>
+  <div class="np-calc">
+    <div class="np-cf">λ_a = [ cos(φ'_k) / ( 1 + √( sin(φ'_k+δ₁)·sin(φ'_k) / cos(δ₁) ) ) ]²</div>
+    <div class="np-cv">Beispiel φ=30°, δ₁=15°:  λ_a = [0.866/(1+0.604)]² = 0.291</div>
+  </div>
+
+  <div class="np-sh2">λ_p — passiver Erddruckbeiwert über NL (Gl.28, Coulomb mit δ=−δ_p, β_p=0)</div>
+  <div class="np-calc">
+    <div class="np-cf">λ_p = [ cos(φ'_k) / ( 1 − √( sin(φ'_k+δ_p)·sin(φ'_k) / cos(δ_p) ) ) ]²</div>
+    <div class="np-cv">Beispiel φ=30°, δ_p=15°:  λ_p = [0.866/(1−0.604)]² = 4.80</div>
+    <div class="np-cv">Hinweis: Steckner §5.3 verwendet FEM-Ansatz δ_p = −0.5·φ'_k (neg. Wandreibung passiv)</div>
+  </div>
+
+  <div class="np-sh2">λ'_p — passiver Erddruckbeiwert unter NL (Gl.29, mit δ=+δ₁)</div>
+  <div class="np-calc">
+    <div class="np-cf">λ'_p = [ cos(φ'_k) / ( 1 − √( sin(φ'_k−δ₁)·sin(φ'_k) / cos(δ₁) ) ) ]²</div>
+    <div class="np-cv">Beispiel φ=30°, δ₁=15°:  λ'_p = [0.866/0.634]² = 1.867</div>
+  </div>
+
+  <div class="np-sh2">λ_0 — Erdruhedruckbeiwert (Gl.30)</div>
+  <div class="np-calc">
+    <div class="np-cf">λ_0 = 1 − sin(φ'_k) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jaky-Formel</div>
+    <div class="np-cv">Beispiel φ=30°:  λ_0 = 1 − 0.5 = 0.50</div>
+  </div>
+
+  <div class="np-sh2">Ideelle Druckwandbreite b_id (Gl.23–26)</div>
+  <div class="np-calc">
+    <div class="np-cf">b_id = B + 0.6 · t · tan(φ'_k) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[m]  wirksame Querschnittsbreite nach Steckner</div>
+    <div class="np-cv">Beispiel B=1.20m, t=3.0m, φ=30°:  b_id = 1.20 + 0.6·3.0·0.577 = 2.239 m</div>
+  </div>
+
+  <div class="np-hr"></div>
+
+  <div class="np-sh" id="s332">3.3.2 · Erddruckkräfte (Gl.31–35)</div>
+
+  <div class="np-p">Alle Kräfte wirken auf die Fundamentoberfläche. Der Erddruck steigt linear ab GOK mit der Tiefe z. Das Integral umfasst die jeweilige Zone (über oder unter NL). Für Mehrschichtböden erfolgt die Integration schichtweise.</div>
+
+  <div class="np-g2">
+    <div>
+      <div class="np-sh2">Über der Nulllinie (Höhe h = t − y)</div>
+      <div class="np-calc">
+        <div class="np-cf">Ea = ½·λ_a·γ_e·b_id·h² &nbsp;&nbsp;&nbsp;&nbsp;(Gl.31)</div>
+        <div class="np-cv">aktiver Erddruck (destabilisierend)</div>
+        <div class="np-cf" style="margin-top:4px">Ep = ½·λ_p·γ_e·b_id·h² &nbsp;&nbsp;&nbsp;&nbsp;(Gl.32)</div>
+        <div class="np-cv">voller passiver Widerstand</div>
+        <div class="np-cf" style="margin-top:4px">E0 = ½·λ_0·γ_e·A·h² &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Gl.34)</div>
+        <div class="np-cv">Erdruhedruck (A = B·L Grundfläche)</div>
+      </div>
+    </div>
+    <div>
+      <div class="np-sh2">Unter der Nulllinie (Höhe y)</div>
+      <div class="np-calc">
+        <div class="np-cf">E'p = ½·λ'_p·γ_e·b_id·y(2t−y) &nbsp;(Gl.33)</div>
+        <div class="np-cv">passiver Widerstand (Gegenseite)</div>
+        <div class="np-cf" style="margin-top:4px">E'0 = ½·λ_0·γ_e·A·y(2t−y) &nbsp;&nbsp;&nbsp;(Gl.35)</div>
+        <div class="np-cv">Erdruhedruck unter NL</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="np-sh2">Hebelarme ab OK Fundament (Gl.36–37)</div>
+  <div class="np-calc">
+    <div class="np-cf">v  = 2/3·(t−y) − ü &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Gl.36)  Hebelarm Kräfte über NL</div>
+    <div class="np-cv">Beispiel t=3.0, y=0.221, ü=0.80: v = 1.853 − 0.80 = 1.053 m</div>
+    <div class="np-cf" style="margin-top:4px">v' = (2/3)·[3t(t−y)+y²]/(2t−y) − ü &nbsp;&nbsp;&nbsp;(Gl.37)  Hebelarm Kräfte unter NL</div>
+    <div class="np-cv">Beispiel: v' = 2.890 − 0.80 = 2.091 m</div>
+  </div>
+
+</div><!-- /kap3b -->
+
+<!-- GZT Seite 2: Reibungskräfte + Nulllinie + Sohlkräfte + Grenzmoment -->
+<div class="np-page" id="kap3b2">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>3 · GZT (Forts.)</span></div>
+
+  <div class="np-sh" id="s333">3.3.3 · Reibungskräfte und resultierender Erdwiderstand (Gl.38–44)</div>
+
+  <div class="np-p">Den Erddruckkräften zugeordnete <strong>vertikale Reibungskomponenten</strong> (tangential zur Wandfläche) beeinflussen die Sohlnormalkraft N_u und das Grenzmoment.</div>
+
+  <div class="np-g2">
+    <div>
+      <div class="np-sh2">Reibungskräfte (Gl.38–42)</div>
+      <div class="np-calc">
+        <div class="np-cf">Ra   = Ea  · tan(δ₁) &nbsp;&nbsp;(Gl.38) ↓ abwärts</div>
+        <div class="np-cf">Rp   = Ep  · tan(δ_p) &nbsp;(Gl.39) ↑ aufwärts wenn δ_p&gt;0</div>
+        <div class="np-cf">R'p  = E'p · tan(δ₁) &nbsp;&nbsp;(Gl.40) ↑ aufwärts</div>
+        <div class="np-cf">R0   = E0  · tan(δ₁) &nbsp;&nbsp;(Gl.41) zugehörige Reibung</div>
+        <div class="np-cf">R'0  = E'0 · tan(δ₁) &nbsp;&nbsp;(Gl.42) zugehörige Reibung</div>
+      </div>
+      <div class="np-note" style="margin-top:6px">
+        Reibungshebelarm = <strong>B/2 = A/2</strong> (halbe Fundamentbreite), da Reibung an der Sohle angreift.
+      </div>
+    </div>
+    <div>
+      <div class="np-sh2">Resultierender Erdwiderstand (Gl.43–44)</div>
+      <div class="np-calc">
+        <div class="np-cf">Ew  = Ep − Ea + R0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Gl.43)</div>
+        <div class="np-cv">netto über NL, Hebelarm v</div>
+        <div class="np-cf" style="margin-top:4px">E'w = E'p + R'0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Gl.44)</div>
+        <div class="np-cv">netto unter NL, Hebelarm v'</div>
+      </div>
+      <div class="np-note" style="margin-top:6px">
+        <strong>mob = 0.25</strong>: Mobilisierungsgrad passiver Erdwiderstand (Steckner §5.4). Wird <em>nicht</em> direkt in Gl.43 eingesetzt — Gl.43 verwendet den vollen Ep-Wert. mob erscheint im GZT-Diagramm als Visualisierung des mobilisierten Anteils zwischen E0 und Ep.
+      </div>
+    </div>
+  </div>
+
+  <div class="np-hr"></div>
+
+  <div class="np-sh" id="s334">3.3.4 · Nulllinie y_NL — Bisektionsverfahren (Gl.54)</div>
+
+  <div class="np-p">Die Nulllinie y (Abstand von UK) erfüllt die horizontale Kräftegleichgewichtsbedingung (Steckner Gl.54):</div>
+  <div class="np-calc">
+    <div class="np-cf">H* − Ew(y) + E'w(y) + R_u(y) = 0 &nbsp;&nbsp;&nbsp;(Gl.54)</div>
+    <div class="np-cv">→ Ew(y) − E'w(y) = H* + R_u(y) &nbsp;&nbsp;&nbsp;(Bisektionsziel)</div>
+  </div>
+
+  <div class="np-p">Da R_u von N_u abhängt und N_u von y, wird <strong>zweistufig</strong> iteriert:</div>
+  <div class="np-flow">
+    <div class="np-flow-step"><span class="nr">1</span><span>Näherungs-N_u mit vollem Ep über t berechnen → R_u_approx</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">2</span><span>Bisektion (50 Iter.): y₁ aus Ew(y)−E'w(y) = H*+R_u_approx</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">3</span><span>Exaktes R_u bei y₁ berechnen</span></div>
+    <div class="np-flow-arrow">↓</div>
+    <div class="np-flow-step"><span class="nr">4</span><span>Bisektion (50 Iter.): y_NL verfeinert mit exaktem R_u</span></div>
+  </div>
+
+  <div class="np-note" style="margin-top:8px">
+    Steckner leitet für den einfachen Fall (homogener Boden, kein ü) eine analytische Lösung via Hilfsgrössen U, W, S, T her (Gl.57–63). Die App verwendet das numerische Bisektionsverfahren — allgemeiner und für Mehrschichtböden geeignet.
+  </div>
+
+  <div class="np-hr"></div>
+
+  <div class="np-sh" id="s335">3.3.5 · Sohlkräfte (Gl.46, 48, 51)</div>
+
+  <div class="np-g2">
+    <div>
+      <div class="np-sh2">Sohlnormalkraft N_u (Gl.46)</div>
+      <div class="np-calc">
+        <div class="np-cf">N_u = N_d + Ra − Rp + R'p</div>
+        <div class="np-cv">N_d = γ_G·(N_G+G_k) &nbsp;Bemessungsnormalkraft</div>
+        <div class="np-cv">Ra  = Ea·tan(δ₁)   ↓ (erhöht N_u)</div>
+        <div class="np-cv">Rp  = Ep·tan(δ_p)  ↑ (reduziert N_u)</div>
+        <div class="np-cv">R'p = E'p·tan(δ₁)  ↑ (reduziert N_u)</div>
+        <div class="np-cf" style="margin-top:4px">Bedingung: N_u ≥ 0 &nbsp;(Gl.49)</div>
+        <div class="np-cv">Falls N_u &lt; 0: δ_p stufenweise reduzieren (bis δ_p=−δ₁)</div>
+      </div>
+    </div>
+    <div>
+      <div class="np-sh2">Exzentrizität u (Gl.47/48, Näherung)</div>
+      <div class="np-calc">
+        <div class="np-cf">u ≈ B/2 · (1 − (y_NL/B)²)</div>
+        <div class="np-cv">Winkler-Näherung (Abweichung &lt;3%)</div>
+        <div class="np-cf" style="margin-top:4px">Exakt (Steckner Gl.47–48):</div>
+        <div class="np-cv">x = N_u / (B·p_u) &nbsp;&nbsp;u = (A−x)/2</div>
+        <div class="np-cv">p_u aus Grundbruchformeln Gl.5–7</div>
+      </div>
+      <div class="np-sh2" style="margin-top:8px">Sohlreibung R_u (Gl.51)</div>
+      <div class="np-calc">
+        <div class="np-cf">R_u = N_u · tan(φ'_k)</div>
+        <div class="np-cv">φ'_k = charakteristischer Reibungswinkel (Gl.51)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="np-hr"></div>
+
+  <div class="np-sh" id="s336">3.3.6 · Grenzmoment M_u — Steckner Gl.66</div>
+
+  <div class="np-p">Das Grenzmoment M_u folgt aus dem Momentengleichgewicht ΣM = 0 um den Angriffspunkt von H* (= OK Block). Es enthält fünf stabilisierende Beiträge:</div>
+
+  <div class="np-calc">
+    <div class="np-cf">M_u = − (Ew_d − Ea_d + E0_a_d) · v &nbsp;&nbsp;&nbsp;Gl.66 Term 1: Netto-Erdwiderstand über NL</div>
+    <div class="np-cf">    + (Ep_b_d + E0_b_d) · v' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gl.66 Term 2: Kräfte unter NL (stabilisierend)</div>
+    <div class="np-cf">    + (Ra + Rp + R'p) · B/2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gl.66 Term 3: Reibungskräfte × B/2</div>
+    <div class="np-cf">    + R_u · (t − ü) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gl.66 Term 4: Sohlreibung × Blockhöhe H_Block</div>
+    <div class="np-cf">    + N_u · u &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gl.66 Term 5: Sohlreaktion × Exzentrizität</div>
+  </div>
+
+  <table class="np-tbl" style="margin-top:8px">
+    <thead><tr><th>Term</th><th>Bedeutung</th><th>Vorzeichen</th><th>Hinweis</th></tr></thead>
+    <tbody>
+      <tr><td>−(Ew−Ea+E0a)·v</td><td>Destab. Nettokraft über NL</td><td>−</td><td>Bewirkt Rotation</td></tr>
+      <tr><td>+(Ep_b+E0_b)·v'</td><td>Stabilisierend unter NL</td><td>+</td><td>Gegendruck</td></tr>
+      <tr><td>+(Ra+Rp+R'p)·B/2</td><td>Reibungskräfte</td><td>+</td><td>Vertikale Wandreibung</td></tr>
+      <tr><td>+R_u·(t−ü)</td><td>Sohlreibung × H_Block</td><td>+</td><td>Nicht R_u·t!</td></tr>
+      <tr><td>+N_u·u</td><td>Sohlreaktion</td><td>+</td><td>Winkler-Exzentrizität</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-sh2">Nachweis</div>
+  <div class="np-calc">
+    <div class="np-cf">η_GZT = M_u / M_d &nbsp;&nbsp;≥ 1.0 &nbsp;&nbsp;&nbsp;(Grenzzustand der Tragfähigkeit erfüllt)</div>
+    <div class="np-cv">M_d = H_d·(H_Kopf+ü) + γ_G·M_G + γ_W·M_W &nbsp;&nbsp;(Bemessungsmoment am OK Block)</div>
+  </div>
+
+
+</div><!-- /kap3b2 -->
+
+<div class="np-page" id="kap3c">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>3 · Berechnungsgrundlagen (Forts.)</span></div>
+
+  <div class="np-sh" id="s34">3.4 · GZG — Gebrauchstauglichkeit nach Steckner Gl.3 und Gl.11–21</div>
+
+  <div class="np-p">
+    Der GZG-Nachweis prüft die <strong>Schiefstellung des Mastfusses</strong> unter charakteristischen Lasten. Das Verfahren basiert auf den Steckner-Gleichungen 11–21 (Bautechnik 2/1989): Das Fundament rotiert starr; die Widerstände M₁ (stirnseitig) und M₂ (Sohle) begrenzen das aufnehmbare Moment M_α.
+  </div>
+
+  <div class="np-sh2">3.4.1 · Bettungsziffer C₁ (Steckner Gl.3)</div>
+  <div class="np-calc">
+    <div class="np-cf">C₁ = {4 + 0.6·(φ'_k − 20)} · 10⁴ · t/2 &nbsp;&nbsp;&nbsp;[kN/m³]  (Gl.3, horizontales Gelände)</div>
+    <div class="np-cf">C₁ = {4 + 0.6·(φ'_k − 20)} · 10⁴ · t/2 · (1 + β_p/40) &nbsp;(Gl.4, β_p ≤ 0)</div>
+    <div class="np-cv">Beispiel φ=30°, t=3.0m: C₁ = 10·10⁴·1.5 = 150'000 kN/m³ = 150 MN/m³</div>
+    <div class="np-cv">Mehrschicht: tiefengewichteter Mittelwert φ_avg; β_p = Geländeneigung</div>
+  </div>
+
+  <div class="np-sh2">3.4.2 · Charakteristische Einwirkungen und Schnittgrössen</div>
+  <div class="np-calc">
+    <div class="np-cf">N_α = N_k = G_k + N_G + N_W &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kN]   charakteristisch (γ = 1.0)</div>
+    <div class="np-cf">H_k = H_Gx + H_Wx &nbsp;&nbsp;&nbsp;(Quer) &nbsp;oder &nbsp;H_Gy + H_Wy  [kN]   massgebende Richtung</div>
+    <div class="np-cf">M_ok = H_k·(H_Kopf+ü) + M_G + M_W &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kNm]  Moment an OK Block (Bezugspunkt)</div>
+  </div>
+
+  <div class="np-sh2">3.4.3 · Kennzeichnende Drehwinkel (Gl.11–12)</div>
+  <div class="np-calc">
+    <div class="np-cf">tan α₁ = 6·(N_α·tan φ₂ + H_k) / (B·D²·C₁) &nbsp;&nbsp;&nbsp;(Gl.11)  Überwindung Sohlreibung</div>
+    <div class="np-cf">tan α₂ = 2·N_α / (A²·B·C₂) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Gl.12)  Abheben hintere Sohlkante</div>
+    <div class="np-cv">C₂ = C₁  (vertikale = horizontale Bettungsziffer nach Steckner)</div>
+  </div>
+
+  <div class="np-sh2">3.4.4 · Reaktionsmomente und M_α (Gl.13–21)</div>
+  <table class="np-tbl">
+    <thead><tr><th>Bereich</th><th>M₁ — stirnseit. Einspannung</th><th>M₂ — Sohlenreaktion</th><th>HD-Korrektur</th></tr></thead>
+    <tbody>
+      <tr><td>tan α ≤ tan α₁</td><td>(1/12)·B·D³·C₁·tan α &nbsp;(Gl.13)</td><td>(1/12)·B·A³·C₂·tan α &nbsp;(Gl.16)</td><td>H·D &nbsp;(Gl.18)</td></tr>
+      <tr><td>tan α₁ &lt; tan α ≤ 3tan α₁</td><td>½·D·(N_α·tanφ₂+H) = konst. &nbsp;(Gl.14)</td><td>(1/12)·B·A³·C₂·tan α &nbsp;(Gl.16)</td><td>(1/6)·H·D·(7−α/α₁) &nbsp;(Gl.19)</td></tr>
+      <tr><td>tan α ≥ 3 tan α₁</td><td>(1/36)·B·D³·C₁·tan α &nbsp;(Gl.15)</td><td>N_α·(A/2−(1/3)·√(2N_α/(B·C₂·α))) &nbsp;(Gl.17)</td><td>(2/3)·H·D &nbsp;(Gl.20)</td></tr>
+    </tbody>
+  </table>
+  <div class="np-calc" style="margin-top:6px">
+    <div class="np-cf">M_α(tan α) = M₁(tan α) + M₂(tan α) − HD-Korrektur(tan α)</div>
+    <div class="np-cf">Begrenzung: M_α ≤ M_u,char &nbsp;&nbsp;&nbsp;(Gl.21)  — M_u,char = GZT-Grenzmoment unter char. Lasten</div>
+  </div>
+
+  <div class="np-sh2">3.4.5 · Nachweis</div>
+  <div class="np-calc">
+    <div class="np-cf">M_α(tan α_zul) = berechnet bei tan α = tan α_zul = 0.005 (einstellbar)</div>
+    <div class="np-cf">tan α_res:  Bisektion → M_α(α_res) = M_ok &nbsp;&nbsp;(resultierende Schiefstellung)</div>
+    <div class="np-cf">η_GZG = M_α,begrenzt / M_ok  ≥ 1.0</div>
+    <div class="np-cv">Ausnutzungsgrad = M_ok / M_α (FEM-Konvention)</div>
+  </div>
+  <div class="np-note">
+    <strong>Validierung Typ C:</strong> φ=30°, t=3.0m, C₁=150MN/m³, M_ok=107.5kNm → tan α₁=0.00026, M₁=675kNm, M₂=43.7kNm, M_α=258.6kNm, η=2.41 (Ausnutzg.=0.416) ✓
+  </div>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s35">3.5 · Ergänzende Nachweise (Flachfundament)</div>
+
+  <div class="np-p">
+    Für das Flachfundament-Modell (in Entwicklung) werden folgende Nachweise nach SIA 267 / Hansen geführt.
+    Beim Blockfundament werden diese Werte informativ berechnet, sind jedoch <strong>nicht massgebend</strong>.
+  </div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Nachweis</th><th>Kriterium</th><th>Methode</th></tr></thead>
+    <tbody>
+      <tr><td>Grundbruch</td><td>R_d / V_d ≥ 1</td><td>Hansen (SIA 267 §4)</td></tr>
+      <tr><td>Gleiten</td><td>H_d / (N_d · tan φ_d) ≤ 1</td><td>SIA 267 §4.4</td></tr>
+      <tr><td>Ausmitte / Kippen</td><td>e ≤ B/6 (Kern-Bedingung)</td><td>SIA 267 §4.3</td></tr>
+      <tr><td>Sohlspannung</td><td>σ_max ≤ q_u</td><td>SIA 267, informativ</td></tr>
+    </tbody>
+  </table>
+
+</div><!-- /kap3c -->
+
+
+<!-- ════════════════════════════════════════════
+     4 · ERGEBNISSE & INTERPRETATION
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap4">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>4 · Ergebnisinterpretation</span></div>
+
+  <div class="np-ch">4 · Ergebnisse &amp; Interpretation</div>
+
+  <div class="np-sh" id="s41">4.1 · Nachweismatrix</div>
+
+  <div class="np-p">
+    Nach der Berechnung zeigt das rechte Panel alle Nachweise pro Lastfall als übersichtliche Karten.
+    Die Nachweise sind nach Grenzzustand gruppiert:
+  </div>
+
+  <table class="np-tbl" style="margin-bottom:12px">
+    <thead><tr><th>Grenzzustand</th><th>Nachweis</th><th>Auslastung η</th><th>Kriterium</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Blockfundament (Steckner) — massgebend</td></tr>
+      <tr><td>GZT</td><td>Standsicherheit Gl.66</td><td>M_u / M_d</td><td>≥ 1.0</td></tr>
+      <tr><td>GZG</td><td>Schiefstellung Mastfuss</td><td>α_zul / α</td><td>≥ 1.0</td></tr>
+      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Flachfundament (Hansen) — informativ bei Block</td></tr>
+      <tr><td>GZT</td><td>Grundbruch Hansen</td><td>R_d / V_d</td><td>≥ 1.0</td></tr>
+      <tr><td>GZT</td><td>Gleiten</td><td>R_gl / H_d</td><td>≥ 1.0</td></tr>
+      <tr><td>GZT</td><td>Ausmitte / Kippen</td><td>e ≤ B/6</td><td>im Kern</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s42">4.2 · GZT-Diagramm</div>
+
+  <div class="np-p">
+    Das GZT-Diagramm zeigt den Spannungszustand im Fundament grafisch. Es kann zwischen
+    Bemessungswerten (<strong>d</strong>) und charakteristischen Werten (<strong>k</strong>) umgeschaltet werden.
+  </div>
+
+  <div class="np-g2">
+    <div id="hb-gzt-svg"></div>
+    <div>
+      <table class="np-tbl">
+        <thead><tr><th>Element</th><th>Darstellung</th></tr></thead>
+        <tbody>
+          <tr><td>Ea (aktiv)</td><td>Rotes Trapez links, Pfeil →</td></tr>
+          <tr><td>Ew (mobilisiert)</td><td>Blaues Trapez rechts oben, Pfeil ←</td></tr>
+          <tr><td>Ep (voll passiv)</td><td>Gestrichelter Umriss rechts</td></tr>
+          <tr><td>E0 (Ruhedruck)</td><td>Grauer Pfeil (destab. über NL)</td></tr>
+          <tr><td>E0' (Ruhedruck)</td><td>Grauer Pfeil (stabilis. unter NL)</td></tr>
+          <tr><td>Nu (Sohlreaktion)</td><td>Grüner Pfeil ↑ an Sohle</td></tr>
+          <tr><td>Ru (Sohlreibung)</td><td>Grüner Pfeil ← an Sohle</td></tr>
+          <tr><td>y_NL</td><td>Gestrichelte horizontale Linie</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="np-hr"></div>
+  <div class="np-sh" id="s43">4.3 · Statusanzeige &amp; Nachweisplot</div>
+
+  <div class="np-p">
+    Der Gesamtstatus erscheint in der Statusbar (unten) und als Pill in der Topbar:
+  </div>
+  <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center">
+    <span class="np-eta ok">Erfüllt</span>
+    <span class="np-eta fail">Nicht erfüllt: GZT Standsicherheit</span>
+    <span class="np-eta inf">informativ</span>
+  </div>
+
+  <div class="np-p">
+    Der <strong>Nachweisplot-Button</strong> (Topbar, erscheint nach Berechnung) öffnet ein vollständiges
+    A4-Standsicherheitsdokument mit allen Berechnungsschritten — geeignet für die Vorlage beim Sachprüfer.
+    Der Bericht enthält:
+  </div>
+  <table class="np-tbl">
+    <thead><tr><th>Kapitel</th><th>Inhalt</th></tr></thead>
+    <tbody>
+      <tr><td>Titelblatt</td><td>Projektdaten, Normbasis, Revisionstabelle</td></tr>
+      <tr><td>1 · Systemübersicht</td><td>2D-Skizze, 3D-Modell, Geometrietabelle</td></tr>
+      <tr><td>2 · Baugrundparameter</td><td>Schichttabelle, Ka / Kph, Teilsicherheiten</td></tr>
+      <tr><td>3 · Einwirkungen</td><td>Charakteristische Lasten, G_k, Bemessungswerte je LF</td></tr>
+      <tr><td>4 · Nulllinie</td><td>H*, b_id, Bisektionsergebnis y_NL</td></tr>
+      <tr><td>5 · Erddrücke</td><td>Ea_d, Ew_d, E0, Ep mit Formeln + GZT-Diagramm</td></tr>
+      <tr><td>6 · Grenzmoment GZT</td><td>Sohlkräfte, Hebelarme, vollständige Gl.66, η</td></tr>
+      <tr><td>7 · GZG Schiefstellung</td><td>C₁, K, tan(α), η je Lastfall</td></tr>
+      <tr><td>8 · Zusammenfassung</td><td>Nachweismatrix η aller LF</td></tr>
+    </tbody>
+  </table>
+
+</div><!-- /kap4 -->
+
+
+<!-- ════════════════════════════════════════════
+     ANHANG A — NORMEN & LITERATUR
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap-anhA">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>Anhang A · Normen &amp; Literatur</span></div>
+
+  <div class="np-ch" id="anhA">Anhang A · Normen &amp; Literatur</div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Referenz</th><th>Titel</th><th>Anwendung</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>SIA 267:2013</td>
+        <td>Geotechnik</td>
+        <td>Erddruckberechnung, Teilsicherheiten, Grundbruch (§3–§7)</td>
+      </tr>
+      <tr>
+        <td>SIA 261:2020</td>
+        <td>Einwirkungen auf Tragwerke</td>
+        <td>Lastfallkombinationen, Teilsicherheitsbeiwerte γ_G / γ_Q</td>
+      </tr>
+      <tr>
+        <td>Steckner, H. (1989)</td>
+        <td>Berechnung von Blockfundamenten für Bahnoberleitungsmasten — Bautechnik 2/1989</td>
+        <td>Grenzmoment Gl.66, Nulllinien-Verfahren, GZG Winkler</td>
+      </tr>
+      <tr>
+        <td>DIN 4085:2017</td>
+        <td>Berechnung des Erddrucks</td>
+        <td>Erddruckkoeffizienten Ka, Kph (Rankine, Coulomb)</td>
+      </tr>
+      <tr>
+        <td>EN 1997-1 / EC7</td>
+        <td>Eurocode 7: Entwurf, Berechnung und Bemessung in der Geotechnik</td>
+        <td>Referenz für Grundbruch Hansen (informativ)</td>
+      </tr>
+      <tr>
+        <td>Winkler, E. (1867)</td>
+        <td>Die Lehre von der Elasticitaet und Festigkeit</td>
+        <td>Bettungsmodellansatz für GZG-Berechnung</td>
+      </tr>
+    </tbody>
+  </table>
+
+</div><!-- /anhA -->
+
+
+<!-- ════════════════════════════════════════════
+     ANHANG B — FORMELZEICHEN
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap-anhB">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>Anhang B · Formelzeichen</span></div>
+
+  <div class="np-ch" id="anhB">Anhang B · Formelzeichen &amp; Einheiten</div>
+
+  <div class="np-g2">
+    <div>
+      <div class="np-sh2">Geometrie</div>
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Einheit</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">B</td><td>[m]</td><td>Fundamentbreite</td></tr>
+          <tr><td class="sym">L</td><td>[m]</td><td>Fundamentlänge</td></tr>
+          <tr><td class="sym">t</td><td>[m]</td><td>Einbindetiefe = H_Block + ü</td></tr>
+          <tr><td class="sym">ü</td><td>[m]</td><td>Überdeckung</td></tr>
+          <tr><td class="sym">H_Kopf</td><td>[m]</td><td>Kopfhöhe über GOK</td></tr>
+          <tr><td class="sym">e_x, e_y</td><td>[m]</td><td>Exzentrizitäten</td></tr>
+          <tr><td class="sym">b_id</td><td>[m]</td><td>Wirksame Querschnittsbreite</td></tr>
+          <tr><td class="sym">y_NL</td><td>[m]</td><td>Nulllinientiefe ab OK Block</td></tr>
+        </tbody>
+      </table>
+      <div class="np-sh2" style="margin-top:8px">Bodenkennwerte</div>
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Einheit</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">φ'_k</td><td>[°]</td><td>Reibungswinkel charakteristisch</td></tr>
+          <tr><td class="sym">φ'_d</td><td>[°]</td><td>Reibungswinkel Bemessung</td></tr>
+          <tr><td class="sym">c'_k</td><td>[kPa]</td><td>Kohäsion charakteristisch</td></tr>
+          <tr><td class="sym">c'_d</td><td>[kPa]</td><td>Kohäsion Bemessung</td></tr>
+          <tr><td class="sym">γ</td><td>[kN/m³]</td><td>Wichte (feucht)</td></tr>
+          <tr><td class="sym">γ'</td><td>[kN/m³]</td><td>Wichte (aufgetrieben)</td></tr>
+          <tr><td class="sym">M_E</td><td>[MN/m²]</td><td>Steifemodul</td></tr>
+          <tr><td class="sym">C₁</td><td>[MN/m³]</td><td>Bettungsziffer</td></tr>
+          <tr><td class="sym">Ka</td><td>[–]</td><td>Aktiver Erddruckkoeffizient</td></tr>
+          <tr><td class="sym">Kph</td><td>[–]</td><td>Passiver Erddruckkoeffizient</td></tr>
+          <tr><td class="sym">K0</td><td>[–]</td><td>Erdruhedruckkoeffizient</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="np-sh2">Einwirkungen &amp; Schnittgrössen</div>
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Einheit</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">N_G, N_k, N_d</td><td>[kN]</td><td>Normalkraft G/char./Bem.</td></tr>
+          <tr><td class="sym">H_d</td><td>[kN]</td><td>Bemessungs-Horizontalkraft</td></tr>
+          <tr><td class="sym">M_d</td><td>[kNm]</td><td>Bemessungsmoment am OK Block</td></tr>
+          <tr><td class="sym">G_k</td><td>[kN]</td><td>Eigengewicht Fundament+Auffüllung</td></tr>
+          <tr><td class="sym">arm</td><td>[m]</td><td>Hebelarm = t + H_Kopf</td></tr>
+        </tbody>
+      </table>
+      <div class="np-sh2" style="margin-top:8px">Erddruckkräfte</div>
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Einheit</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">Ea_d</td><td>[kN]</td><td>Aktive Erddruckkraft (Bem.)</td></tr>
+          <tr><td class="sym">Ew_d</td><td>[kN]</td><td>Mobilisierter Erdwiderstand</td></tr>
+          <tr><td class="sym">Ep_d</td><td>[kN]</td><td>Volle passive Kraft</td></tr>
+          <tr><td class="sym">E0_d</td><td>[kN]</td><td>Ruhedruckkraft</td></tr>
+          <tr><td class="sym">mob</td><td>[–]</td><td>Mobilisierungsgrad (std 0.25)</td></tr>
+        </tbody>
+      </table>
+      <div class="np-sh2" style="margin-top:8px">Grenzmoment &amp; Nachweise</div>
+      <table class="np-tbl">
+        <thead><tr><th>Symbol</th><th>Einheit</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">Ra_v, Rp_v</td><td>[kN]</td><td>Reibungskomponenten an Sohle</td></tr>
+          <tr><td class="sym">N_u</td><td>[kN]</td><td>Sohlnormalkraft</td></tr>
+          <tr><td class="sym">R_u</td><td>[kN]</td><td>Sohlreibungskraft</td></tr>
+          <tr><td class="sym">M_u</td><td>[kNm]</td><td>Grenzmoment Steckner Gl.66</td></tr>
+          <tr><td class="sym">η_GZT</td><td>[–]</td><td>Auslastung GZT = M_u / M_d</td></tr>
+          <tr><td class="sym">K</td><td>[kNm/rad]</td><td>Rotationssteifigkeit Winkler</td></tr>
+          <tr><td class="sym">tan(α)</td><td>[–]</td><td>Schiefstellung Mastfuss</td></tr>
+          <tr><td class="sym">η_GZG</td><td>[–]</td><td>Auslastung GZG = α_zul / α</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /anhB -->
+
+
+
+</div><!-- /np-wrap -->
+</main>
+</div><!-- /hb-layout -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// GZT-Diagramm (aus index.html, selbstständig)
+// ══════════════════════════════════════════════════════════════════
+function buildGZTDiagram(r, g, wide=false, charMode=false) {
+  const W = wide ? 500 : 296;
+  const t    = g.Hb;
+  const uberd = g.uberd || 0;
+  const y    = r.y_NL_GZT;
+  const B    = g.B;
+  const Hkopf = g.Hkopf || 0;
+  const Bk    = g.Bk || B;
+  const phi_k = r.phi_k_GZT || 0;
+  const useX   = Math.abs(r.Hxd||0) >= Math.abs(r.Hyd||0);
+  const H_crit = useX ? Math.abs(r.Hxd||0) : Math.abs(r.Hyd||0);
+  const N_crit = r.Nd || 0;
+  const M_ok   = useX
+    ? Math.abs((r.Mxd||0) - (r.Hxd||0)*t)
+    : Math.abs((r.Myd||0) - (r.Hyd||0)*t);
+  const sc    = W / 296;
+  const botM  = Math.round(48 * sc);
+  const approxPxPerM = (wide ? 110 : 65) * sc;
+  const headAboveGOK_approx = Math.max(0, Hkopf - uberd) * approxPxPerM;
+  const topM  = Math.round(Math.max(90 * sc, headAboveGOK_approx + 55 * sc));
+  const H_base = wide ? 720 : 340;
+  const H      = H_base + Math.max(0, topM - Math.round(90 * sc));
+  const drawH  = H - topM - botM;
+  const pxPerM = drawH / t;
+  const fundW = Math.round(Math.min(100*sc, Math.max(40*sc, pxPerM * B * 0.55)));
+  const cx = W / 2;
+  const fundL = cx - fundW/2, fundR = cx + fundW/2;
+  const diagW = Math.round(58*sc);
+  const h_nl  = Math.max(0.01, t - y);
+  const nlY   = topM + (t - y) * pxPerM;
+  const ukY   = topM + t * pxPerM;
+  const okbY  = topM + uberd * pxPerM;
+  const headH   = Math.round(Hkopf * pxPerM);
+  const headW   = Math.round(fundW * (Bk / B));
+  const okKopfY = okbY - headH;
+  const col = {
+    fund:'var(--s3)', ea:'var(--dim)', ew:'var(--on2)',
+    ep:'var(--acc)', e0:'var(--xdim)', nl:'var(--warn)',
+    dim:'var(--dim)', gok:'var(--ol)', line:'var(--ol2)',
+    ru:'var(--ok)', nu:'var(--on2)'
+  };
+  const gs_   = r.gs_GZT  || 18;
+  const Ka_k  = r.Ka_GZT  || 0.333;
+  const Kph_  = r.Kph_GZT || 3.0;
+  const K0_   = r.K0_GZT  || 0.5;
+  const cd_   = r.cd_GZT  || 0;
+  const gEa_  = r.gEa_GZT || 1.35;
+  const gEp_  = r.gEp_GZT || 1.40;
+  const mob_  = r.mob_GZT || 0.25;
+  const fEa = charMode ? 1.0 : gEa_;
+  const fEp = charMode ? 1.0 : gEp_;
+  function sigA(z){ return Math.max(0, Ka_k*gs_*z*fEa - 2*cd_*Math.sqrt(Ka_k)*fEa); }
+  const Kmob_ = charMode ? (K0_ + mob_*(Kph_ - K0_)) : (K0_ + mob_*(Kph_ - K0_)) / gEp_;
+  function sigPm(z){ return Math.max(0, Kmob_*gs_*z); }
+  function sigEp(z){ return Math.max(0, Kph_*gs_*z/fEp); }
+  const z_nl = t - y;
+  const z_okb = uberd;
+  const sigMax = Math.max(sigA(t), sigEp(t), sigPm(z_nl), 0.1);
+  function sw(sig){ return Math.max(0, (sig/sigMax)*diagW); }
+  const eaX = fundL - 6;
+  const ewX = fundR + 6;
+  const eaTopW = sw(sigA(z_okb));
+  const eaW    = sw(sigA(z_nl));
+  const ea_pts = eaTopW < 1
+    ? `${eaX},${okbY} ${eaX-eaW},${nlY} ${eaX},${nlY}`
+    : `${eaX},${okbY} ${eaX-eaTopW},${okbY} ${eaX-eaW},${nlY} ${eaX},${nlY}`;
+  const epbTopW_L = sw(sigEp(z_nl));
+  const epbBotW_L = Math.min(diagW*1.8, sw(sigEp(t)));
+  const epb_L_pts = `${eaX},${nlY} ${eaX-epbTopW_L},${nlY} ${eaX-epbBotW_L},${ukY} ${eaX},${ukY}`;
+  const epTopW = sw(sigEp(z_okb));
+  const epW    = sw(sigEp(z_nl));
+  const ep_pts = epTopW < 1
+    ? `${ewX},${okbY} ${ewX+epW},${nlY} ${ewX},${nlY}`
+    : `${ewX},${okbY} ${ewX+epTopW},${okbY} ${ewX+epW},${nlY} ${ewX},${nlY}`;
+  const ewTopW = sw(sigPm(z_okb));
+  const ewW    = sw(sigPm(z_nl));
+  const ew_pts = ewTopW < 1
+    ? `${ewX},${okbY} ${ewX+ewW},${nlY} ${ewX},${nlY}`
+    : `${ewX},${okbY} ${ewX+ewTopW},${okbY} ${ewX+ewW},${nlY} ${ewX},${nlY}`;
+  const e0bTopW = Math.max(2, sw(K0_*gs_*z_nl/gEp_));
+  const e0bW    = Math.max(3, sw(K0_*gs_*t/gEp_));
+  const e0b_pts = `${ewX},${nlY} ${ewX+e0bTopW},${nlY} ${ewX+e0bW},${ukY} ${ewX},${ukY}`;
+  const arrLen = Math.round(32*sc);
+  const Ra = r.Ra_v_GZT  || 0;
+  const Rp = r.Rp_va_GZT || 0;
+  const Rp_b = r.Rp_vb_GZT || 0;
+  const maxRpx = Math.round(28*sc);
+  function sigLbl(x, y, val, anchor){
+    if(val < 0.5) return '';
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="7.5" fill="var(--dim)" text-anchor="${anchor}" font-family="var(--f-mono)">${val.toFixed(0)} kPa</text>`;
+  }
+  function arrow(x1,y1,x2,y2,c,lbl,side='l'){
+    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+    if(len<2) return '';
+    const ux=dx/len,uy=dy/len,ax=x2-ux*7,ay=y2-uy*7,px=-uy*3,py=ux*3;
+    const lx=side==='l'?x1-3:x1+3, anch=side==='l'?'end':'start';
+    return `<line x1="${x1}" y1="${y1}" x2="${ax.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="${c}" stroke-width="1.2"/>
+<polygon points="${x2},${y2} ${(ax+px).toFixed(1)},${(ay+py).toFixed(1)} ${(ax-px).toFixed(1)},${(ay-py).toFixed(1)}" fill="${c}"/>
+<text x="${lx}" y="${(y1+4).toFixed(1)}" font-size="8" fill="${c}" text-anchor="${anch}" font-family="var(--f-mono)">${lbl}</text>`;
+  }
+  function lbl(x,y,txt,anchor='middle',c='var(--dim)'){
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="8" fill="${c}" text-anchor="${anchor}" font-family="var(--f-mono)">${txt}</text>`;
+  }
+  function arrowDown(x,y1,y2,c,txt){
+    if(y2<=y1+6) return '';
+    return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2-7}" stroke="${c}" stroke-width="1.2"/>
+<polygon points="${x},${y2} ${x-3},${y2-7} ${x+3},${y2-7}" fill="${c}"/>
+<text x="${x+4}" y="${((y1+y2)/2+3).toFixed(1)}" font-size="8" fill="${c}" text-anchor="start" font-family="var(--f-mono)">${txt}</text>`;
+  }
+  function arrowUp(x,y1,y2,c,txt,side='r'){
+    if(y1<=y2+6) return '';
+    const lx=side==='r'?x+4:x-4, anch=side==='r'?'start':'end';
+    return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2+7}" stroke="${c}" stroke-width="1.2"/>
+<polygon points="${x},${y2} ${x-3},${y2+7} ${x+3},${y2+7}" fill="${c}"/>
+<text x="${lx}" y="${((y1+y2)/2+3).toFixed(1)}" font-size="8" fill="${c}" text-anchor="${anch}" font-family="var(--f-mono)">${txt}</text>`;
+  }
+  const Ea_val  = charMode ? (r.Ea_GZT||0)/gEa_  : (r.Ea_GZT||0);
+  const Ew_val  = charMode ? (r.Ew_GZT||0)*gEp_  : (r.Ew_GZT||0);
+  const Epb_val = charMode ? (r.Epb_GZT||0)*gEp_ : (r.Epb_GZT||0);
+  const E0a_val = charMode ? (r.E0a_GZT||0)*gEp_ : (r.E0a_GZT||0);
+  const E0b_val = charMode ? (r.E0b_GZT||0)*gEp_ : (r.E0b_GZT||0);
+  const R0  = E0a_val * 2 * Math.tan(0.5 * phi_k);
+  const R0p = E0b_val * 2 * Math.tan(0.5 * phi_k);
+  function trapCentroidY(y1, y2, s1, s2) {
+    if(s1+s2 < 0.001) return (y1+y2)/2;
+    return y1 + (y2-y1)*(s1+2*s2)/(3*(s1+s2));
+  }
+  const y_R0  = trapCentroidY(okbY, nlY, K0_*gs_*z_okb, K0_*gs_*z_nl);
+  const y_R0p = trapCentroidY(nlY,  ukY, K0_*gs_*z_nl,  K0_*gs_*t);
+  const e0aTopW = Math.max(2, sw(K0_*gs_*z_okb/gEp_));
+  const e0aW    = e0bTopW;
+  const e0a_pts = e0aTopW < 2
+    ? `${ewX},${okbY} ${ewX+e0aW},${nlY} ${ewX},${nlY}`
+    : `${ewX},${okbY} ${ewX+e0aTopW},${okbY} ${ewX+e0aW},${nlY} ${ewX},${nlY}`;
+  function sigR0(z){ return Math.max(0, K0_*gs_*z*2*Math.tan(0.5*phi_k)/gEp_); }
+  const sigR0max = Math.max(sigR0(t), 0.1);
+  function sr0(sig){ return Math.max(0, (sig/sigR0max)*Math.floor(fundW*0.44)); }
+  const r0ArrW  = arrLen;
+  const r0pArrW = arrLen;
+  const rpH = arrLen;
+  const raH = arrLen;
+  const rpXnew = ewX + Math.round(8*sc);
+  const raXnew = eaX - Math.round(8*sc);
+  const maxEwW = Math.max(ewW, e0bW);
+  const maxEaW = Math.max(eaW, epbBotW_L);
+  const sY1 = ukY, sY2 = ukY + 14;
+  const Nu = r.Nu_GZT || 0;
+  const Ru = r.Ru_GZT || 0;
+  const colLoad = 'var(--warn)';
+  const hArrW   = arrLen;
+  const mRad   = Math.min(26*sc, Math.max(14*sc, Math.sqrt(M_ok)*2.0*sc));
+  const loadY  = Hkopf > 0.05 ? okKopfY : topM - Math.round(46*sc);
+  const lblEinwY = loadY - Math.round(20*sc);
+  const hAnchorX = cx - (Hkopf > 0.05 ? headW : fundW) / 2 - 4;
+  function arcArrow(cx_, cy_, rad, startDeg, endDeg, c, clockwise) {
+    const sd=startDeg*Math.PI/180, ed=endDeg*Math.PI/180;
+    const sx=cx_+rad*Math.cos(sd), sy=cy_+rad*Math.sin(sd);
+    const ex=cx_+rad*Math.cos(ed), ey=cy_+rad*Math.sin(ed);
+    const sw_=clockwise?1:0;
+    const tang=(ed+Math.PI/2*(clockwise?1:-1));
+    const ax=ex+5*Math.cos(tang), ay=ey+5*Math.sin(tang);
+    const bx=ex+5*Math.cos(tang+2.4), by=ey+5*Math.sin(tang+2.4);
+    return `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} A${rad},${rad} 0 0,${sw_} ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" stroke="${c}" stroke-width="1.5"/>
+<polygon points="${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}" fill="${c}"/>`;
+  }
+  let _ym_ea = okbY, _ym_ep = okbY;
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;${wide?'':'max-width:'+W+'px;'}margin:8px auto 4px">
+  ${lbl(cx, lblEinwY, 'Einwirkungen', 'middle', colLoad)}
+  ${H_crit>0.5 ? arrow(hAnchorX-hArrW, loadY, hAnchorX, loadY, colLoad, 'H='+H_crit.toFixed(0)+'kN', 'l') : ''}
+  ${N_crit>0.5 ? arrowDown(cx, lblEinwY-4, lblEinwY-4+arrLen, col.dim, 'Gd='+N_crit.toFixed(0)+'kN') : ''}
+  ${M_ok>0.5 ? arcArrow(cx, loadY+4, mRad, -170, 10, colLoad, true) : ''}
+  ${M_ok>0.5 ? lbl(cx+mRad+4, loadY+8, 'M='+M_ok.toFixed(0)+'kNm', 'start', colLoad) : ''}
+  <line x1="${fundL-diagW-18}" y1="${topM}" x2="${fundR+diagW+18}" y2="${topM}" stroke="${col.gok}" stroke-width="1" stroke-dasharray="4,2"/>
+  ${lbl(fundL-diagW-6, topM+3, 'GOK', 'end', col.dim)}
+  ${Hkopf > 0.05 ? `<rect x="${cx-headW/2}" y="${okKopfY}" width="${headW}" height="${okbY-okKopfY}" fill="${col.fund}" opacity="0.32" rx="1"/>
+  <rect x="${cx-headW/2}" y="${okKopfY}" width="${headW}" height="${okbY-okKopfY}" fill="none" stroke="${col.line}" stroke-width="1.2" rx="1"/>
+  ${lbl(cx, okKopfY+(okbY-okKopfY)*0.5+3, 'Bk='+Bk.toFixed(2)+'m', 'middle', col.dim)}` : ''}
+  <rect x="${fundL}" y="${okbY}" width="${fundW}" height="${ukY-okbY}" fill="${col.fund}" opacity="0.28" rx="1"/>
+  <rect x="${fundL}" y="${okbY}" width="${fundW}" height="${ukY-okbY}" fill="none" stroke="${col.line}" stroke-width="1.2" rx="1"/>
+  ${lbl(cx, okbY + (ukY-okbY)*0.5+3, 'B='+B.toFixed(2)+'m', 'middle', col.dim)}
+  <line x1="${cx}" y1="${Hkopf>0.05?okKopfY:okbY-6}" x2="${cx}" y2="${ukY+6}" stroke="${col.dim}" stroke-width="0.8" stroke-dasharray="4,3" opacity="0.55"/>
+  <circle cx="${cx}" cy="${nlY}" r="4.5" fill="none" stroke="${col.nl}" stroke-width="1.5"/>
+  <circle cx="${cx}" cy="${nlY}" r="1.5" fill="${col.nl}"/>
+  <line x1="${fundL-diagW-14}" y1="${nlY}" x2="${fundR+diagW+14}" y2="${nlY}" stroke="${col.nl}" stroke-width="1" stroke-dasharray="5,3"/>
+  ${lbl(fundR+diagW+16, nlY+3, 'NL · y='+y.toFixed(2)+'m', 'start', col.nl)}
+  ${lbl(cx-8, nlY+4, 'D', 'end', col.nl)}
+  ${uberd > 0.02 ? lbl(fundR+5, okbY+3, 'OK-Block', 'start', col.dim) : ''}
+  <line x1="${fundL-6}" y1="${ukY}" x2="${fundR+6}" y2="${ukY}" stroke="${col.line}" stroke-width="0.8"/>
+  ${lbl(cx, ukY+10, 'UK  t='+t.toFixed(2)+'m', 'middle', col.dim)}
+  <polygon points="${ea_pts}" fill="${col.ea}" opacity="0.28"/>
+  <polygon points="${ea_pts}" fill="none" stroke="${col.ea}" stroke-width="1"/>
+  ${sigLbl(eaX - Math.max(eaTopW, eaW) - 4, okbY+4, sigA(z_okb), 'end')}
+  ${sigLbl(eaX - Math.max(eaTopW, eaW) - 4, nlY-2, sigA(z_nl), 'end')}
+  ${(()=>{_ym_ea=trapCentroidY(okbY,nlY,sigA(z_okb),sigA(z_nl));
+    const xstart=eaX-arrLen;
+    return arrow(xstart, _ym_ea, eaX, _ym_ea, col.ea, 'Ea='+Ea_val.toFixed(0)+'kN', 'l')
+     +`<text x="${(xstart-2).toFixed(1)}" y="${(_ym_ea-3).toFixed(1)}" font-size="6" fill="${col.ea}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">treibend</text>`;
+  })()}
+  <polygon points="${epb_L_pts}" fill="${col.ep}" opacity="0.30"/>
+  <polygon points="${epb_L_pts}" fill="none" stroke="${col.ep}" stroke-width="1.2"/>
+  ${sigLbl(eaX - Math.max(epbTopW_L, epbBotW_L) - 4, nlY+5, sigEp(z_nl), 'end')}
+  ${sigLbl(eaX - epbBotW_L - 4, ukY-1, sigEp(t), 'end')}
+  ${(()=>{const ym=nlY+(ukY-nlY)*0.5, xstart=eaX-arrLen;
+    return arrow(xstart, ym, eaX, ym, col.ep, "E'p="+Epb_val.toFixed(0)+'kN', 'l')
+     +`<text x="${(xstart-2).toFixed(1)}" y="${(ym-3).toFixed(1)}" font-size="6" fill="${col.ep}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">stabilisierend</text>`;
+  })()}
+  ${Ra>0.5 ? arrowDown(raXnew, _ym_ea, _ym_ea+raH, col.ea, 'Ra='+Ra.toFixed(0)+'kN') : ''}
+  <polygon points="${ep_pts}" fill="${col.ep}" opacity="0.07"/>
+  <polygon points="${ep_pts}" fill="none" stroke="${col.ep}" stroke-width="0.9" stroke-dasharray="4,2" opacity="0.8"/>
+  ${sigLbl(ewX + Math.max(epTopW, epW) + 4, okbY+4, sigEp(z_okb), 'start')}
+  ${sigLbl(ewX + Math.max(epTopW, epW) + 4, nlY-2, sigEp(z_nl), 'start')}
+  ${epW > ewW + 6 ? `<text x="${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)}" y="${((okbY+nlY)/2).toFixed(1)}" font-size="6" fill="${col.ep}" text-anchor="start" font-family="var(--f-mono)" opacity="0.7" transform="rotate(-90,${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)},${((okbY+nlY)/2).toFixed(1)})">mob=25%</text>` : ''}
+  <polygon points="${ew_pts}" fill="${col.ew}" opacity="0.25"/>
+  <polygon points="${ew_pts}" fill="none" stroke="${col.ew}" stroke-width="1.4"/>
+  ${(()=>{_ym_ep=trapCentroidY(okbY,nlY,sigPm(z_okb),sigPm(z_nl));
+    const xstart=ewX+arrLen;
+    return arrow(xstart, _ym_ep, ewX, _ym_ep, col.ew, 'Ew='+Ew_val.toFixed(0)+'kN', 'r')
+     +`<text x="${(xstart+2).toFixed(1)}" y="${(_ym_ep-3).toFixed(1)}" font-size="6" fill="${col.ew}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">Widerstand</text>`;
+  })()}
+  ${Rp>0.5 ? arrowUp(rpXnew, _ym_ep+rpH, _ym_ep, col.ew, 'Rp='+Rp.toFixed(0)+'kN', 'r') : ''}
+  ${(()=>{
+    const r0tw = sr0(sigR0(z_okb)), r0bw = sr0(sigR0(z_nl));
+    const e0a_cx = r0tw<1 ? `${cx},${okbY} ${cx+r0bw},${nlY} ${cx},${nlY}` : `${cx},${okbY} ${cx+r0tw},${okbY} ${cx+r0bw},${nlY} ${cx},${nlY}`;
+    const r0ptw = sr0(sigR0(z_nl)), r0pbw = sr0(sigR0(t));
+    const e0p_cx = `${cx},${nlY} ${cx-r0ptw},${nlY} ${cx-r0pbw},${ukY} ${cx},${ukY}`;
+    return `<polygon points="${e0a_cx}" fill="${col.e0}" opacity="0.22"/>
+<polygon points="${e0a_cx}" fill="none" stroke="${col.e0}" stroke-width="0.9" stroke-dasharray="2,2"/>
+<polygon points="${e0p_cx}" fill="${col.e0}" opacity="0.22"/>
+<polygon points="${e0p_cx}" fill="none" stroke="${col.e0}" stroke-width="0.9" stroke-dasharray="2,2"/>`;
+  })()}
+  ${R0>0.5 ? arrow(cx, y_R0, cx-r0ArrW, y_R0, col.e0, 'R₀='+R0.toFixed(0)+'kN', 'r') : ''}
+  ${R0>0.5 ? `<text x="${(cx-r0ArrW-2).toFixed(1)}" y="${(y_R0-4).toFixed(1)}" font-size="6" fill="${col.e0}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">destab.</text>` : ''}
+  ${R0p>0.5 ? arrow(cx, y_R0p, cx+r0pArrW, y_R0p, col.e0, 'R₀′='+R0p.toFixed(0)+'kN', 'l') : ''}
+  ${R0p>0.5 ? `<text x="${(cx+r0pArrW+2).toFixed(1)}" y="${(y_R0p-4).toFixed(1)}" font-size="6" fill="${col.e0}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">stabilis.</text>` : ''}
+  ${Nu>0.5 ? arrowUp(cx, sY1+arrLen, sY1, col.nu, 'Nu='+Nu.toFixed(0)+'kN', 'r') : ''}
+  ${Ru>0.5 ? arrow(cx+arrLen+Math.round(4*sc), sY1+Math.round(arrLen*0.5), cx+Math.round(4*sc), sY1+Math.round(arrLen*0.5), col.ru, 'Ru='+Ru.toFixed(0)+'kN', 'r') : ''}
+  <rect x="${fundL}" y="${ukY}" width="${fundW}" height="${sY2-ukY}" fill="none" stroke="${col.dim}" stroke-width="0.7" stroke-dasharray="2,2"/>
+  ${(()=>{const tx=fundL-diagW-Math.round(16*sc);
+    const Hb = t - uberd;
+    let s=`<line x1="${tx}" y1="${topM}" x2="${tx}" y2="${ukY}" stroke="${col.dim}" stroke-width="0.7"/>
+  <line x1="${tx-3}" y1="${topM}" x2="${tx+3}" y2="${topM}" stroke="${col.dim}" stroke-width="0.7"/>
+  <line x1="${tx-3}" y1="${ukY}" x2="${tx+3}" y2="${ukY}" stroke="${col.dim}" stroke-width="0.7"/>`;
+    if(uberd>0.02){
+      s+=`<line x1="${tx-5}" y1="${okbY}" x2="${tx+5}" y2="${okbY}" stroke="${col.dim}" stroke-width="1"/>`;
+      s+=`<text x="${tx-4}" y="${((topM+okbY)/2+3).toFixed(1)}" font-size="8" fill="${col.dim}" text-anchor="end" font-family="var(--f-mono)">ü=${uberd.toFixed(2)}m</text>`;
+      s+=`<text x="${tx-4}" y="${((okbY+ukY)/2+3).toFixed(1)}" font-size="8" fill="${col.dim}" text-anchor="end" font-family="var(--f-mono)">H=${Hb.toFixed(2)}m</text>`;
+    } else {
+      s+=`<text x="${tx-4}" y="${((topM+ukY)/2+3).toFixed(1)}" font-size="8" fill="${col.dim}" text-anchor="end" font-family="var(--f-mono)">${t.toFixed(2)}m</text>`;
+    }
+    return s;
+  })()}
+  ${(()=>{
+    const av = r.arm_v_GZT || 0; if(av < 0.01) return '';
+    const ax = fundR + diagW + Math.round(12*sc);
+    return `<line x1="${ax}" y1="${okbY}" x2="${ax}" y2="${nlY}" stroke="var(--acc)" stroke-width="0.8" stroke-dasharray="3,2"/>
+<text x="${ax+3}" y="${((okbY+nlY)/2+3).toFixed(1)}" font-size="7" fill="var(--acc)" text-anchor="start" font-family="var(--f-mono)">v=${av.toFixed(2)}m</text>`;
+  })()}
+  ${(()=>{
+    const avp = r.arm_vp_GZT || 0; if(avp < 0.01) return '';
+    const ax = fundR + diagW + Math.round(12*sc);
+    return `<line x1="${ax}" y1="${nlY}" x2="${ax}" y2="${ukY}" stroke="var(--ok)" stroke-width="0.8" stroke-dasharray="3,2"/>
+<text x="${ax+3}" y="${((nlY+ukY)/2+3).toFixed(1)}" font-size="7" fill="var(--ok)" text-anchor="start" font-family="var(--f-mono)">v'=${avp.toFixed(2)}m</text>`;
+  })()}
+  ${(()=>{
+    const axX=Math.round(12*sc), axY=H-Math.round(14*sc), axL=Math.round(48*sc);
+    return `<line x1="${axX}" y1="${axY}" x2="${axX+axL}" y2="${axY}" stroke="${col.dim}" stroke-width="1.4"/>
+<polygon points="${axX+axL},${axY} ${axX+axL-7},${axY-4} ${axX+axL-7},${axY+4}" fill="${col.dim}"/>
+<text x="${axX+axL+4}" y="${axY+4}" font-size="11" fill="${col.dim}" text-anchor="start" font-family="var(--f-mono)">x</text>
+<line x1="${axX}" y1="${axY}" x2="${axX}" y2="${axY-axL}" stroke="${col.dim}" stroke-width="1.4"/>
+<polygon points="${axX},${axY-axL} ${axX-4},${axY-axL+7} ${axX+4},${axY-axL+7}" fill="${col.dim}"/>
+<text x="${axX}" y="${axY-axL-4}" font-size="11" fill="${col.dim}" text-anchor="middle" font-family="var(--f-mono)">z</text>`;
+  })()}
+</svg>`;
+  return svg;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 2D-Systemskizze Blockfundament (Typ C Beispiel)
+// ══════════════════════════════════════════════════════════════════
+function buildSystemSVG() {
+  const B=1.20, Hb=2.20, ue=0.80, Hkopf=0.20, Bk=0.60;
+  const t = Hb + ue;
+  const sc = 44; // px/m
+  const W = 260, cx = W/2;
+  const topPad = 72;
+  const gokY   = topPad;
+  const okbY   = gokY + ue * sc;
+  const ukY    = gokY + t * sc;
+  const kopfBotY = gokY;
+  const kopfTopY = gokY - Hkopf * sc;
+  const H = ukY + 44;
+  const bL = cx - B/2*sc, bR = cx + B/2*sc;
+  const kL = cx - Bk/2*sc, kR = cx + Bk/2*sc;
+  const dimX = bR + 52;
+  const c = {f:'var(--s3)', ln:'var(--ol2)', d:'var(--dim)', g:'var(--ol)', s:'var(--s2)'};
+
+  // Soil hatching: diagonal lines on sides
+  let hatch = '';
+  const hatchSpacing = 9;
+  const hatchDepth = ukY - gokY;
+  for(let i = -4; i < hatchDepth/hatchSpacing + 8; i++) {
+    const y0 = gokY + i*hatchSpacing;
+    // left side
+    hatch += `<line x1="${bL-28}" y1="${y0}" x2="${bL}" y2="${y0+16}" stroke="${c.d}" stroke-width="0.6" opacity="0.3"/>`;
+    // right side
+    hatch += `<line x1="${bR}" y1="${y0}" x2="${bR+28}" y2="${y0+16}" stroke="${c.d}" stroke-width="0.6" opacity="0.3"/>`;
+  }
+
+  function dv(x, y1, y2, txt) {
+    const mid = (y1+y2)/2;
+    return `<line x1="${x-3}" y1="${y1}" x2="${x+3}" y2="${y1}" stroke="${c.d}" stroke-width="0.8"/>
+<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${c.d}" stroke-width="0.8"/>
+<line x1="${x-3}" y1="${y2}" x2="${x+3}" y2="${y2}" stroke="${c.d}" stroke-width="0.8"/>
+<text x="${x+5}" y="${mid+3}" font-size="8.5" fill="${c.d}" text-anchor="start" font-family="var(--f-mono)">${txt}</text>`;
+  }
+  function dh(x1, y, x2, txt, above=true) {
+    const mid = (x1+x2)/2, ty = above ? y-6 : y+12;
+    return `<line x1="${x1}" y1="${y-3}" x2="${x1}" y2="${y+3}" stroke="${c.d}" stroke-width="0.8"/>
+<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${c.d}" stroke-width="0.8"/>
+<line x1="${x2}" y1="${y-3}" x2="${x2}" y2="${y+3}" stroke="${c.d}" stroke-width="0.8"/>
+<text x="${mid}" y="${ty}" font-size="8.5" fill="${c.d}" text-anchor="middle" font-family="var(--f-mono)">${txt}</text>`;
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:${W}px;margin:0 auto">
+
+  <!-- Boden-Hintergrund -->
+  <rect x="0" y="${gokY}" width="${W}" height="${H-gokY}" fill="var(--s1)" opacity="0.55"/>
+
+  <!-- GOK -->
+  <line x1="0" y1="${gokY}" x2="${W}" y2="${gokY}" stroke="${c.g}" stroke-width="1.2" stroke-dasharray="6,3"/>
+  <text x="8" y="${gokY-5}" font-size="8" fill="${c.d}" text-anchor="start" font-family="var(--f-mono)">GOK</text>
+
+  <!-- Boden-Schraffur seitlich -->
+  ${hatch}
+
+  <!-- Überdeckung ü (GOK→OK-Block, im Block bereich, heller) -->
+  <rect x="${bL}" y="${gokY}" width="${bR-bL}" height="${okbY-gokY}" fill="var(--s2)" opacity="0.9"/>
+  <line x1="${bL}" y1="${okbY}" x2="${bR}" y2="${okbY}" stroke="${c.ln}" stroke-width="0.9" stroke-dasharray="3,2"/>
+  <text x="${cx}" y="${(gokY+okbY)/2+3}" font-size="7.5" fill="${c.d}" text-anchor="middle" font-family="var(--f-mono)">ü</text>
+
+  <!-- Fundament Block -->
+  <rect x="${bL}" y="${okbY}" width="${bR-bL}" height="${ukY-okbY}" fill="${c.f}" opacity="0.35" rx="1"/>
+  <rect x="${bL}" y="${okbY}" width="${bR-bL}" height="${ukY-okbY}" fill="none" stroke="${c.ln}" stroke-width="1.3" rx="1"/>
+
+  <!-- Fundamentkopf über GOK -->
+  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${kopfBotY-kopfTopY}" fill="${c.f}" opacity="0.45" rx="1"/>
+  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${kopfBotY-kopfTopY}" fill="none" stroke="${c.ln}" stroke-width="1.3" rx="1"/>
+
+  <!-- Achslinie -->
+  <line x1="${cx}" y1="${kopfTopY-8}" x2="${cx}" y2="${ukY+6}" stroke="${c.d}" stroke-width="0.7" stroke-dasharray="4,3" opacity="0.45"/>
+
+  <!-- Label OK-Block -->
+  <text x="${bL-4}" y="${okbY+3}" font-size="7.5" fill="${c.d}" text-anchor="end" font-family="var(--f-mono)">OK-Block</text>
+  <!-- UK -->
+  <line x1="${bL-4}" y1="${ukY}" x2="${bR+4}" y2="${ukY}" stroke="${c.ln}" stroke-width="0.9"/>
+  <text x="${cx}" y="${ukY+12}" font-size="8" fill="${c.d}" text-anchor="middle" font-family="var(--f-mono)">UK (Sohle)</text>
+
+  <!-- Mastkopf Andeutung -->
+  <rect x="${kL+2}" y="${kopfTopY-18}" width="${kR-kL-4}" height="18" fill="${c.f}" opacity="0.22" rx="1"/>
+  <line x1="${kL+2}" y1="${kopfTopY-18}" x2="${kR-2}" y2="${kopfTopY-18}" stroke="${c.ln}" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <text x="${cx}" y="${kopfTopY-22}" font-size="7.5" fill="${c.d}" text-anchor="middle" font-family="var(--f-mono)">Mast</text>
+
+  <!-- Bemaßung horizontal -->
+  ${dh(bL, gokY - 26, bR, 'B = '+B.toFixed(2)+' m')}
+  ${dh(kL, kopfTopY - 14, kR, 'B_K = '+Bk.toFixed(2)+' m')}
+
+  <!-- Bemaßung vertikal -->
+  ${dv(dimX, kopfTopY, gokY, 'H_Kopf = '+Hkopf.toFixed(2)+' m')}
+  ${dv(dimX, gokY, okbY, 'ü = '+ue.toFixed(2)+' m')}
+  ${dv(dimX, okbY, ukY, 'H_Block = '+Hb.toFixed(2)+' m')}
+  ${dv(dimX+36, gokY, ukY, 't = '+t.toFixed(2)+' m')}
+
+</svg>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Initialisierung: SVGs in Platzhalter einsetzen (Typ C Beispiel)
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  // 1) Systemskizze Geometrie
+  const sysDiv = document.getElementById('hb-system-svg');
+  if(sysDiv) sysDiv.innerHTML = buildSystemSVG();
+
+  // 2) GZT-Diagramm — Mock-Daten Typ C (B=1.20m, t=3.00m, φ=30°)
+  const mockR = {
+    phi_k_GZT:  30 * Math.PI / 180,
+    Ka_GZT:  0.291,
+    Kph_GZT: 4.81,
+    K0_GZT:  0.50,
+    gs_GZT:  20,
+    cd_GZT:  0,
+    gEa_GZT: 1.35,
+    gEp_GZT: 1.50,
+    mob_GZT: 0.25,
+    y_NL_GZT:  0.221,
+    Hxd: 25.7, Hyd: 0,
+    Mxd: 306.5, Myd: 0,   // M_ok = Mxd − Hxd×t = 229.4 kNm
+    Nd:  173.5,
+    Ea_GZT:   62,
+    Ew_GZT:  140,
+    Epb_GZT:  18,
+    E0a_GZT:  32,
+    E0b_GZT:   5,
+    Ra_v_GZT:  18,
+    Rp_va_GZT: 50,
+    Rp_vb_GZT:  6,
+    Nu_GZT: 105.5,
+    Ru_GZT:  60.6,
+    arm_v_GZT:  1.053,
+    arm_vp_GZT: 0.980
+  };
+  const mockG = { Hb: 3.0, uberd: 0.80, B: 1.20, Hkopf: 0.20, Bk: 0.60 };
+  const gztDiv = document.getElementById('hb-gzt-svg');
+  if(gztDiv) gztDiv.innerHTML = buildGZTDiagram(mockR, mockG, false, false);
+});
+
+// ── Theme Toggle ──
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  try { localStorage.setItem('bc_theme', next); } catch(e){}
+}
+
+// Theme aus URL-Parameter oder localStorage übernehmen
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get('theme') || (function(){ try{ return localStorage.getItem('bc_theme'); }catch(e){return null;} })() || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+
+// ── Active Nav Link ──
+(function(){
+  const links = document.querySelectorAll('.hb-nav a');
+  const sections = [];
+  links.forEach(a => {
+    const id = a.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if(el) sections.push({id, el, a});
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        links.forEach(l => l.classList.remove('active'));
+        const found = sections.find(s => s.el === e.target);
+        if(found) found.a.classList.add('active');
+      }
+    });
+  }, {rootMargin:'-20% 0px -70% 0px'});
+  sections.forEach(s => obs.observe(s.el));
+})();
+</script>
+</body>
+</html>
