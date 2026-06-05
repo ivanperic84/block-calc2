@@ -4578,11 +4578,17 @@ function onFlachMaterial(val){
   // Kopf-Section: bei Stahl verstecken
   const kopfSec = document.getElementById('kopf-section');
   if(kopfSec) kopfSec.style.display = isStahl ? 'none' : '';
-  // Überdeckung bei Stahl: aus flach-uberd-Feld lesen
+  // Überdeckung: bei Stahl auf 0 setzen (auf unsicherer Seite), bei Beton aus Feld lesen
+  const uberdRow = document.getElementById('flach-uberd-row');
   if(isStahl){
-    const uf = document.getElementById('g_uberd_flach');
-    si('g_uberd', uf ? uf.value : '0.15');
+    if(uberdRow) uberdRow.style.display = 'none';
+    si('g_uberd', '0');
+    si('g_uberd_flach', '0');
     si('g_kx','0'); si('g_ky','0'); si('g_hkopf','0');
+  } else {
+    if(uberdRow) uberdRow.style.display = '';
+    const uf = document.getElementById('g_uberd_flach');
+    si('g_uberd', uf ? uf.value : '0.30');
   }
   // Auflasten-Section
   const aufSec = document.getElementById('auflasten-section');
