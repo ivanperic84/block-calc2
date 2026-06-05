@@ -407,7 +407,14 @@ html, body {
 .nw-plot-topbar { display:flex; align-items:center; gap:10px; padding:0 16px; height:48px; border-bottom:1px solid var(--ol); flex-shrink:0; position:relative; }
 .nw-plot-title { position:absolute; left:50%; transform:translateX(-50%); font-family:var(--f-mono); font-size:12px; font-weight:500; white-space:nowrap; pointer-events:none; }
 .nw-plot-title { font-family:var(--f-mono); font-size:11px; font-weight:600; color:var(--on2); letter-spacing:0.05em; flex:1; }
-.nw-plot-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:20px; }
+.nw-plot-body { flex:1; overflow:hidden; display:flex; flex-direction:row; gap:0; padding:0; }
+.nw-plot-sidebar { width:148px; flex-shrink:0; overflow-y:auto; background:var(--s1); border-right:1px solid var(--ol); padding:12px 8px; display:flex; flex-direction:column; gap:10px; }
+.nw-plot-thumb { cursor:pointer; border:1.5px solid var(--ol); border-radius:3px; overflow:hidden; position:relative; width:128px; height:181px; background:white; flex-shrink:0; transition:border-color .15s; }
+.nw-plot-thumb:hover { border-color:var(--acc); }
+.nw-plot-thumb.active { border-color:var(--acc); box-shadow:0 0 0 2px var(--acc-s); }
+.nw-plot-thumb-inner { position:absolute; top:0; left:0; width:760px; transform-origin:top left; transform:scale(0.168); pointer-events:none; }
+.nw-plot-thumb-lbl { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,.45); color:#fff; font-family:var(--f-mono); font-size:7px; text-align:center; padding:2px 0; letter-spacing:.05em; }
+.nw-plot-main { flex:1; overflow-y:auto; padding:24px 0; background:var(--s1); }
 .nw-plot-lf { border:1px solid var(--ol); border-radius:var(--r2); overflow:hidden; }
 .nw-plot-lf-hd { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--s2); font-family:var(--f-mono); font-size:9px; color:var(--dim); letter-spacing:0.06em; text-transform:uppercase; }
 .nw-plot-lf-eta { font-size:11px; font-weight:600; }
@@ -503,6 +510,8 @@ html, body {
   .nw-plot-overlay{position:static!important;display:block!important;overflow:visible!important;height:auto!important}
   .nw-plot-topbar{display:none!important}
   .nw-plot-body{display:block!important;overflow:visible!important;padding:0!important;height:auto!important;flex:none!important;background:white!important}
+  .nw-plot-sidebar{display:none!important}
+  .nw-plot-main{display:block!important;overflow:visible!important;padding:0!important;height:auto!important}
   .np-wrap{padding:0;display:block!important}
   .np-doc{display:block!important;overflow:visible!important}
   .np-page{box-shadow:none!important;border:none!important;margin:0!important;width:100%!important;padding:14mm 18mm!important;page-break-after:always;break-after:page}
@@ -1453,7 +1462,10 @@ html, body {
       Drucken
     </button>
   </div>
-  <div class="nw-plot-body" id="nw-plot-body"></div>
+  <div class="nw-plot-body" id="nw-plot-body">
+    <div class="nw-plot-sidebar" id="nw-plot-sidebar"></div>
+    <div class="nw-plot-main" id="nw-plot-main"></div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -4538,13 +4550,12 @@ function setModel(m, silent){
   // Topbar subtitle
   const sub = document.querySelector('.tb-sub');
   if(sub) sub.textContent = isBlock ? 'SIA 267 · Steckner Blockfundament' : (FLACH_MAT==='stahl' ? 'SIA 267 · Stahl-Basisplatte' : 'SIA 267 · Flachfundament Beton');
-  // Felder zurücksetzen wenn Flach (Stahl: auch Überdeckung + Kopf)
-  if(!isBlock && !silent){
-    if(FLACH_MAT==='stahl'){
-      si('g_kx','0'); si('g_ky','0'); si('g_hkopf','0');
-      const uf = document.getElementById('g_uberd_flach');
-      si('g_uberd', uf ? uf.value : '0.15');
-    }
+  // Überdeckungsfeld: immer sichtbar bei Flach; bei Stahl Hinweistext anpassen
+  const uberdRow = document.getElementById('flach-uberd-row');
+  if(!isBlock && uberdRow) uberdRow.style.display = '';
+  // Felder zurücksetzen wenn Flach+Stahl (nur ohne silent)
+  if(!isBlock && !silent && FLACH_MAT==='stahl'){
+    si('g_kx','0'); si('g_ky','0'); si('g_hkopf','0');
     updateViewer();
   }
   // Auflasten-Section
@@ -4578,15 +4589,12 @@ function onFlachMaterial(val){
   // Kopf-Section: bei Stahl verstecken
   const kopfSec = document.getElementById('kopf-section');
   if(kopfSec) kopfSec.style.display = isStahl ? 'none' : '';
-  // Überdeckung: bei Stahl auf 0 setzen (auf unsicherer Seite), bei Beton aus Feld lesen
-  const uberdRow = document.getElementById('flach-uberd-row');
   if(isStahl){
-    if(uberdRow) uberdRow.style.display = 'none';
-    si('g_uberd', '0');
-    si('g_uberd_flach', '0');
     si('g_kx','0'); si('g_ky','0'); si('g_hkopf','0');
+    // g_uberd bleibt wie vom User gesetzt (0 = bündig mit Terrain, >0 = Planumtiefe)
+    const uf = document.getElementById('g_uberd_flach');
+    si('g_uberd', uf ? uf.value : '0');
   } else {
-    if(uberdRow) uberdRow.style.display = '';
     const uf = document.getElementById('g_uberd_flach');
     si('g_uberd', uf ? uf.value : '0.30');
   }
@@ -5468,6 +5476,9 @@ function coulombKph(phi, delta) {
 }
 
 function calculate(){
+  try { _doCalculate(); } catch(e){ console.error('calculate() Fehler:', e); }
+}
+function _doCalculate(){
   const B=+gi('g_bx'), L=+gi('g_by'), Hb=+gi('g_hblock');
   const ue=Math.max(0,+gi('g_uberd')||0);          // Überdeckung ab OK Block
   const t=Hb+ue;                                    // effektive Einbindetiefe
@@ -6080,6 +6091,7 @@ function calculate(){
   const _relevantEtas = r => isBlock
     ? [r.etaGZT, r.etaGZG]
     : [r.etaSIG, r.etaGB, r.etaGL];
+  if(!results.length) return;
   const worst = results.reduce((a, b) => {
     const ma = Math.min(..._relevantEtas(a).filter(isFinite));
     const mb = Math.min(..._relevantEtas(b).filter(isFinite));
@@ -6279,19 +6291,77 @@ function openNachweisplot(){
     return;
   }
   // Modellabhängig: Block → Steckner-Bericht, Flach → Hansen-Bericht
-  const doc = _lastG.isBlock
-    ? buildNachweisDoc(_lastResults, _lastG)
-    : buildNachweisDocFlach(_lastResults, _lastG);
-  body.innerHTML='<div class="np-doc">'+doc+'</div>';
+  let doc;
+  try {
+    doc = _lastG.isBlock
+      ? buildNachweisDoc(_lastResults, _lastG)
+      : buildNachweisDocFlach(_lastResults, _lastG);
+  } catch(e) {
+    console.error('Nachweisplot Fehler:', e);
+    doc = '<div class="np-page"><div style="padding:40px;font-family:var(--f-mono);font-size:11px;color:var(--fail)">Fehler beim Erstellen des Berichts:<br>'+e.message+'</div></div>';
+  }
+  const main = document.getElementById('nw-plot-main');
+  if(main) main.innerHTML = '<div class="np-doc" id="nw-plot-doc">'+doc+'</div>';
   // Titel dynamisch anpassen
   const titleEl = document.querySelector('.nw-plot-title');
   if(titleEl) titleEl.textContent = _lastG.isBlock
     ? 'Standsicherheitsnachweis — Blockfundament SIA 267'
     : 'Standsicherheitsnachweis — Flachfundament SIA 267';
   document.getElementById('ov-nachweisplot').style.display='flex';
+  // Thumbnails nach kurzem Delay (DOM muss gerendert sein)
+  setTimeout(_buildNachweisThumb, 80);
 }
 function closeNachweisplot(){
   document.getElementById('ov-nachweisplot').style.display='none';
+}
+
+function _buildNachweisThumb(){
+  const sidebar = document.getElementById('nw-plot-sidebar');
+  const main    = document.getElementById('nw-plot-main');
+  if(!sidebar || !main) return;
+  const pages = main.querySelectorAll('.np-page');
+  sidebar.innerHTML = '';
+  pages.forEach((page, i) => {
+    // Wrapper mit A4-Seitenverhältnis (128 × 181 px)
+    const wrap = document.createElement('div');
+    wrap.className = 'nw-plot-thumb' + (i===0?' active':'');
+    wrap.title = 'Seite '+(i+1);
+
+    // Geklonter Seiteninhalt, skaliert auf 128px Breite (Scale = 128/760 ≈ 0.168)
+    const inner = document.createElement('div');
+    inner.className = 'nw-plot-thumb-inner';
+    inner.innerHTML = page.innerHTML;
+    // Bilder + SVGs behalten, interaktive Elemente entfernen
+    inner.querySelectorAll('button,input,select,textarea').forEach(el=>el.remove());
+    wrap.appendChild(inner);
+
+    // Seitennummer-Label
+    const lbl = document.createElement('div');
+    lbl.className = 'nw-plot-thumb-lbl';
+    lbl.textContent = 'Seite '+(i+1);
+    wrap.appendChild(lbl);
+
+    // Klick → zur Seite scrollen
+    wrap.addEventListener('click', ()=>{
+      sidebar.querySelectorAll('.nw-plot-thumb').forEach(t=>t.classList.remove('active'));
+      wrap.classList.add('active');
+      page.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    sidebar.appendChild(wrap);
+  });
+
+  // Scroll-Spy: aktive Seite in Sidebar hervorheben
+  main.onscroll = () => {
+    const thumbs = sidebar.querySelectorAll('.nw-plot-thumb');
+    pages.forEach((page, i) => {
+      const rect = page.getBoundingClientRect();
+      const mainRect = main.getBoundingClientRect();
+      if(rect.top <= mainRect.top + mainRect.height*0.5 && rect.bottom > mainRect.top){
+        thumbs.forEach(t=>t.classList.remove('active'));
+        if(thumbs[i]) thumbs[i].classList.add('active');
+      }
+    });
+  };
 }
 
 // ── 3D-Viewer Snapshot
@@ -6932,7 +7002,88 @@ function buildNachweisDoc(results,G){
     '</div>'+
   '</div>';
 
-  return '<div class="np-wrap">'+cover+page2+page3+nwPages+summary+'</div>';
+  // ────────────────────────────────────────────────────────────────
+  // INHALTSVERZEICHNIS
+  // ────────────────────────────────────────────────────────────────
+  function tocRow(num, title, sub){
+    return '<div class="np-toc-row'+(sub?' np-toc-sub':'')+'">'+
+      '<span class="np-toc-num">'+num+'</span>'+
+      '<span class="np-toc-title">'+title+'</span>'+
+      '<span class="np-toc-dots"></span>'+
+    '</div>';
+  }
+  var lfCount = results.length;
+  var lfTocRows = results.map(function(r,i){
+    var secBase = 5+i;
+    return tocRow(secBase+'.', r.name, false)+
+      (NW.sohlsp  ? tocRow(secBase+'.1', 'Sohlspannung (informativ)',true):'') +
+      (NW.grundb  ? tocRow(secBase+'.2', 'Grundbruch — GZT Typ 2',true):'') +
+      (NW.gleiten ? tocRow(secBase+'.3', 'Gleiten — GZT Typ 2',true):'') +
+      (NW.kippen  ? tocRow(secBase+'.4', 'Kippnachweis — GZT Typ 1',true):'') +
+      (NW.verkipp ? tocRow(secBase+'.5', 'Verkippen (Masteinspannung)',true):'') +
+      (NW.gzt     ? tocRow(secBase+'.6', 'GZT Standsicherheit (Steckner Gl.66)',true):'') +
+      (NW.gzg     ? tocRow(secBase+'.7', 'GZG Schiefstellung',true):'');
+  }).join('');
+  var toc = '<div class="np-page np-pb">'+ph()+
+    '<div class="np-toc-hd">Inhaltsverzeichnis</div>'+
+    '<div class="np-toc">'+
+      tocRow('1.', 'Systemübersicht und Geometrie', false)+
+      tocRow('2.', 'Baugrundparameter', false)+
+      tocRow('3.', 'Einwirkungen', false)+
+      tocRow('4.', 'Lastfallkombinationen', false)+
+      lfTocRows+
+      tocRow((5+lfCount)+'.', 'Ergebniszusammenfassung', false)+
+    '</div>'+
+  '</div>';
+
+  // ────────────────────────────────────────────────────────────────
+  // LETZTE SEITE: ZUSAMMENFASSUNG (erweitert)
+  // ────────────────────────────────────────────────────────────────
+  var sumHead=results.map(function(r){return '<th>'+r.name+'</th>';}).join('');
+  function sumRowBlock(label, etaFn, show, note){
+    if(!show) return '';
+    return '<tr><td>'+(note?'<span style="font-style:italic">'+label+'</span>':label)+'</td>'+
+      results.map(function(r){
+        var v=etaFn(r);
+        var inf=!isFinite(v)||v>99;
+        var ok=v>=1;
+        return '<td class="r '+(ok?'ok':'fail')+'">'+
+          (inf?'–':v.toFixed(2))+
+        '</td>';
+      }).join('')+'</tr>';
+  }
+  var gztRow=results.map(function(r){
+    var ok=r.etaGZT>=1.0&&isFinite(r.etaGZT);
+    return '<td class="'+(ok?'ok':'fail')+' r">'+(ok?'✓':'✗')+' η = '+_npN(r.etaGZT)+'</td>';
+  }).join('');
+  var gzgRow=results.map(function(r){
+    var ok=r.etaGZG>=1.0&&isFinite(r.etaGZG);
+    return '<td class="'+(ok?'ok':'fail')+' r">'+(ok?'✓':'✗')+' η = '+_npN(r.etaGZG)+'</td>';
+  }).join('');
+  var allOk=results.every(function(r){return r.ok;});
+
+  var summary='<div class="np-page">'+ph()+
+    ch((5+lfCount)+'.','Ergebniszusammenfassung')+
+    '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
+    'Übersicht aller Nachweis-Ausnutzungsgrade η je Lastfall. Nachweis erbracht wenn η ≥ 1.0.'+
+    '</div>'+
+    '<table class="np-tbl" style="margin-bottom:14px">'+
+      '<thead><tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr></thead><tbody>'+
+      sumRowBlock('Sohlspannung (informativ)', function(r){return r.etaSIG;}, NW.sohlsp, true)+
+      sumRowBlock('Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb)+
+      sumRowBlock('Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten)+
+      sumRowBlock('Kippnachweis — GZT Typ 1', function(r){return isFinite(r.eta_klaf)?r.eta_klaf:Math.min(r.etaKx,r.etaKy);}, NW.kippen)+
+      sumRowBlock('Verkippen (Masteinspannung)', function(r){return r.etaVK!==undefined?r.etaVK:99;}, NW.verkipp)+
+      '<tr class="hl"><td><b>GZT — Standsicherheit (Steckner Gl.66)</b></td>'+gztRow+'</tr>'+
+      (NW.gzg?'<tr><td>GZG — Schiefstellung</td>'+gzgRow+'</tr>':'')+
+    '</tbody></table>'+
+    '<div class="np-verdict '+(allOk?'ok':'fail')+'">'+
+      '<div class="np-verdict-v">'+(allOk?'✓  Alle massgebenden Nachweise (GZT und GZG) sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt')+'</div>'+
+      '<div class="np-verdict-s">Berechnungsmodell: Steckner Blockfundament · SIA 267:2013 · '+datStr+'</div>'+
+    '</div>'+
+  '</div>';
+
+  return '<div class="np-wrap">'+cover+toc+page2+page3+nwPages+summary+'</div>';
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -7141,7 +7292,7 @@ function buildNachweisDocFlach(results, G){
         fml("σ = N_d/A ± M_xd/W_x ± M_yd/W_y",
           r.Nd.toFixed(0)+"/"+A.toFixed(2)+" ± "+r.Mxd.toFixed(0)+"/"+r.Wy.toFixed(3)+" ± "+r.Myd.toFixed(0)+"/"+r.Wx.toFixed(3),
           "σ_max = "+r.smax.toFixed(1)+" / σ_min = "+r.smin.toFixed(1),"kPa")+
-        diagWrap(buildSohlDiagram(r,G,false))+
+        diagWrap((function(){try{return buildSohlDiagram(r,G,false);}catch(e){return '';}})())+
         eta(r.etaSIG, !G.isBlock)+
         '</div>'
       :'')+
@@ -7154,7 +7305,7 @@ function buildNachweisDocFlach(results, G){
         fml("B' = B − 2|e_x|  /  L' = L − 2|e_y|",
           B+"−2·"+Math.abs(r.ex).toFixed(3)+" / "+L+"−2·"+Math.abs(r.ey).toFixed(3),
           "B'="+r.Be.toFixed(3)+"m  /  L'="+r.Le.toFixed(3)+"m","")+
-        diagWrap(buildGrundbDiagram(r,G,false), true)+
+        diagWrap((function(){try{return buildGrundbDiagram(r,G,false);}catch(e){return '';}})(), true)+
         sh2('Tragfähigkeit')+
         fml("R_d = c'_d·Nc·ic·sc·dc + q₀·Nq·iq·sq·dq + 0.5·γ·B'·Nγ·iγ·sγ",
           "q₀="+r.q0.toFixed(1)+" kPa  Nq="+r.Nq.toFixed(2)+" Nc="+r.Nc.toFixed(2),
@@ -7186,7 +7337,7 @@ function buildNachweisDocFlach(results, G){
           return '<div class="np-nw">'+
           nwh('4.','Kippnachweis (klaffende Fuge)','SIA 267 — GZT Typ 1, γ_G,sup='+st.lw_G1_sup+' / γ_G,inf='+st.lw_G1_inf)+
           sh2('Ausmitten mit Typ-1-Faktoren')+
-          diagWrap(buildKippDiagram(r,G,false), true)+
+          diagWrap((function(){try{return buildKippDiagram(r,G,false);}catch(e){return '';}})(), true)+
           fml('(ea/a)² + (eb/b)² ≤ 1/9  (SIA 267 — klaffende Fuge)',
               '('+Math.abs(ex_k).toFixed(3)+'/'+G.B+')²+('+Math.abs(ey_k).toFixed(3)+'/'+G.L+')²',
               kv.toFixed(5)+'  '+(ok_k?'≤ 1/9 = 0.1111  ✓':'> 1/9 = 0.1111  ✗'),'')+
@@ -7210,33 +7361,69 @@ function buildNachweisDocFlach(results, G){
     '</div>';
   });
 
+  // ── Inhaltsverzeichnis ─────────────────────────────────────────
+  function tocRowF(num, title, sub){
+    return '<div class="np-toc-row'+(sub?' np-toc-sub':'')+'">'+
+      '<span class="np-toc-num">'+num+'</span>'+
+      '<span class="np-toc-title">'+title+'</span>'+
+      '<span class="np-toc-dots"></span>'+
+    '</div>';
+  }
+  var nwCount = results.length;
+  var lfTocRowsF = results.map(function(r,i){
+    var secBase = 5+i;
+    return tocRowF(secBase+'.', r.name, false)+
+      (NW.sohlsp  ? tocRowF(secBase+'.1', 'Sohlspannung (informativ)',true):'') +
+      (NW.grundb  ? tocRowF(secBase+'.2', 'Grundbruch — GZT Typ 2 (Hansen)',true):'') +
+      (NW.gleiten ? tocRowF(secBase+'.3', 'Gleiten — GZT Typ 2',true):'') +
+      (NW.kippen  ? tocRowF(secBase+'.4', 'Kippnachweis — GZT Typ 1',true):'');
+  }).join('');
+  var toc = '<div class="np-page np-pb">'+ph()+
+    '<div class="np-toc-hd">Inhaltsverzeichnis</div>'+
+    '<div class="np-toc">'+
+      tocRowF('1.', 'Systemübersicht und Geometrie', false)+
+      tocRowF('2.', 'Baugrundparameter', false)+
+      tocRowF('3.', 'Einwirkungen', false)+
+      tocRowF('4.', 'Lastfallkombinationen', false)+
+      lfTocRowsF+
+      tocRowF((5+nwCount)+'.', 'Ergebniszusammenfassung', false)+
+    '</div>'+
+  '</div>';
+
   // ── Zusammenfassung ────────────────────────────────────────────
   var allOk = results.every(function(r){return r.ok;});
   var sumHead = results.map(function(r){return '<th class="r">'+r.name+'</th>';}).join('');
-  function sumRow(label, etaFn, show){
+  function sumRow(label, etaFn, show, italic){
     if(!show) return '';
-    return '<tr><td>'+label+'</td>'+results.map(function(r){
-      var v=etaFn(r); var ok=v>=1;
-      return '<td class="r '+(ok?'ok':'fail')+'">'+(v<99?v.toFixed(2):'–')+'</td>';
-    }).join('')+'</tr>';
+    return '<tr><td>'+(italic?'<span style="font-style:italic">'+label+'</span>':label)+'</td>'+
+      results.map(function(r){
+        var v=etaFn(r); var ok=v>=1; var inf=!isFinite(v)||v>99;
+        return '<td class="r '+(ok?'ok':'fail')+'">'+(inf?'–':v.toFixed(2))+'</td>';
+      }).join('')+'</tr>';
   }
+  var minEta = results.reduce(function(a,b){
+    var k=b.eta_klaf!==undefined?b.eta_klaf:Math.min(b.etaKx||99,b.etaKy||99);
+    return Math.min(a, b.etaGB||99, b.etaGL||99, k);
+  }, 99);
   var summary = '<div class="np-page">'+ph()+
-    ch('5','Ergebniszusammenfassung')+
-    '<table class="np-tbl">'+
-      '<tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr>'+
-      sumRow('1. Sohlspannung  (informativ)', function(r){return r.etaSIG;}, NW.sohlsp)+
-      sumRow('2. Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb)+
-      sumRow('3. Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten)+
-      sumRow('4. Kippnachweis (klaffende Fuge) — GZT Typ 1 (SIA 267)', function(r){return r.eta_klaf!==undefined ? r.eta_klaf : Math.min(r.etaKx,r.etaKy);}, NW.kippen)+
-    '</table>'+
+    ch((5+nwCount)+'.','Ergebniszusammenfassung')+
+    '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
+    'Übersicht aller Nachweis-Ausnutzungsgrade η je Lastfall. Nachweis erbracht wenn η ≥ 1.0.'+
+    '</div>'+
+    '<table class="np-tbl" style="margin-bottom:14px">'+
+      '<thead><tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr></thead><tbody>'+
+      sumRow('Sohlspannung (informativ)', function(r){return r.etaSIG;}, NW.sohlsp, true)+
+      sumRow('Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb, false)+
+      sumRow('Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten, false)+
+      sumRow('Kippnachweis — GZT Typ 1', function(r){return r.eta_klaf!==undefined ? r.eta_klaf : Math.min(r.etaKx||99,r.etaKy||99);}, NW.kippen, false)+
+    '</tbody></table>'+
     '<div class="np-verdict '+(allOk?'ok':'fail')+'">'+
       '<div class="np-verdict-v">'+(allOk?'✓  Alle massgebenden Nachweise sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt')+'</div>'+
-      '<div class="np-verdict-s">Massgebend: '+results.reduce(function(a,b){var k=b.eta_klaf!==undefined?b.eta_klaf:Math.min(b.etaKx,b.etaKy);return Math.min(a,Math.min(b.etaGB,b.etaGL,k)); },99).toFixed(2)+' · Methode: Starre Methode · SIA 267:2013</div>'+
+      '<div class="np-verdict-s">Massgebend: η = '+minEta.toFixed(2)+' · Starre Methode · SIA 267:2013 · '+now.toLocaleDateString('de-CH')+'</div>'+
     '</div>'+
-    '<div style="margin-top:40px;border-top:.5px solid var(--ol);padding-top:6px;font-size:7.5px;color:var(--xdim)">BlockCalc · SIA 267:2013 · '+now.toLocaleDateString('de-CH')+'</div>'+
   '</div>';
 
-  return cover + page2 + page3 + nwPages.join('') + summary;
+  return cover + toc + page2 + page3 + nwPages.join('') + summary;
 }
 
 let _gztCharMode = false;
@@ -8215,8 +8402,8 @@ function buildPfahlErddruckSVG(params, wide=false){
 function buildSohlDiagram(r, g, wide=false){
   // Arbeite mit festem internem Koordinatensystem (VB = viewBox-Breite)
   // SVG skaliert dann per viewBox auf die verfügbare Containerbreite
-  const VB = 400;  // interne Breite
-  const W = wide ? 500 : VB;
+  const VB = 267;  // interne Breite (÷1.5)
+  const W = wide ? 334 : VB;
 
   const B = g.B, L = g.L;
   const ex = r.ex||0, ey = r.ey||0;
@@ -8234,11 +8421,15 @@ function buildSohlDiagram(r, g, wide=false){
 
   // Internes Layout
   const PAD=28, sc_w=VB-2*PAD;
-  const sig_h_max=160;
-  const sig_scale = sig_h_max / Math.max(smax,qu,0.001);
+  const sig_h_max=80;
+  // q_u-Linie nur zeigen wenn σ_max > 40% von q_u (sonst riesiger Leerraum)
+  const showQu = smax >= qu * 0.4;
+  const sig_scale = showQu
+    ? sig_h_max / Math.max(smax, qu, 0.001)
+    : sig_h_max / Math.max(smax, 0.001);
   const px_smax = Math.min(sig_h_max, smax*sig_scale);
   const px_smin = klaff ? 0 : Math.min(sig_h_max, Math.max(0,smin)*sig_scale);
-  const px_qu   = Math.min(sig_h_max, qu*sig_scale);
+  const px_qu   = showQu ? Math.min(sig_h_max, qu*sig_scale) : 0;
 
   // Dynamische Höhe: Inhalt von oben (Titel+Pfeil=48) bis unten (Kalkzeilen+Fallabel=~110)
   const content_h = 48 + Math.max(px_smax, px_qu, 20) + 115 + (klaff?20:0);
@@ -8292,9 +8483,14 @@ function buildSohlDiagram(r, g, wide=false){
   </defs>
   <!-- Titel -->
   <text x="${VB/2}" y="11" text-anchor="middle" font-size="8.5" fill="${c_dim}" letter-spacing="0.06em">SCHNITT  (${lbl_dom}-Richtung)</text>
-  <!-- q_u Referenz -->
+  <!-- q_u Referenz (nur wenn σ_max ≥ 40% von q_u) -->
+  ${showQu ? `
   <line x1="${PAD}" y1="${qu_y}" x2="${PAD+sc_w}" y2="${qu_y}" stroke="${c_warn}" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.7"/>
   <text x="${PAD+sc_w+2}" y="${qu_y+3}" font-size="7.5" fill="${c_warn}">q_u</text>
+  <text x="${PAD+4}" y="${qu_y-4}" font-size="7.5" fill="${c_warn}" opacity="0.85">q_u = ${qu.toFixed(0)} kPa  (zul. Sohlspannung)</text>
+  ` : `
+  <text x="${PAD+4}" y="${gnd_y+px_smax+38}" font-size="7.5" fill="${c_warn}" opacity="0.75">q_u = ${qu.toFixed(0)} kPa  (η = ${r.etaSIG?r.etaSIG.toFixed(1):'—'})</text>
+  `}
   <!-- Klaffende Fuge: Schraffur + Label -->
   ${klaff ? `
   <rect x="${klaff_x_gap_l}" y="${fund_y}" width="${klaff_x_gap_r-klaff_x_gap_l}" height="${fund_h}"
@@ -8378,13 +8574,13 @@ function buildKippDiagram(r, g, wide=false){
   const {c_ok,c_fail,c_fund,c_dim,c_on2} = _sohlColors(0,300);
 
   // Layout: Diagramm links, Legende rechts (nebeneinander wenn wide)
-  const W = wide ? 500 : 296;
-  const diagW = wide ? 340 : W;
+  const W = wide ? 750 : 444;  // ×1.5
+  const diagW = wide ? 510 : W;
   const legX  = diagW + 14;
 
   // Skalierung: Grundriss passt in diagW × verfügbare Höhe
-  const sc = Math.min((diagW-50)/(B||1), 160/(L||1), wide?55:42);
-  const H  = wide ? 260 : Math.round(sc*L + 65);  // dynamische Höhe normal
+  const sc = Math.min((diagW-50)/(B||1), 240/(L||1), wide?82:63);  // ×1.5
+  const H  = wide ? 390 : Math.round(sc*L + 98);  // ×1.5
   const pl_bpx = B*sc, pl_lpx = L*sc;
   const pl_cx = diagW/2;
   const pl_cy = H/2 + 5;
@@ -8475,7 +8671,7 @@ function buildKippDiagram(r, g, wide=false){
 
 // ── 3. GRUNDBRUCH-DIAGRAMM (effektive Fläche Meyerhof) ──────────────────
 function buildGrundbDiagram(r, g, wide=false){
-  const W = wide ? 500 : 296;
+  const W = wide ? 750 : 444;  // ×1.5
   const B = g.B, L = g.L;
   const ex = r.ex||0, ey = r.ey||0;
   const Be = r.Be||B, Le = r.Le||L;
@@ -8486,14 +8682,14 @@ function buildGrundbDiagram(r, g, wide=false){
   const redPct = Math.round((1 - (Be*Le)/(B*L))*100);
 
   // Layout: Diagramm links, Legende rechts (wide) oder unten (normal)
-  const diagW = wide ? 300 : W;
+  const diagW = wide ? 450 : W;  // ×1.5
   const legX  = diagW + 14;
-  const PAD = 30;
+  const PAD = 45;  // ×1.5
 
   // Skalierung & dynamische Höhe
-  const sc = Math.min((diagW-2*PAD)/(B||1), 150/(L||1), wide?60:45);
+  const sc = Math.min((diagW-2*PAD)/(B||1), 225/(L||1), wide?90:68);  // ×1.5
   const pl_bpx = B*sc, pl_lpx = L*sc;
-  const H = wide ? 220 : Math.round(pl_lpx + 75);
+  const H = wide ? 330 : Math.round(pl_lpx + 113);  // ×1.5
   const pl_cx = diagW/2, pl_cy = H/2 + 5;
   const pl_x0 = pl_cx - pl_bpx/2, pl_y0 = pl_cy - pl_lpx/2;
 
@@ -9193,10 +9389,11 @@ function renderResults(res,worst,g){
          f:'σ = N/A ± M_x/W_x ± M_y/W_y  →  σ_max ≤ q_u',
          rows:[['σ_max',r.smax.toFixed(1)+' kPa'],['σ_min',r.smin.toFixed(1)+' kPa'],
                ['q_u zul.',g.qu+' kPa'],['η',r.etaSIG.toFixed(2)]],
-         svg: buildSohlDiagram(r, g, _gztExpanded),
+         svg: (()=>{ try{ return buildSohlDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildSohlDiagram'},
         {id:'grundb',t:'Grundbruch',e:r.etaGB,f:grundbFormula,rows:grundbRows,
-         svg:buildGrundbDiagram(r,g,_gztExpanded), diagR:r, diagG:g, diagFn:'buildGrundbDiagram'},
+         svg:(()=>{ try{ return buildGrundbDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
+         diagR:r, diagG:g, diagFn:'buildGrundbDiagram'},
         {id:'gleiten',t:'Gleiten',e:r.etaGL,f:gleitenFormula,rows:gleitenRows},
         {id:'kippen',t:'Kippnachweis',e:r.eta_klaf!==undefined?r.eta_klaf:Math.min(r.etaKx,r.etaKy),
          f:'SIA 267 GZT Typ 1  ·  N_d = γ_G,inf·(N_G+G_k)  ·  e_x = M_y,d/N_d  ·  e_y = M_x,d/N_d  →  (e_x/B)² + (e_y/L)² ≤ 1/9',
@@ -9206,7 +9403,7 @@ function renderResults(res,worst,g){
                ['(ea/B)²+(eb/L)²',r.klaf_val!==undefined?r.klaf_val.toFixed(4):'—'],
                ['Grenzwert 1/9','0.1111'],
                ['η',r.eta_klaf!==undefined?r.eta_klaf.toFixed(2):'—']],
-         svg: buildKippDiagram(r, g, _gztExpanded),
+         svg: (()=>{ try{ return buildKippDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildKippDiagram'},
       ]:[]),
       // ── Blockfundament (Steckner) — nur GZT + GZG (je nach lf.nw)
@@ -9216,7 +9413,7 @@ function renderResults(res,worst,g){
           {id:'gzt',t:'Standsicherheit',e:r.etaGZT,
            f:"M_u = −(Ew−Ea+E0ü)·v + (Ep+E0)u·v' + Reib·B/2 + Ru·(t−ü) + Nu·u  ≥  M_d",
            gztR: r, gztG: g,
-           svg: buildGZTDiagram(r, g)},
+           svg: (()=>{ try{ return buildGZTDiagram(r,g); }catch(e){ return ''; } })()},
         ]:[]),
         ...((r.nw!=='gzt')?[
           {id:'_grp', t:'GZG — Grenzzustand der Gebrauchstauglichkeit  ·  Steckner Gl.11–21'},
