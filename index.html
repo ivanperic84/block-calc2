@@ -479,6 +479,27 @@ html, body {
 /* LF-Titel auf Nachweis-Seite */
 .np-lfh{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:5px 0;border-bottom:1.5px solid var(--on2);margin-bottom:14px;color:var(--on2)}
 /* Zusammenfassung */
+/* Bettungsziffer C₁ Zone-Chip und Hint */
+.c1-zone-soft{color:var(--fail);font-family:var(--f-mono);display:flex;flex-direction:column;gap:1px;white-space:normal;word-break:break-word}
+.c1-zone-mid{color:var(--warn);font-family:var(--f-mono);display:flex;flex-direction:column;gap:1px;white-space:normal;word-break:break-word}
+.c1-zone-ok{color:var(--dim);font-family:var(--f-mono);display:flex;flex-direction:column;gap:1px;white-space:normal;word-break:break-word}
+#bg_c1_hint{overflow:visible;min-width:0}
+#bg_c1_hint span{display:block;font-size:9px;line-height:1.5;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.c1-zone-chip{font-size:8px;font-family:var(--f-mono);padding:1px 6px;border-radius:3px;flex-shrink:0;font-weight:600;align-self:center}
+.c1-zone-chip.chip-fail{background:rgba(200,0,0,.1);color:var(--fail)}
+.c1-zone-chip.chip-warn{background:rgba(160,100,0,.12);color:var(--warn)}
+.c1-zone-chip.chip-ok{background:rgba(0,110,0,.08);color:var(--ok)}
+/* Manuell überschriebene Felder (γ-Beiwerte, C₁) */
+.field-overridden>label{color:var(--warn)!important}
+.field-overridden input,.field-overridden select{border-color:var(--warn)!important;background:rgba(160,100,0,.06)!important}
+/* Inhaltsverzeichnis */
+.np-toc-hd{font-size:15px;font-weight:700;letter-spacing:.03em;margin:18px 0 14px;border-bottom:1.5px solid var(--ol);padding-bottom:7px}
+.np-toc{display:flex;flex-direction:column;gap:0}
+.np-toc-row{display:flex;align-items:baseline;gap:4px;padding:4px 0;border-bottom:.5px solid var(--s3,#f0f0f0);font-size:9.5px}
+.np-toc-row.np-toc-sub{padding:2px 0 2px 20px;font-size:8.5px;color:var(--dim);border-bottom:none}
+.np-toc-num{font-family:var(--f-mono);font-size:8.5px;color:var(--xdim);min-width:26px;flex-shrink:0}
+.np-toc-title{flex:1}
+.np-toc-dots{flex:0 0 60px;height:1px;border-bottom:1px dotted var(--ol);margin:0 6px 3px}
 .np-verdict{padding:10px 14px;margin-top:16px;border:.5px solid}
 .np-verdict.ok{background:rgba(34,139,34,.05);border-color:rgba(34,139,34,.3)}
 .np-verdict.fail{background:rgba(200,0,0,.05);border-color:rgba(200,0,0,.3)}
@@ -872,16 +893,21 @@ html, body {
         <div id="model-hint" class="hint"></div>
 
         <div class="sec" id="geo-sec-block">Blockgeometrie</div>
-        <div class="field"><label id="lbl-bx">B <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_bx_r" min="1.0" max="2.5" step="0.1" value="2.0" oninput="slSync('g_bx',this.value);updateViewer();scheduleCalc()"><input id="g_bx" type="number" value="2.0" step="0.1" oninput="slSync('g_bx',this.value);updateViewer();scheduleCalc()"/></div></div>
-        <div class="field"><label id="lbl-by">L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_by_r" min="1.0" max="2.5" step="0.1" value="2.0" oninput="slSync('g_by',this.value);updateViewer();scheduleCalc()"><input id="g_by" type="number" value="2.0" step="0.1" oninput="slSync('g_by',this.value);updateViewer();scheduleCalc()"/></div></div>
-        <div class="field"><label id="lbl-hblock">H_Block <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hblock_r" min="1.4" max="3.6" step="0.1" value="2.5" oninput="slSync('g_hblock',this.value);updateViewer();scheduleCalc()"><input id="g_hblock" type="number" value="2.5" step="0.1" oninput="slSync('g_hblock',this.value);updateViewer();scheduleCalc()"/></div></div>
+        <div class="field"><label id="lbl-bx">B <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_bx_r" min="1.0" max="2.5" step="0.1" value="1.2" oninput="slSync('g_bx',this.value);updateViewer();scheduleCalc()"><input id="g_bx" type="number" value="1.2" step="0.1" oninput="slSync('g_bx',this.value);updateViewer();scheduleCalc()"/></div></div>
+        <div class="field"><label id="lbl-by">L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_by_r" min="1.0" max="2.5" step="0.1" value="1.2" oninput="slSync('g_by',this.value);updateViewer();scheduleCalc()"><input id="g_by" type="number" value="1.2" step="0.1" oninput="slSync('g_by',this.value);updateViewer();scheduleCalc()"/></div></div>
+        <div class="field"><label id="lbl-hblock">H_Block <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hblock_r" min="1.4" max="3.6" step="0.1" value="2.2" oninput="slSync('g_hblock',this.value);updateViewer();scheduleCalc()"><input id="g_hblock" type="number" value="2.2" step="0.1" oninput="slSync('g_hblock',this.value);updateViewer();scheduleCalc()"/></div></div>
 
         <div id="kopf-section">
           <div class="sec">Fundamentkopf</div>
-          <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_kx_r" min="0.40" max="0.80" step="0.1" value="0.8" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"><input id="g_kx" type="number" value="0.8" step="0.1" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_ky_r" min="0.40" max="0.80" step="0.1" value="0.8" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"><input id="g_ky" type="number" value="0.8" step="0.1" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hkopf_r" min="0.40" max="1.00" step="0.1" value="0.5" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"><input id="g_hkopf" type="number" value="0.5" step="0.1" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>Überdeckung <em>m</em></label><input id="g_uberd" type="number" value="0.30" step="0.05" min="0" oninput="updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div>
+          <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_kx_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"><input id="g_kx" type="number" value="0.6" step="0.1" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"/></div></div>
+          <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_ky_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"><input id="g_ky" type="number" value="0.6" step="0.1" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"/></div></div>
+          <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hkopf_r" min="0.40" max="1.00" step="0.1" value="1.0" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"><input id="g_hkopf" type="number" value="1.0" step="0.1" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"/></div></div>
+          <div class="field"><label>Überdeckung <em>m</em></label><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div>
+          <div class="field" style="flex-direction:row;align-items:center;gap:8px;padding:4px 0">
+            <input type="checkbox" id="kopf_in_gk" checked onchange="scheduleCalc()" style="width:15px;height:15px;cursor:pointer;flex-shrink:0"/>
+            <label for="kopf_in_gk" style="cursor:pointer;user-select:none;font-size:11px">Kopfgewicht in G_k einschliessen</label>
+          </div>
+          <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:0;display:block;padding-bottom:4px">Deaktivieren für DP2a-Kompatibilität (Stütze als Mastteil)</span>
           <div class="g2">
             <div class="field"><label>Versatz e_x <em>m</em></label><input id="g_ex" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()"/></div>
             <div class="field"><label>Versatz e_y <em>m</em></label><input id="g_ey" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()"/></div>
@@ -934,6 +960,7 @@ html, body {
         <!-- Bodenschichten als Karten -->
         <div class="sec">Bodenschichten</div>
         <div id="schichten-list"></div>
+        <span id="bg_preset_warn" style="display:none;font-size:9px;color:var(--warn);font-family:var(--f-mono);line-height:1.4;margin:3px 0 4px;display:none;padding:3px 6px;border-left:2px solid var(--warn)"></span>
         <button class="btn btn-tonal btn-full btn-sm" onclick="addSchicht()">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
           Schicht hinzufügen
@@ -957,6 +984,23 @@ html, body {
                   <option value="1.0">φ — rau</option>
                 </select>
               </div>
+              <div class="field">
+                <label>Bodenart (USCS-Klassifikation)</label>
+                <select id="bg_koernig" onchange="_bgKoernig=this.value;autoC1();scheduleCalc()">
+                  <option value="grob">Grobkörnig — M_E ≥ 25 MN/m² (GW, GP, SW, SP, SM, SC …)</option>
+                  <option value="fein">Feinkörnig — M_E ≥ 12 MN/m² (CL, ML, MH, CH, CL-ML …)</option>
+                </select>
+                <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Gem. SN 670 004-2b-NA — Minimalanforderung Steckner GZG</span>
+              </div>
+              <div class="field">
+                <label>C₁-Berechnungsmethode</label>
+                <select id="bg_c1_methode" onchange="_c1Methode=this.value;_c1Manual=false;autoC1();scheduleCalc()">
+                  <option value="auto">Automatisch</option>
+                  <option value="winkler">Winkler — M_E · Kp / B</option>
+                  <option value="steckner">Steckner Gl.3 — φ-abhängig</option>
+                </select>
+                <span id="c1-methode-hint" style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">auto — Methode nach M_E und Bodenart</span>
+              </div>
               <div class="g2">
                 <div class="field">
                   <label style="min-height:2.6em;display:flex;align-items:flex-end">q_u  zul. Sohlspannung <em style="margin-left:4px">kPa</em></label>
@@ -964,20 +1008,23 @@ html, body {
                   <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">informativ · nicht massgebend nach Steckner</span>
                 </div>
                 <div class="field">
-                  <label style="min-height:2.6em;display:flex;align-items:flex-end">M_E  Steifemodul <em style="margin-left:4px">MN/m²</em></label>
-                  <input id="bg_me" type="number" value="20" step="1" oninput="autoC1();scheduleCalc()"/>
-                  <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">nur für C₁ Reset-Button</span>
+                  <label style="min-height:2.6em;display:flex;align-items:flex-end;gap:5px">M_E  Steifemodul <em style="margin-left:2px">MN/m²</em><span id="c1-zone-chip" class="c1-zone-chip"></span></label>
+                  <input id="bg_me" type="number" value="20" step="1" readonly style="opacity:.5;cursor:default" title="Automatisch aus Bodenschichten berechnet"/>
+                  <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Automatisch aus Schicht-M_E berechnet</span>
                 </div>
               </div>
               <div class="field">
                 <label>C₁  Bettungsziffer <em>MN/m³</em></label>
                 <div style="display:flex;gap:6px;align-items:center">
-                  <input id="bg_c1" type="number" value="50" step="5" style="flex:1" oninput="calculate();updateMatCardSummary()"/>
-                  <button class="btn btn-tonal btn-sm" onclick="autoC1()" title="Auf berechneten Wert zurücksetzen" style="padding:0 8px;flex-shrink:0">
+                  <input id="bg_c1" type="number" value="50" step="5" style="flex:1" oninput="_c1Manual=true;calculate();updateMatCardSummary()"/>
+                  <button class="btn btn-tonal btn-sm" onclick="_c1Manual=false;autoC1()" title="Auf berechneten Wert zurücksetzen" style="padding:0 8px;flex-shrink:0">
                     <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 10a6 6 0 1 0 1.5-4L4 4v4h4"/></svg>
                   </button>
+                  <button class="btn btn-tonal btn-sm" onclick="openC1Info()" title="Berechnungsdetails C₁" style="padding:0 8px;flex-shrink:0">
+                    <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="8"/><line x1="10" y1="9" x2="10" y2="14"/><circle cx="10" cy="6.5" r="0.5" fill="currentColor" stroke="none"/></svg>
+                  </button>
                 </div>
-                <span id="bg_c1_hint" style="font-size:10px;color:var(--dim);font-family:var(--f-mono);margin-top:2px;display:block"></span>
+                <div id="bg_c1_hint" style="margin-top:4px"></div>
               </div>
             </div>
             <!-- Flachfundament-spezifisch -->
@@ -1051,26 +1098,29 @@ html, body {
           </div>
         </div>
 
-        <!-- Teilsicherheitsbeiwerte -->
+        <!-- Widerstandsbeiwerte Baugrund (Lastbeiwerte γ_G/γ_Q → Tab Lasten) -->
         <div class="lf-card" id="tsb-card" style="margin-top:6px">
           <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
-            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Teilsicherheitsbeiwerte</span>
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Widerstandsbeiwerte Baugrund</span>
             <span class="mat-card-summary">SIA 267 GZ Typ 2</span>
+            <button class="btn btn-tonal btn-xs" style="margin-left:6px;flex-shrink:0"
+              onclick="event.stopPropagation();resetSIABodenbeiwerte()"
+              title="SIA 267 Standardwerte wiederherstellen">SIA</button>
             <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
           </div>
           <div class="lf-card-body">
             <div class="g2">
-              <div class="field"><label>γ_G  ständig</label><input id="tw_G" type="number" value="1.35" step="0.05" oninput="scheduleCalc()"/></div>
-              <div class="field"><label>γ_Q  veränderl.</label><input id="tw_Q" type="number" value="1.5" step="0.05" oninput="scheduleCalc()"/></div>
+              <div class="field"><label>γ_φ  Reibung</label><input id="tw_phi" type="number" value="1.20" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
+              <div class="field"><label>γ_c  Kohäsion</label><input id="tw_c" type="number" value="1.5" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
             </div>
             <div class="g2">
-              <div class="field"><label>γ_φ  Reibung</label><input id="tw_phi" type="number" value="1.20" step="0.05" oninput="scheduleCalc()"/></div>
-              <div class="field"><label>γ_c  Kohäsion</label><input id="tw_c" type="number" value="1.5" step="0.05" oninput="scheduleCalc()"/></div>
+              <div class="field"><label>γ_Ea  akt. Erddruck</label><input id="tw_Ea" type="number" value="1.35" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
+              <div class="field"><label>γ_Ep  pass. Erddruck</label><input id="tw_Ep" type="number" value="1.40" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
             </div>
-            <div class="g2">
-              <div class="field"><label>γ_Ea  akt. Erddruck</label><input id="tw_Ea" type="number" value="1.35" step="0.05" oninput="scheduleCalc()"/></div>
-              <div class="field"><label>γ_Ep  pass. Erddruck</label><input id="tw_Ep" type="number" value="1.40" step="0.05" oninput="scheduleCalc()"/></div>
-            </div>
+            <div class="hint" style="margin-top:4px">Lastbeiwerte (γ_G, γ_Q) werden im Tab «Lasten» unter «Lastbeiwerte» geführt.</div>
+            <!-- Hidden: von Lastbeiwerten gespiegelt (Berichte/Projektspeicherung) -->
+            <input id="tw_G" type="hidden" value="1.35"/>
+            <input id="tw_Q" type="hidden" value="1.5"/>
           </div>
         </div>
 
@@ -1150,29 +1200,42 @@ html, body {
               Typ 2 / ST — Grundbruch · Gleiten · Sohlspannung · Steckner GZT
             </div>
             <div class="g2" style="margin-bottom:8px">
-              <div class="field"><label>γ_G sup  ungünstig</label><input id="lw_G" type="number" value="1.35" step="0.05" oninput="syncLastbeiwerte();refreshMatrix();scheduleCalc()"/></div>
-              <div class="field"><label>γ_G inf  günstig</label><input id="lw_G_inf" type="number" value="1.00" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
-              <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q" type="number" value="1.50" step="0.05" oninput="syncLastbeiwerte();refreshMatrix();scheduleCalc()"/></div>
+              <div class="field"><label>γ_G sup  ungünstig</label><input id="lw_G" type="number" value="1.35" step="0.05" oninput="syncLastbeiwerte();refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
+              <div class="field"><label>γ_G inf  günstig</label><input id="lw_G_inf" type="number" value="1.00" step="0.05" oninput="refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
+              <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q" type="number" value="1.50" step="0.05" oninput="syncLastbeiwerte();refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
             </div>
 
-            <!-- Typ 1 — Kippen -->
-            <div style="font-size:10.5px;font-weight:500;color:var(--dim);letter-spacing:0.04em;margin-bottom:4px">
-              Typ 1 — Kippen / Ausmitte (Stabilität)
-            </div>
-            <div class="g2" style="margin-bottom:8px">
-              <div class="field"><label>γ_G sup  ungünstig</label><input id="lw_G1_sup" type="number" value="1.20" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
-              <div class="field"><label>γ_G inf  günstig</label><input id="lw_G1_inf" type="number" value="0.80" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
-              <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q1" type="number" value="1.50" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+            <!-- Typ 1 — Kippen (nur Flachfundament; Block ist eingespannt → kein Kippen) -->
+            <div id="lw-typ1-sec" style="display:none">
+              <div style="font-size:10.5px;font-weight:500;color:var(--dim);letter-spacing:0.04em;margin-bottom:4px">
+                Typ 1 — Kippen / Ausmitte (Stabilität)
+              </div>
+              <div class="g2" style="margin-bottom:8px">
+                <div class="field"><label>γ_G sup  ungünstig</label><input id="lw_G1_sup" type="number" value="1.20" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+                <div class="field"><label>γ_G inf  günstig</label><input id="lw_G1_inf" type="number" value="0.80" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+                <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q1" type="number" value="1.50" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+              </div>
             </div>
 
-            <!-- GZG -->
-            <div style="font-size:10.5px;font-weight:500;color:var(--dim);letter-spacing:0.04em;margin-bottom:4px">
-              GZG — Gebrauchstauglichkeit (Schiefstellung)
+            <!-- GZG (nur Blockfundament — Steckner Schiefstellung) -->
+            <div id="lw-gzg-sec">
+              <div style="font-size:10.5px;font-weight:500;color:var(--dim);letter-spacing:0.04em;margin-bottom:4px">
+                GZG — Gebrauchstauglichkeit (Schiefstellung)
+              </div>
+              <div class="g2">
+                <div class="field"><label>γ_G  ständig</label><input id="lw_G_gzg" type="number" value="1.00" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+                <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q_gzg" type="number" value="1.00" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+              </div>
             </div>
-            <div class="g2">
-              <div class="field"><label>γ_G  ständig</label><input id="lw_G_gzg" type="number" value="1.00" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
-              <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q_gzg" type="number" value="1.00" step="0.05" oninput="refreshMatrix();scheduleCalc()"/></div>
+
+            <!-- Eigengewicht G_k -->
+            <div style="font-size:10.5px;font-weight:500;color:var(--dim);letter-spacing:0.04em;margin-bottom:4px;margin-top:6px">
+              Eigengewicht Fundament G_k
             </div>
+            <div class="g2" style="margin-bottom:4px">
+              <div class="field"><label>γ_G,eig  Fundament</label><input id="lw_G_eig" type="number" value="1.00" step="0.05" oninput="_checkTWOverrides();scheduleCalc()" title="Faktor für G_k (SIA 267 §4.4.3: günstig wirkend = 1.00)"/></div>
+            </div>
+            <div class="hint" style="margin-top:0">γ_G,eig wirkt nur auf G_k (Beton + Hinterfüllung). Äussere Lasten N_G verwenden γ_G sup. SIA 267 §4.4.3: Eigengewicht des Fundaments wirkt günstig → 1.00.</div>
 
             <div class="hint" style="margin-top:6px">Beiwerte gelten für alle Lastfälle des jeweiligen Typs. GZT-LF verwenden Typ 2/ST, GZG-LF verwenden GZG.</div>
           </div>
@@ -1884,12 +1947,12 @@ function loadSettings(){
   set('set-lang',    SETTINGS.lang||'de');
   set('set-firma',   SETTINGS.firma||'');
   set('set-bearbeiter', SETTINGS.bearbeiter||'');
-  set('set-gbx',  SETTINGS.gbx??2.0);
-  set('set-gby',  SETTINGS.gby??2.0);
-  set('set-ghb',  SETTINGS.ghb??2.5);
-  set('set-gkx',  SETTINGS.gkx??0.8);
-  set('set-gky',  SETTINGS.gky??0.8);
-  set('set-ghk',  SETTINGS.ghk??0.5);
+  set('set-gbx',  SETTINGS.gbx??1.2);
+  set('set-gby',  SETTINGS.gby??1.2);
+  set('set-ghb',  SETTINGS.ghb??2.2);
+  set('set-gkx',  SETTINGS.gkx??0.6);
+  set('set-gky',  SETTINGS.gky??0.6);
+  set('set-ghk',  SETTINGS.ghk??1.0);
   set('set-tG',   SETTINGS.tG??1.35);
   set('set-tQ',   SETTINGS.tQ??1.5);
   set('set-tph',  SETTINGS.tph??1.20);
@@ -1900,9 +1963,15 @@ function loadSettings(){
   set('set-bgc',     SETTINGS.bgc??0);
   set('set-bggamma', SETTINGS.bggamma??20);
   set('set-bgme',    SETTINGS.bgme??20);
-  set('set-uberd',   SETTINGS.uberd??0.30);
+  set('set-uberd',   SETTINGS.uberd??0.40);
   set('set-mob',     SETTINGS.mob??0.25);
   set('set-alpha-zul', SETTINGS.alphaZul??0.005);
+  _bgKoernig = SETTINGS.bg_koernig || 'grob';
+  const kSel = document.getElementById('bg_koernig');
+  if(kSel) kSel.value = _bgKoernig;
+  _c1Methode = SETTINGS.c1_methode || 'auto';
+  const mSel = document.getElementById('bg_c1_methode');
+  if(mSel) mSel.value = _c1Methode;
   const nw = SETTINGS.nw||{};
   chk('nw-sohlsp',  nw.sohlsp!==false);
   chk('nw-grundb',  nw.grundb!==false);
@@ -2008,6 +2077,8 @@ function applySettings(){
   SETTINGS.uberd   = gv('set-uberd');
   SETTINGS.mob     = gv('set-mob');
   SETTINGS.alphaZul= gv('set-alpha-zul');
+  SETTINGS.bg_koernig = _bgKoernig;
+  SETTINGS.c1_methode = _c1Methode;
   SETTINGS.nw = {
     sohlsp:  gc('nw-sohlsp'),
     grundb:  gc('nw-grundb'),
@@ -2813,8 +2884,11 @@ function rebuildScene(){
     const Hxd=gG*HGx+gW*HWx, Hyd=gG*HGy+gW*HWy;
     const Ht=Math.sqrt(Hxd**2+Hyd**2);
     const _gb=+gi('g_gbeton'),_ga=+gi('g_gauf'),_ue=Math.max(0,+gi('g_uberd')||0);
-    const _Gk=(_gb*(bx*by*hb+(+gi('g_kx'))*(+gi('g_ky'))*(hk+_ue))+(_ue>0?(bx*by-( +gi('g_kx'))*(+gi('g_ky')))*_ue*_ga:0));
-    const Nd=gG*(NG+_Gk);
+    const _kpf=document.getElementById('kopf_in_gk')?.checked!==false;
+    const _kx=+gi('g_kx'),_ky=+gi('g_ky');
+    const _Gk=(_gb*(bx*by*hb+(_kpf?_kx*_ky*(hk+_ue):0))+(_ue>0?((_kpf?_kx*_ky:0)*_ue*_gb+(bx*by-_kx*_ky)*_ue*_ga):0));
+    const _gGe=+gi('lw_G_eig')||1.00;
+    const Nd=gG*NG+_gGe*_Gk;
     const S_MIN=0.55, S_MAX=2.5; // Mindest- / Maximallänge Vektoren [m]
     if(Ht>0.001){
       const s=Math.max(S_MIN,Math.min(S_MAX,Ht/20));
@@ -3857,13 +3931,22 @@ function resetSIALastbeiwerte(){
   const vals = {
     lw_G:'1.35', lw_G_inf:'1.00', lw_Q:'1.50',
     lw_G1_sup:'1.20', lw_G1_inf:'0.80', lw_Q1:'1.50',
-    lw_G_gzg:'1.00', lw_Q_gzg:'1.00'
+    lw_G_gzg:'1.00', lw_Q_gzg:'1.00',
+    lw_G_eig:'1.00'
   };
   Object.entries(vals).forEach(([id,v])=>si(id,v));
   syncLastbeiwerte();
   refreshMatrix();
   scheduleCalc();
   toast('SIA 267 Lastbeiwerte wiederhergestellt');
+}
+
+function resetSIABodenbeiwerte(){
+  const vals = { tw_phi:'1.20', tw_c:'1.50', tw_Ea:'1.35', tw_Ep:'1.40' };
+  Object.entries(vals).forEach(([id,v])=>si(id,v));
+  _checkTWOverrides();
+  scheduleCalc();
+  toast('SIA 267 Widerstandsbeiwerte wiederhergestellt');
 }
 
 // Lastbeiwerte für einen Lastfall ermitteln (aus Lastbeiwerte-Karte, nicht LF-Felder)
@@ -4016,18 +4099,14 @@ function buildLFMatrix(){
   const isBlock = CALC_MODEL === 'block';
   const lbl = SETTINGS.gz_labels || {};
 
+  // Block (eingespannt): kein Kippen/Ausmitte-Nachweis → keine Typ-1-Zeile
+  // (Standsicherheit wird über Steckner GZT erbracht; Grundbruch/Gleiten informativ)
   const GZ_BLOCK = [
     {
       label: 'Typ 2 / ST',
-      sub:   lbl.t2_block || 'Grundbruch · Gleiten · Sohlsp. · Steckner GZT',
+      sub:   lbl.t2_block || 'Steckner GZT — Standsicherheit',
       color: 'var(--acc)',
       gamma: (c) => c[3]==='W' ? gQ2 : gG2s
-    },
-    {
-      label: 'Typ 1',
-      sub:   lbl.t1_block || 'Kippen / Ausmitte',
-      color: 'var(--warn)',
-      gamma: (c) => { if(c[3]==='W') return gQ1; if(c[0]==='NG') return gG1i; return gG1s; }
     },
     {
       label: 'GZG',
@@ -4123,11 +4202,15 @@ function buildLFMatrix(){
 // BAUGRUND PRESETS
 // ════════════════════════════════════════════
 const BGP = {
-  kies:   { phi:38, c:0,   gamma:20.0, gamma2:10.5, qu:400, me:80  },
-  sand:   { phi:32, c:0,   gamma:19.0, gamma2:9.5,  qu:250, me:40  },
-  schluff:{ phi:28, c:5,   gamma:18.5, gamma2:8.5,  qu:150, me:15  },
-  ton:    { phi:20, c:20,  gamma:18.0, gamma2:8.0,  qu:100, me:8   },
-  fels:   { phi:45, c:100, gamma:26.0, gamma2:16.0, qu:800, me:500 },
+  kies:         { phi:38, c:0,   gamma:20.0, gamma2:10.5, qu:400, me:80,  warn:null },
+  sand:         { phi:32, c:0,   gamma:19.0, gamma2:9.5,  qu:250, me:40,  warn:null },
+  schluff:      { phi:28, c:5,   gamma:18.5, gamma2:8.5,  qu:150, me:15,  warn:null },
+  ton:          { phi:20, c:20,  gamma:18.0, gamma2:8.0,  qu:100, me:12,  warn:null },
+  fels:         { phi:45, c:100, gamma:26.0, gamma2:16.0, qu:800, me:500, warn:null },
+  ton_weich:    { phi:18, c:15,  gamma:17.5, gamma2:7.5,  qu:60,  me:6,   warn:'M_E = Erfahrungswert für weichen Ton — Feldversuche (Plattendruckversuch, CPT) empfohlen' },
+  sand_locker:  { phi:28, c:0,   gamma:17.5, gamma2:8.0,  qu:150, me:18,  warn:null },
+  aufsch_verd:  { phi:30, c:0,   gamma:20.0, gamma2:10.0, qu:150, me:20,  warn:'Auffüllung — M_E = Erfahrungswert (verdichtet). Feldnachweis durch Plattendruckversuch empfohlen.' },
+  aufsch_locker:{ phi:25, c:0,   gamma:18.0, gamma2:8.5,  qu:80,  me:5,   warn:'Auffüllung locker — M_E sehr tief. Steckner GZG nicht gültig. Feldnachweis zwingend empfohlen.' },
 };
 
 function applyBGPreset() {
@@ -4137,6 +4220,11 @@ function applyBGPreset() {
   si('bg_phi', p.phi); si('bg_c', p.c);
   si('bg_gamma', p.gamma); si('bg_gamma2', p.gamma2);
   si('bg_qu', p.qu);
+  if(p.me != null) si('bg_me', p.me);
+  // Auffüllungs-Hinweis
+  const warnEl = document.getElementById('bg_preset_warn');
+  if(warnEl){ warnEl.textContent = p.warn||''; warnEl.style.display = p.warn ? '' : 'none'; }
+  autoC1();
 }
 
 function updateGWField(){
@@ -4207,11 +4295,17 @@ function schichtPresetDropdown(i){
   return `<select class="sch-preset-sel" id="sch-sel-${i}"
     onchange="applySchichtPreset(${i},this.value)">
     <optgroup label="Standard">
-      <option value="kies"    ${cur==='kies'   ?'selected':''}>Kies</option>
-      <option value="sand"    ${cur==='sand'   ?'selected':''}>Sand</option>
-      <option value="schluff" ${cur==='schluff'?'selected':''}>Schluff</option>
-      <option value="ton"     ${cur==='ton'    ?'selected':''}>Ton</option>
-      <option value="fels"    ${cur==='fels'   ?'selected':''}>Fels</option>
+      <option value="kies"    ${cur==='kies'   ?'selected':''}>Kies (M_E 80)</option>
+      <option value="sand"    ${cur==='sand'   ?'selected':''}>Sand (M_E 40)</option>
+      <option value="schluff" ${cur==='schluff'?'selected':''}>Schluff (M_E 15)</option>
+      <option value="ton"     ${cur==='ton'    ?'selected':''}>Ton, steif (M_E 12)</option>
+      <option value="fels"    ${cur==='fels'   ?'selected':''}>Fels (M_E 500)</option>
+    </optgroup>
+    <optgroup label="Sonderböden">
+      <option value="ton_weich"     ${cur==='ton_weich'    ?'selected':''}>Ton, weich (M_E 6) ⚠</option>
+      <option value="sand_locker"   ${cur==='sand_locker'  ?'selected':''}>Sand, locker (M_E 18)</option>
+      <option value="aufsch_verd"   ${cur==='aufsch_verd'  ?'selected':''}>Auffüllung, verdichtet (M_E 20) ⚠</option>
+      <option value="aufsch_locker" ${cur==='aufsch_locker'?'selected':''}>Auffüllung, locker (M_E 5) ⚠</option>
     </optgroup>
     ${tpls.length?`<optgroup label="Gespeichert">${tpls.map(t=>`<option value="__tpl__${t.id}" ${cur===t.id?'selected':''}>${t.name}</option>`).join('')}</optgroup>`:''}
     ${isCustom?`<option value="" selected>—</option>`:''}
@@ -4319,6 +4413,14 @@ function applySchichtPreset(i, key){
     }
   }
   renderSchichten(); // neu rendern für Chip-Update + Preset-Markierung
+  // Warn-Hinweis für Auffüllungen und Sonderböden
+  const warnEl = document.getElementById('bg_preset_warn');
+  if(warnEl){
+    const warnTxt = (!key.startsWith('__tpl__') && BGP[key]) ? (BGP[key].warn||'') : '';
+    warnEl.textContent = warnTxt;
+    warnEl.style.display = warnTxt ? '' : 'none';
+  }
+  autoC1();
   scheduleCalc();
 }
 
@@ -4511,6 +4613,9 @@ function loadBGTemplate(id){
 let CALC_MODEL = 'block'; // 'block' | 'flach'
 let FLACH_MAT  = 'beton'; // 'beton' | 'stahl'
 let AUFLASTEN  = [];      // [{Pk, dx, dy}] Ballastierung Stahlplatte
+let _bgKoernig = 'grob';  // 'grob' | 'fein' — Bodenart für Steckner-Gültigkeitsprüfung
+let _c1Manual  = false;   // true = User hat C₁ manuell gesetzt → autoC1() überschreibt nicht
+let _c1Methode = 'auto';  // 'auto' | 'blend' | 'winkler' | 'steckner'
 
 function setModel(m, silent){
   CALC_MODEL = m;
@@ -4578,6 +4683,14 @@ function setModel(m, silent){
     showPfahl = false;
     if(typeof _updateSicherungBtn === 'function') _updateSicherungBtn();
   }
+  // Lastbeiwerte-Sektionen modellabhängig:
+  //   Typ 1 (Kippen/Ausmitte) nur Flach — Block ist eingespannt, kein Kippnachweis
+  //   GZG (Schiefstellung) nur Block — Steckner Gl.11-21
+  const lwT1 = document.getElementById('lw-typ1-sec');
+  if(lwT1) lwT1.style.display = isBlock ? 'none' : '';
+  const lwGzg = document.getElementById('lw-gzg-sec');
+  if(lwGzg) lwGzg.style.display = isBlock ? '' : 'none';
+  refreshMatrix();   // Kombinationsmatrix zeigt nur modellrelevante Grenzzustände
   scheduleCalc();
 }
 
@@ -4728,22 +4841,222 @@ function avgPhiToDepth(t) {
   return z > 0 ? phi_sum / z : (+gi('bg_phi') || 30);
 }
 
-function autoC1(){
-  const t      = Math.max(0.1, +gi('g_hblock') + Math.max(0, +gi('g_uberd')||0));
-  const beta   = +gi('bg_beta') || 0;
-  const hint   = document.getElementById('bg_c1_hint');
-  let c1, hintText;
-  if(SCHICHTEN.length > 1){
-    const phi_avg = avgPhiToDepth(t);
-    c1 = c1Steckner(phi_avg, t, beta);
-    hintText = `Steckner Gl.3: φ_avg=${phi_avg.toFixed(1)}° · t=${t.toFixed(2)}m · β=${beta}°`;
-  } else {
-    const phi_k = +gi('bg_phi') || 30;
-    c1 = c1Steckner(phi_k, t, beta);
-    hintText = `Steckner Gl.3: φ=${phi_k}° · t=${t.toFixed(2)}m · β=${beta}°`;
+// Tiefengewichteter Mittelwert M_E [MN/m²] über alle Schichten bis Tiefe t
+function avgMeToDepth(t){
+  let me_sum=0, z=0;
+  for(const s of SCHICHTEN){
+    const thick=Math.min(s.d===999?Math.max(0,t-z):s.d, Math.max(0,t-z));
+    if(thick<=0) break;
+    me_sum += Math.max(0.5, s.me ?? (+gi('bg_me') || 20)) * thick;
+    z += thick; if(z>=t) break;
   }
-  document.getElementById('bg_c1').value = c1.toFixed(1);
-  if(hint) hint.textContent = hintText;
+  return z>0 ? me_sum/z : (+gi('bg_me')||20);
+}
+
+// Aktualisiert Zone-Chip, mehrzeiligen Hint und Methoden-Dropdown
+function _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w){
+  const hint = document.getElementById('bg_c1_hint');
+  const chip = document.getElementById('c1-zone-chip');
+
+  // Chip
+  const chipLabels = {soft:'Unter Grenze', mid:'Übergangsbereich', ok:'Steckner gültig'};
+  const chipCls    = {soft:'chip-fail',    mid:'chip-warn',        ok:'chip-ok'};
+  if(chip){ chip.textContent=chipLabels[zoneKey]; chip.className='c1-zone-chip '+chipCls[zoneKey]; }
+
+  // Zeile 1: Zone + Kontext
+  const koernigLbl = _bgKoernig==='fein' ? 'Feinkörnig' : 'Grobkörnig';
+  const methForcedLbl = _c1Methode==='winkler'  ? ' · Winkler erzwungen' :
+                        _c1Methode==='steckner' ? ' · Steckner erzwungen' :
+                        _c1Methode==='blend'    ? ' · Blend erzwungen' : '';
+  const zoneLbl = zoneKey==='soft'
+    ? `M_E=${me_avg.toFixed(0)} MN/m² — unter Minimum (< 12) · ${koernigLbl}${methForcedLbl}`
+    : zoneKey==='mid'
+    ? `M_E=${me_avg.toFixed(0)} MN/m² — Übergangsbereich · ${koernigLbl}${methForcedLbl}`
+    : `M_E=${me_avg.toFixed(0)} MN/m² — Steckner gültig (≥ ${grenzwert}) · ${koernigLbl}${methForcedLbl}`;
+
+  // Zeile 2: Zwischenwerte
+  const blendLbl = zoneKey==='mid'
+    ? `Blend ${(w*100).toFixed(0)}% St + ${((1-w)*100).toFixed(0)}% Wk`
+    : zoneKey==='ok' ? 'Steckner' : 'Winkler';
+  const autoVal = _c1Manual ? ` · Auto wäre: ${c1_eff.toFixed(1)}` : '';
+  const valLbl = `St: ${c1_steck.toFixed(1)}  Wk: ${c1_me.toFixed(1)}  [${blendLbl}]  →  C₁ = ${_c1Manual?(+gi('bg_c1')||0).toFixed(1):c1_eff.toFixed(1)} MN/m³${autoVal}`;
+
+  // Zeile 3: Manuell-Hinweis
+  const manualLbl = _c1Manual ? `Manuell überschrieben — Reset-Button zum Zurücksetzen` : '';
+
+  if(hint){
+    hint.className = `c1-zone-${zoneKey}`;
+    hint.innerHTML =
+      `<span>${zoneLbl}</span>` +
+      `<span style="color:var(--xdim)">${valLbl}</span>` +
+      (manualLbl ? `<span style="color:var(--warn)">${manualLbl}</span>` : '');
+  }
+
+  // C₁-Feld visuell als überschrieben markieren wenn manuell
+  const c1El = document.getElementById('bg_c1');
+  if(c1El) c1El.closest('.field')?.classList.toggle('field-overridden', _c1Manual);
+
+  // Methoden-Dropdown + subtext dynamisch anpassen
+  _updateC1MethodOptions(me_avg, grenzwert);
+  const mhint = document.getElementById('c1-methode-hint');
+  if(mhint){
+    if(_c1Methode === 'winkler')  mhint.textContent = 'Winkler erzwungen — M_E · Kp / B';
+    else if(_c1Methode === 'steckner') mhint.textContent = 'Steckner erzwungen — φ-abhängig';
+    else if(zoneKey==='soft') mhint.textContent = `auto — Winkler (M_E < 12, Steckner ungültig)`;
+    else if(zoneKey==='mid')  mhint.textContent = `auto — Blend ${(w*100).toFixed(0)}% Steckner / ${((1-w)*100).toFixed(0)}% Winkler`;
+    else                      mhint.textContent = `auto — Steckner Gl.3 (M_E ≥ ${grenzwert})`;
+  }
+}
+
+// Blendet nicht sinnvolle Methoden-Optionen aus
+function _updateC1MethodOptions(me_avg, grenzwert){
+  const sel = document.getElementById('bg_c1_methode');
+  if(!sel) return;
+  const steckOk = me_avg >= grenzwert;
+  const opts = [
+    { v:'auto',     lbl:'Automatisch',                   show: true },
+    { v:'winkler',  lbl:'Winkler — M_E · Kp / B',        show: !steckOk },
+    { v:'steckner', lbl:'Steckner Gl.3 — φ-abhängig',    show: steckOk },
+  ];
+  const prev = sel.value || _c1Methode;
+  sel.innerHTML = opts.filter(o=>o.show).map(o=>`<option value="${o.v}">${o.lbl}</option>`).join('');
+  const stillValid = opts.find(o=>o.v===prev && o.show);
+  if(stillValid){ sel.value=prev; }
+  else { sel.value='auto'; _c1Methode='auto'; }
+}
+
+// Vergleicht γ-Felder mit SETTINGS-Defaults und markiert Abweichungen
+function _checkTWOverrides(){
+  const pairs = [
+    ['tw_G',     SETTINGS.tG   ?? 1.35],
+    ['tw_Q',     SETTINGS.tQ   ?? 1.50],
+    ['tw_phi',   SETTINGS.tph  ?? 1.20],
+    ['tw_c',     SETTINGS.tc   ?? 1.50],
+    ['tw_Ea',    SETTINGS.tEa  ?? 1.35],
+    ['tw_Ep',    SETTINGS.tEp  ?? 1.40],
+    ['lw_G',     SETTINGS.lw_G     ?? 1.35],
+    ['lw_G_inf', SETTINGS.lw_G_inf ?? 1.00],
+    ['lw_Q',     SETTINGS.lw_Q     ?? 1.50],
+    ['lw_G_eig', SETTINGS.lw_G_eig ?? 1.00],
+  ];
+  pairs.forEach(([id, def]) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const fd = el.closest('.field');
+    if(!fd) return;
+    fd.classList.toggle('field-overridden', Math.abs((+el.value) - def) > 0.001);
+  });
+}
+
+// Öffnet Info-Panel mit Berechnungsdetails für C₁
+function openC1Info(){
+  const d = window._c1Calc;
+  if(!d){ return; }
+  const Kp = Math.tan(Math.PI/4 + d.phi_avg*Math.PI/360)**2;
+  const blendText = d.zoneKey==='mid'
+    ? `\nBlend (M_E im Übergangsbereich 12–25 MN/m²):\n  w = (${d.me_avg.toFixed(1)}−12) / 13 = ${(d.w*100).toFixed(0)}%  →  ${((1-d.w)*100).toFixed(0)}% Winkler + ${(d.w*100).toFixed(0)}% Steckner\n  C₁ = ${(1-d.w).toFixed(3)}·${d.c1_me.toFixed(1)} + ${d.w.toFixed(3)}·${d.c1_steck.toFixed(1)} = ${d.c1_eff.toFixed(1)} MN/m³`
+    : d.zoneKey==='soft'
+    ? `\nSteckner Gl.3 nicht gültig (M_E < 12 MN/m²):\n  C₁ = C₁_ME = ${d.c1_eff.toFixed(1)} MN/m³`
+    : `\nSteckner Gl.3 maßgebend (M_E ≥ ${d.grenzwert} MN/m²):\n  C₁ = C₁_Steckner = ${d.c1_eff.toFixed(1)} MN/m³`;
+  const phiOk = d.phi_avg >= 27;
+  const meOkFein = d.me_avg >= 12;
+  const meOkGrob = d.me_avg >= 25;
+  const lines = [
+    `Bettungsziffer C₁ — Berechnungsdetails`,
+    `${'─'.repeat(52)}`,
+    `Bodenart:   ${d.koernig==='fein'?'Feinkörnig (CL, ML, MH, CH …)':'Grobkörnig (GW, GP, SW, SP, SM …)'}`,
+    `Grenzwert:  M_E ≥ ${d.grenzwert} MN/m²  (Minimalanforderung Steckner GZG)`,
+    ``,
+    `Eingangsparameter:`,
+    `  φ'_avg = ${d.phi_avg.toFixed(1)}°   (tiefengewichtet, t = ${d.t.toFixed(2)} m)`,
+    `  M_E,avg = ${d.me_avg.toFixed(1)} MN/m²  (tiefengewichtet)`,
+    `  B = ${d.B.toFixed(2)} m`,
+    ``,
+    `Methode 1 — Steckner (1989) Gl.3:`,
+    `  C₁ = {4 + 0.6·(${d.phi_avg.toFixed(1)}−20)} · 10⁴ · ${(d.t/2).toFixed(2)} = ${d.c1_steck.toFixed(1)} MN/m³`,
+    ``,
+    `Methode 2 — Winkler horizontal (M_E · Kp / B):`,
+    `  Kp = tan²(45+${(d.phi_avg/2).toFixed(1)}°) = ${Kp.toFixed(3)}`,
+    `  C₁_ME = ${d.me_avg.toFixed(1)} · ${Kp.toFixed(3)} / ${d.B.toFixed(2)} = ${d.c1_me.toFixed(1)} MN/m³`,
+    blendText,
+    ``,
+    `Gültigkeitsprüfung (Projektunterlage):`,
+    `  φ'_k = ${d.phi_avg.toFixed(1)}° ${phiOk?'≥':'<'} 27°  ${phiOk?'✓':'✗'}`,
+    `  M_E = ${d.me_avg.toFixed(1)} MN/m²:  ≥ 12 (feinkörnig) ${meOkFein?'✓':'✗'}  |  ≥ 25 (grobkörnig) ${meOkGrob?'✓':'✗'}`,
+    `  → ${d.stecknerGueltig?'Steckner für gewählte Bodenart gültig':'Steckner für gewählte Bodenart NICHT voll gültig — '+( d.zoneKey==='soft'?'Winkler-Ansatz':'Blend')+' angewendet'}`,
+    ``,
+    `${'─'.repeat(52)}`,
+    `Quellen: Steckner (1989) Bautechnik 2/89 Gl.3`,
+    `         SN 670 004-2b-NA (USCS), Minimalanforderungen`,
+    `         Winkler-Bettung horizontal: M_E · Kp / B`,
+  ].join('\n');
+  // Overlay öffnen
+  let ov = document.getElementById('ov-c1-info');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'ov-c1-info';
+    ov.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)';
+    ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML=`<div style="background:var(--s1);border:1px solid var(--ol);border-radius:6px;padding:20px 22px;max-width:520px;width:95vw;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.04em">C₁ Berechnungsdetails</span>
+      <button class="btn btn-tonal btn-sm" onclick="document.getElementById('ov-c1-info').style.display='none'" style="padding:0 8px">✕</button>
+    </div>
+    <pre style="font-family:var(--f-mono);font-size:9px;line-height:1.7;margin:0;white-space:pre-wrap;color:var(--dim)">${lines}</pre>
+  </div>`;
+  ov.style.display='flex';
+}
+
+function autoC1(){
+  const t         = Math.max(0.1, +gi('g_hblock') + Math.max(0,+gi('g_uberd')||0));
+  const B         = Math.max(0.1, +gi('g_bx'));
+  const beta      = +gi('bg_beta')||0;
+  const grenzwert = _bgKoernig==='fein' ? 12 : 25;
+
+  const phi_avg  = SCHICHTEN.length>1 ? avgPhiToDepth(t) : (+gi('bg_phi')||30);
+  const me_avg   = SCHICHTEN.length>1 ? avgMeToDepth(t) : (SCHICHTEN[0]?.me ?? 20);
+  // bg_me als Display-Feld aktualisieren
+  const bgMeEl = document.getElementById('bg_me');
+  if(bgMeEl) bgMeEl.value = me_avg.toFixed(1);
+  const c1_steck = c1Steckner(phi_avg, t, beta);
+  const c1_me    = c1Effective_layers(t, B);
+
+  let c1_eff, zoneKey, w=0;
+  if(_c1Methode === 'winkler'){
+    c1_eff=c1_me; zoneKey='soft'; w=0;
+  } else if(_c1Methode === 'steckner'){
+    c1_eff=c1_steck; zoneKey='ok'; w=1;
+  } else {
+    // auto — 3-Zonen, korrekt nach Bodenart-Grenzwert
+    if(me_avg < 12){
+      // Unter absolutem Minimum → Winkler
+      c1_eff=c1_me; zoneKey='soft'; w=0;
+    } else if(me_avg < grenzwert){
+      // Zwischen 12 und grenzwert → Blend (nur bei grobkörnig 12–25; bei feinkörnig grenzwert=12, dieser Ast wird nie erreicht)
+      w=(me_avg-12)/Math.max(1, grenzwert-12);
+      c1_eff=(1-w)*c1_me+w*c1_steck; zoneKey='mid';
+    } else {
+      // M_E ≥ grenzwert → Steckner gültig
+      c1_eff=c1_steck; zoneKey='ok'; w=1;
+    }
+  }
+
+  const stecknerGueltig = me_avg >= grenzwert;
+
+  // Feld nur setzen wenn nicht manuell überschrieben
+  if(!_c1Manual){
+    document.getElementById('bg_c1').value = c1_eff.toFixed(1);
+  } else {
+    // Manueller Wert — c1_eff für _c1Calc aktualisieren aber Feld nicht anfassen
+    c1_eff = +gi('bg_c1') || c1_eff;
+  }
+  _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w);
+
+  // Details für Info-Panel und Nachweisbericht
+  window._c1Calc = {phi_avg,me_avg,B,t,beta,grenzwert,c1_steck,c1_me,c1_eff,zoneKey,
+                    stecknerGueltig,w,koernig:_bgKoernig,manual:_c1Manual};
   calculate();
 }
 
@@ -4751,54 +5064,101 @@ function autoC1(){
 // MEHRSCHICHT-HILFSFUNKTIONEN (SIA 267 / DIN 4085)
 // ════════════════════════════════════════════
 
+// Grundwassertiefe [m u. GOK] — Infinity wenn kein GW vorhanden
+function gwDepth(){ return gi('bg_gw')==='ja' ? Math.max(0, +gi('bg_gwt')||3.0) : Infinity; }
+
+// Effektive Wichte einer Schicht unterhalb GW (γ' Eingabe, sonst γ−10)
+function gamEff(s){ return s.gamma2 > 0 ? s.gamma2 : Math.max(1, s.gamma - 10); }
+
 // Schichtweises Integral des Erddrucks von GOK bis h [kN]
-// mode: 'p'=passiv, 'a'=aktiv, '0'=Ruhedruck
-// charPhi: Erddruckbeiwert K aus φ_k (nicht φ_d) — für GZT charakteristische Lasten
-// coulombWF: Coulomb Kph mit δ=-0.5φ für passiven GZT-Widerstand
-function intEarthPress(h, bid, mode, gph, gc_, charPhi, coulombWF) {
+// mode: 'a'  = aktiv     — Steckner Gl.27: λa mit δ₁=+2/3·φ (Gl.8), Horizontalkomponente
+//       'p'  = passiv    — coulombWF: Steckner Gl.28: λp mit δp=dpFac·φ (über NL)
+//                          sonst: Rankine Kp (Gleiten/Seitenwiderstand, Bemessungsbasis)
+//       'pp' = passiv    — Steckner Gl.29: λ'p mit δ=dpFac·φ (unter NL, Rückseite)
+//       '0'  = Ruhedruck — Jaky λ0 = 1−sinφ (Gl.30)
+// charPhi: K aus φ_k (nicht φ_d) — für GZT charakteristische Kräfte
+// dpFac:   Wandreibungsfaktor δp/φ der passiven Beiwerte (Default 0.5 = ST-Fundament-konform;
+//          wird bei Nu<0 stufenweise herabgesetzt — Steckner Gl.49/50, §5.4)
+// Grundwasser: unterhalb gwDepth() wirkt γ' — effektive Spannungen (ST-verifiziert Test02)
+function intEarthPress(h, bid, mode, gph, gc_, charPhi, coulombWF, dpFac) {
   if(h <= 0) return {E:0, cz:0};
+  if(dpFac === undefined || dpFac === null || dpFac === true) dpFac = 0.5;
+  const z_gw = gwDepth();
   let E=0, Earm=0, z=0, sv=0;
   for(const s of SCHICHTEN) {
     const z_top = z;
     const dz_layer = s.d === 999 ? Math.max(0, h - z_top) : s.d;
     const z_bot = Math.min(z_top + dz_layer, h);
-    if(z_top >= h || dz_layer <= 0) { z += s.d===999?dz_layer:s.d; sv += s.gamma*(s.d===999?dz_layer:s.d); continue; }
-    const dz = z_bot - z_top;
-    const gam = s.gamma;
+    if(z_top >= h || dz_layer <= 0) break;
     const phi_k_i = s.phi * Math.PI / 180;
     const phi_i   = charPhi ? phi_k_i : Math.atan(Math.tan(phi_k_i) / gph);
     const c_d_i   = s.c / gc_;
     let K_i;
     if(mode === 'p'){
       if(coulombWF) {
-        const dp = -0.5*phi_k_i, cd2=Math.cos(dp), c2p=Math.cos(phi_k_i)**2;
-        const sq = Math.sin(phi_k_i+dp)*Math.sin(phi_k_i)/cd2;
-        K_i = (sq>0 && cd2>0) ? c2p / (Math.abs(cd2)*(1-Math.sqrt(sq))**2) : c2p;
+        // Gl.28: λp = [cosφ / (1 − √(sin(φ+δp)·sinφ / cosδp))]²  (Horizontalkomponente)
+        const dp = dpFac * phi_i, cd = Math.cos(dp);
+        const sq = Math.sin(phi_i + dp) * Math.sin(phi_i) / cd;
+        const den = 1 - Math.sqrt(Math.max(0, Math.min(0.9999, sq)));
+        K_i = (Math.cos(phi_i) / Math.max(0.05, den)) ** 2;
       } else {
         K_i = Math.tan(Math.PI/4 + phi_i/2)**2;
       }
+    } else if(mode === 'pp'){
+      // Gl.29: λ'p = [cosφ / (1 − √(sin(φ−δ)·sinφ / cosδ))]²  (unter NL, Rückseite)
+      const dp = dpFac * phi_i, cd = Math.cos(dp);
+      const sq = Math.sin(phi_i - dp) * Math.sin(phi_i) / cd;
+      const den = 1 - Math.sqrt(Math.max(0, Math.min(0.9999, sq)));
+      K_i = (Math.cos(phi_i) / Math.max(0.05, den)) ** 2;
     } else if(mode === 'a'){
-      // Steckner Gl.27: Coulomb λ_a mit δ₁ = +φ₁/2, β_a = 0 (horizontales Gelände)
-      // λ_a = [cos(φ) / (1 + √(sin(φ+δ₁)·sin(φ) / cos(δ₁)))]²
-      const da = phi_i / 2;  // δ₁ = φ/2
+      // Gl.27: λa = [cosφ / (1 + √(sin(φ+δ₁)·sinφ / cosδ₁))]²,  δ₁ = 2/3·φ (Gl.8)
+      const da = (2/3) * phi_i;
       const inner_a = Math.sin(phi_i + da) * Math.sin(phi_i) / Math.cos(da);
       const denom_a = 1 + Math.sqrt(Math.max(0, inner_a));
       K_i = denom_a > 0.001 ? (Math.cos(phi_i) / denom_a) ** 2 : 0.001;
     } else { // '0' Ruhedruck
       K_i = 1 - Math.sin(phi_i);
     }
-    const c_c = mode==='p' ? 2*c_d_i*Math.sqrt(K_i) : (mode==='a' ? -2*c_d_i*Math.sqrt(K_i) : 0);
-    // Integral: K*(σ_v_top*dz + γ*dz²/2) + c_c*dz   — exaktes Trapez-Integral
-    const E_i = (K_i*(sv*dz + gam*dz*dz/2) + c_c*dz) * bid;
-    const z_mid = (z_top + z_bot) / 2;
-    E += E_i;
-    Earm += E_i * z_mid;
-    sv += gam * dz;
+    const c_c = (mode==='p'||mode==='pp') ? 2*c_d_i*Math.sqrt(K_i)
+              : (mode==='a' ? -2*c_d_i*Math.sqrt(K_i) : 0);
+    // Segment ggf. am GW-Spiegel teilen — unterhalb γ' (effektive Spannungen)
+    const segs = [];
+    if(z_gw > z_top && z_gw < z_bot){
+      segs.push([z_top, z_gw, s.gamma], [z_gw, z_bot, gamEff(s)]);
+    } else {
+      segs.push([z_top, z_bot, z_top >= z_gw ? gamEff(s) : s.gamma]);
+    }
+    for(const seg of segs){
+      const dz = seg[1] - seg[0];
+      if(dz <= 0) continue;
+      // Integral: K*(σ'_v_top·dz + γ·dz²/2) + c_c·dz — exaktes Trapez-Integral
+      const E_i = (K_i*(sv*dz + seg[2]*dz*dz/2) + c_c*dz) * bid;
+      E += E_i;
+      Earm += E_i * (seg[0] + seg[1]) / 2;
+      sv += seg[2] * dz;
+    }
     z = z_bot;
     if(z >= h) break;
   }
   const Epos = Math.max(0, E);
   return { E: Epos, cz: Epos > 0.001 ? Earm / E : h * 0.667 };
+}
+
+// Effektive Vertikalspannung σ'v in Tiefe zq [kN/m²] (GW-wirksam) — für pu (Gl.5)
+function sigVeffTo(zq){
+  if(zq <= 0) return 0;
+  const z_gw = gwDepth();
+  let sv=0, z=0;
+  for(const s of SCHICHTEN){
+    const dz_layer = s.d === 999 ? Math.max(0, zq - z) : s.d;
+    const z_bot = Math.min(z + dz_layer, zq);
+    if(z >= zq || dz_layer <= 0) break;
+    if(z_gw > z && z_gw < z_bot){ sv += s.gamma*(z_gw - z) + gamEff(s)*(z_bot - z_gw); }
+    else sv += (z >= z_gw ? gamEff(s) : s.gamma) * (z_bot - z);
+    z = z_bot;
+    if(z >= zq) break;
+  }
+  return sv;
 }
 
 // Mittlere vertikale Spannung von GOK bis t (für Mantelreibung)
@@ -4826,7 +5186,7 @@ function c1Effective_layers(t, B) {
     if(thick <= 0) break;
     const phi_k_i = s.phi*Math.PI/180;
     const Kp_i    = Math.tan(Math.PI/4+phi_k_i/2)**2;
-    const me_i    = Math.max(0.5, s.me ?? +gi('bg_me'));
+    const me_i    = Math.max(0.5, SCHICHTEN.length>1 ? (s.me ?? +gi('bg_me')) : (+gi('bg_me')||20));
     const c1_i    = me_i * Kp_i / Math.max(0.1, B);   // MN/m³
     harm  += thick / Math.max(0.001, c1_i);
     t_sum += thick;
@@ -5517,16 +5877,8 @@ function _doCalculate(){
   const beta_deg_c1 = +gi('bg_beta') || 0;
   const phi_k_c1 = SCHICHTEN.length > 1 ? avgPhiToDepth(t) : (phi_k * 180/Math.PI);
   const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1);  // MN/m³
-  // Feld aktualisieren und Hinweis anzeigen
-  const c1el = document.getElementById('bg_c1');
-  if(c1el && Math.abs(+c1el.value - C1_auto) > 0.5) {
-    c1el.value = C1_auto.toFixed(1);
-  }
-  const c1hint = document.getElementById('bg_c1_hint');
-  if(c1hint) c1hint.textContent =
-    `Steckner Gl.3: φ=${phi_k_c1.toFixed(1)}° · t=${t.toFixed(2)}m · β=${beta_deg_c1}°` +
-    (SCHICHTEN.length>1 ? ` · ${SCHICHTEN.length} Schichten` : '');
-  const C1_val = Math.max(1, C1_auto);
+  // C₁ aus Feld lesen (wird von autoC1() verwaltet, nicht hier überschreiben)
+  const C1_val = Math.max(1, +gi('bg_c1') || C1_auto);
   const C1_kN = C1_val * 1000;
 
   // ── Geländeneigung
@@ -5544,11 +5896,20 @@ function _doCalculate(){
   const gauf = +gi('g_gauf');
   const V_block = B*L*Hb;
   const V_kopf  = Bk*Lk*Hk;
+  // Kopfgewicht in G_k einschliessen? (Option B: DP2a-Kompatibilität = ausschalten)
+  const _inclKopf = document.getElementById('kopf_in_gk')?.checked !== false;
   // Überdeckung: Betonkopf durch Erde + seitliche Auffüllung
-  const G_ue = ue>0 ? Bk*Lk*ue*gb + (B*L - Bk*Lk)*ue*gauf : 0;
-  const Gk = isBlock
-    ? (V_block + V_kopf)*gb + G_ue          // Block: inkl. Kopf + Überdeckung
-    : B*L*Hb*gb + (ue>0 ? B*L*ue*gauf : 0); // Flach: Platte + Hinterfüllung oben
+  const G_ue = ue>0
+    ? (_inclKopf ? Bk*Lk*ue*gb : 0) + (B*L - Bk*Lk)*ue*gauf
+    : 0;
+  const Gk0 = isBlock
+    ? (V_block + (_inclKopf ? V_kopf : 0))*gb + G_ue  // Block: Kopf optional
+    : B*L*Hb*gb + (ue>0 ? B*L*ue*gauf : 0);           // Flach: Platte + Hinterfüllung oben
+  // Auftrieb: Fundamentkörper unter GW-Spiegel (γw=10 kN/m³, effektive Gewichte)
+  // ST-Fundament-verifiziert (Test02): N = Block + Auffüllung − Auftrieb = 111.2 kN
+  const _subH = Math.min(Math.max(0, t - gwDepth()), Hb);
+  const G_auftrieb = _subH > 0 ? B*L*_subH*10 : 0;
+  const Gk = Gk0 - G_auftrieb;
 
   // ── Auflasten (Ballastierung — nur Flach + Stahl)
   let N_auf_k=0, Mx_auf_k=0, My_auf_k=0;
@@ -5617,7 +5978,10 @@ function _doCalculate(){
     // Lastbeiwerte aus zentraler Karte (Typ 2/ST für GZT, GZG für Gebrauchstauglichkeit)
     const {gG, gW} = getGF(lf);
 
-    const Nd_mast = gG*(NG_lf + Gk);
+    // γ_G,eig: separater Faktor für Eigengewicht G_k (SIA 267 §4.4.3 günstig = 1.00)
+    // Für GZG immer 1.00; für GZT aus Feld lw_G_eig
+    const gG_eig = lf.nw === 'gzg' ? 1.00 : (+gi('lw_G_eig') || 1.00);
+    const Nd_mast = gG*NG_lf + gG_eig*Gk;
     // Auflasten: ständig mit γ_G
     const Nd  = Nd_mast + gG*N_auf_k;
     const Hxd = gG*HGx_lf + gW*HWx_lf;
@@ -5692,7 +6056,9 @@ function _doCalculate(){
     // ── 3. GLEITEN — SIA 267 Typ 2
     // Gleitwiderstand mit γ_G,inf (günstig → kleines N = konservativer Widerstand)
     // Horizontalkraft H_d bleibt mit γ_G,sup (ungünstig)
-    const Nd_gl = _gG2inf*(NG_lf + Gk) + _gG2inf*N_auf_k;
+    // G_k: günstig wirkend → min(gG_eig, _gG2inf) für konsistente Bemessung
+    const gG_eig_gl = Math.min(gG_eig, _gG2inf);
+    const Nd_gl = _gG2inf*NG_lf + gG_eig_gl*Gk + _gG2inf*N_auf_k;
     let Rgl, etaGL;
     if(isBlock){
       // Steckner: Sohle + passiver Erddruck Seitenfl. + Mantelreibung
@@ -5712,7 +6078,8 @@ function _doCalculate(){
     // ── 4. KIPPNACHWEIS (klaffende Fuge) — SIA 267 GZT Typ 1 (Stabilität)
     // γ_G,sup (1.20) für destabilisierende Momente, γ_G,inf (0.80) für stabilisierende Normalkraft
     // Normalkraft mit günstigem Faktor (stabilisierend → kleiner N = ungünstiger für Ausmitte)
-    const Nd_kipp  = _gG1inf*(NG_lf + Gk) + _gG1inf*N_auf_k;
+    // G_k beim Kippen günstig wirkend → min(gG_eig, _gG1inf)
+    const Nd_kipp  = _gG1inf*NG_lf + Math.min(gG_eig, _gG1inf)*Gk + _gG1inf*N_auf_k;
     const Hxd_kipp = _gG1sup*HGx_lf + _gQ1*HWx_lf;
     const Hyd_kipp = _gG1sup*HGy_lf + _gQ1*HWy_lf;
     const Mxd_kipp = Hxd_kipp*arm + _gG1sup*MGx_lf + _gQ1*MWx_lf + Nd_kipp*eyk + _gG1sup*Mx_auf_k;
@@ -5749,12 +6116,11 @@ function _doCalculate(){
     let Malpha_GZG_val=0, Mu_char_GZG=0, M_ok_char_GZG=0;
 
     // ── 7. GZT STANDSICHERHEIT STECKNER (Nulllinie + Grenzmoment)
-    // Modell nach Steckner (Bautechnik 2/1989):
-    //   Ea  über Höhe h = (t-y)  [charakteristisch × γ_Ea]
-    //   Ew  = (E0_k + mob·(Ep_k - E0_k)) / γ_Ep  [mobilisierter Widerstand über NL]
-    //   Ep' = Ep_k_unter / γ_Ep  [voller passiver Widerstand unter NL, Gegenseite]
-    //   E0' = Ruhedruck unter NL × γ_Ea  [destabilisierend]
-    //   NL aus iterativem Bisektionsverfahren
+    // Modell nach Steckner (Bautechnik 2/1989), §5, ST-Fundament-verifiziert:
+    //   Ew  = Ep/γ_Ep − Ea·γ_Ea + R0      (Gl.43, über NL)
+    //   E'w = E'p/γ_Ep + R'0              (Gl.44, unter NL)
+    //   NL aus Gl.54: Ew − E'w = H* + Ru  (Bisektion, δp-Reduktion nach Gl.49/50)
+    //   Nu = (V+G+Ra−Rp+R'p)/γ_Ep (Gl.46) · u=(A−x)/2, x=Nu/(B·pu) (Gl.47/48)
     let etaGZT = Infinity, Mu_GZT = 0, y_NL_GZT = 0;
     let Ea_GZT = 0, Ew_GZT = 0, E0b_GZT = 0, E0a_GZT = 0, Epb_GZT = 0, Nu_GZT = 0, Ru_GZT = 0;
     // GZT erweiterte Terme — ausserhalb if(isBlock) für return-Objekt zugänglich
@@ -5765,131 +6131,121 @@ function _doCalculate(){
     const doGZT = _lfNW !== 'gzg';   // false nur wenn LF explizit nur GZG
     const doGZG = _lfNW !== 'gzt';   // false nur wenn LF explizit nur GZT
     if(isBlock) {
-      // Charakteristische Erddruckbeiwerte (φ_k zurückrechnen aus φ_d)
+      // Charakteristische Kennwerte (φ_k zurückrechnen aus φ_d)
       const phi_k_rad = Math.atan(Math.tan(phi_d) * gph);
-      const Ka_k = Math.tan(Math.PI/4 - phi_k_rad/2)**2;
-      const Kp_k = Math.tan(Math.PI/4 + phi_k_rad/2)**2;
-      const K0_k = 1 - Math.sin(phi_k_rad);
+      const tan_p2 = Math.tan(phi_k_rad);        // Sohlreibungswinkel φ₂ = φ_k (Steckner §3.5)
+      const tan_d1 = Math.tan((2/3)*phi_k_rad);  // δ₁ = 2/3·φ (Gl.8) — Ra/R0-Reibungen
 
-      const dp = -0.5 * phi_k_rad;  // neg. Wandreibung passiv (ST: -0.5*φ)
-      const Kph_wf = coulombKph(phi_k_rad, dp);  // Kp horizontal mit Wandreibung
-      // Ka mit Wandreibung δ₁=+φ/2 (Steckner Gl.27, Coulomb) — bereits in intEarthPress implementiert
+      // ── Grenzwert Bodenpressung pu (Steckner Gl.5-7), als Widerstand /γ_Ep
+      // σ'v(t): effektive Überlagerung an der Sohle (GW-wirksam)
+      // ST-verifiziert Test02: pu0 = 1445.4, pu_d = 1032.5 (φ=30°, σ'v=54.0)
+      const pu0 = (1 + 3.15*tan_p2*(1 - Math.sin(phi_k_rad))**2)
+                * Math.exp(Math.PI * tan_p2)
+                * Math.tan(Math.PI/4 + phi_k_rad/2)**2 * sigVeffTo(t);
+      const _bp_pu = (btyp!=='none' && beta < 0) ? beta : 0;   // βp<0 → Abminderung Gl.7
+      const pu0_eff = pu0 * (_bp_pu < 0 ? Math.max(0, 1 + 0.5*_bp_pu)**5 : 1);
 
-      // ── Erddruckkräfte über volle Tiefe t (für Näherungs-N_u im Bisektionsziel)
-      const Ea_full_k = intEarthPress(t, bid, 'a', gph, gc_, true, false).E;
-      const Ea_full_d = Ea_full_k * gEa;
-      const Ep_k_full = intEarthPress(t, bid, 'p', gph, gc_, true, true ).E;
-      const E0_k_full = intEarthPress(t, bid, '0', gph, gc_, true, false).E;
-
-      // Näherungs-N_u für Bisektionsziel (korrekte Vorzeichen nach Steckner):
-      // Ra_v (Reibung Ea) wirkt abwärts (+), Rp_v (Reibung Ep) wirkt aufwärts (-)
-      const Ra_v_full = Ea_full_d * Math.tan(0.5 * phi_k_rad);
-      const Rp_v_full = (Ep_k_full / gEp) * Math.tan(0.5 * phi_k_rad);  // δ₁=φ/2 (HB Gl.39)
-      const N_u_approx = Math.max(0.1, Nd + Ra_v_full - Rp_v_full);
-      const R_u_approx = N_u_approx * Math.tan(phi_k_rad);  // φ_k (nicht φ_d) nach ST
-
-      function gztForces(y) {
-        const h = Math.max(0.001, t - y);
-        const Ea_k   = intEarthPress(h, bid, 'a', gph, gc_, true, false).E;
-        const Ea_d   = Ea_k * gEa;
-        const Ep_k_a = intEarthPress(h, bid, 'p', gph, gc_, true, true ).E;
-        const E0_k_a = intEarthPress(h, bid, '0', gph, gc_, true, false).E;
-        // Steckner Gl.43: Ew = Ep − Ea + R₀  (mobilisierter Netto-Erdwiderstand über NL)
-        // R₀ = E₀ × tan(δ₁) mit δ₁ = φ_k/2  (HB Gl.41: δ₁ = φ/2)
-        // Alle Terme in Bemessungswerten: Ep/gEp, Ea×gEa, E0/gEp
-        const R0_a_d = (E0_k_a / gEp) * Math.tan(0.5 * phi_k_rad);  // Ruhedruck-Reibung
-        const Ep_a_d = Ep_k_a / gEp;
-        const Ew_d   = Math.max(0, Ep_a_d - Ea_d + R0_a_d);
-        const Ep_b_d = Math.max(0, Ep_k_full - Ep_k_a) / gEp;
-        const E0_b_d = Math.max(0, E0_k_full - E0_k_a) / gEp;
-        const E0_a_d = E0_k_a / gEp;
-        return {Ea_d, Ew_d, Ep_a_d, Ep_b_d, E0_b_d, E0_a_d, R0_a_d};
-      }
-
-      function gztBalance(y) {
-        // Gl.54: H* − Ew + E'w + R_u = 0  →  Ew − E'w = H* + R_u
-        // E'w = Ep_b_d + E0_b_d  (Gl.44: E'w = E'p + R'₀)
-        const f = gztForces(y);
-        return f.Ew_d - (f.Ep_b_d + f.E0_b_d);
-      }
-
-      function computeGZT_dir(H_d_dir, M_ok_dir) {
+      // ── GZT-Berechnung je Richtung (Steckner Gl.27-66, ST-Fundament-verifiziert)
+      // A_pl: Fundamentbreite in der Momentenebene, B_q: Breite quer dazu
+      // fac (optional): {gEa, gEp, N} — für charakteristische Basis (GZG Gl.21: gEa=gEp=1, N=N_k)
+      function computeGZT_dir(H_d_dir, M_ok_dir, A_pl, B_q, fac) {
+        const _gEa = fac && fac.gEa !== undefined ? fac.gEa : gEa;
+        const _gEp = fac && fac.gEp !== undefined ? fac.gEp : gEp;
+        const _N   = fac && fac.N   !== undefined ? fac.N   : Nd;
+        const pu_d = pu0_eff / _gEp;
         if(H_d_dir < 0.01) return {
           eta:Infinity, Mu:0, y_nl:0,
           Ew:0, E0b:0, E0a:0, Epb:0, Epa:0, Ea_d:0,
-          Nu:N_u_approx, Ru:R_u_approx, u_ecc:B/2,
-          Ra_v:Ra_v_full, Rp_va:Rp_v_full/2, Rp_vb:Rp_v_full/2
+          Nu:Math.max(0, _N)/_gEp, Ru:0, u_ecc:A_pl/2,
+          Ra_v:0, Rp_va:0, Rp_vb:0, arm_v:0, arm_vp:0, dp_fac:0.5, x_keil:0, pu_d
         };
 
-        // Bisektionsverfahren: Ew(y) − Ep_unter(y) = H_d + R_u (Näherung)
-        // ── Pass 1: Bisektionsverfahren mit Näherungs-R_u
-        function bisect(tgt) {
+        // Ideelle Druckwandbreite in Bewegungsrichtung (Gl.23-26, Regelfall B ≥ b_kr)
+        const bidD = A_pl + 0.6 * t * Math.tan(phi_k_rad);
+
+        // ── Kräfte bei NL-Lage y und Wandreibungsfaktor dpf (δp = dpf·φ_k)
+        // Erddrücke charakteristisch, NUR auf Blockfläche (ü→h bzw. h→t):
+        //   Ea: λa(δ₁=2/3φ) Gl.27/31 · Ep: λp(δp) Gl.28/32 · E'p: λ'p(δp) Gl.29/33
+        // Ruhedruck auf die 2 Seitenflächen: Breite A ×2, OHNE γ-Faktor (Gl.34/35)
+        // ST-verifiziert Test02: Ea=32.4 Ep=294.7 E'p=174.5 E0=47.0 E0'=71.7 exakt
+        const F = (y, dpf) => {
+          const h = Math.max(0.001, t - y);
+          const Ea_k  = Math.max(0, intEarthPress(h, bidD,'a',gph,gc_,true,true).E
+                                  - intEarthPress(ue,bidD,'a',gph,gc_,true,true).E);
+          const Ep_k  = Math.max(0, intEarthPress(h, bidD,'p',gph,gc_,true,true,dpf).E
+                                  - intEarthPress(ue,bidD,'p',gph,gc_,true,true,dpf).E);
+          const Epp_k = Math.max(0, intEarthPress(t, bidD,'pp',gph,gc_,true,true,dpf).E
+                                  - intEarthPress(h, bidD,'pp',gph,gc_,true,true,dpf).E);
+          const E0_k  = Math.max(0, intEarthPress(h, 2*A_pl,'0',gph,gc_,true,false).E
+                                  - intEarthPress(ue,2*A_pl,'0',gph,gc_,true,false).E);
+          const E0p_k = Math.max(0, intEarthPress(t, 2*A_pl,'0',gph,gc_,true,false).E
+                                  - intEarthPress(h, 2*A_pl,'0',gph,gc_,true,false).E);
+          const tdp = Math.tan(dpf * phi_k_rad);
+          // Reibungskräfte charakteristisch (Gl.38-42) — ST-verifiziert: Rp = Ep_k·tanδp
+          const Ra  = Ea_k * tan_d1;                      // Gl.38 (δ₁ = 2/3φ)
+          const Rp  = Ep_k * tdp, Rpp = Epp_k * tdp;      // Gl.39/40 (δp)
+          const R0  = E0_k * tan_d1, R0p = E0p_k * tan_d1;// Gl.41/42 (×2 in Breite enthalten)
+          // Bemessungswerte horizontal
+          const Ea_d = Ea_k*_gEa, Ep_d = Ep_k/_gEp, Epp_d = Epp_k/_gEp;
+          const Ew_d  = Math.max(0, Ep_d - Ea_d + R0);    // Gl.43
+          const Ewp_d = Epp_d + R0p;                       // Gl.44
+          // Bodendruckkraft Gl.46: R'p wirkt ABWÄRTS (+), als Widerstand /γ_Ep
+          // ST-verifiziert: Nu_k/1.40 = 53.5 (Test02) bzw. 72.8 (Test03) exakt
+          const Nu_k = _N + Ra - Rp + Rpp;
+          const Nu_d = Math.max(0, Nu_k) / _gEp;
+          const Ru   = Nu_d * tan_p2;                      // Gl.51
+          return {h, Ea_d, Ep_d, Epp_d, E0_k, E0p_k, Ra, Rp, Rpp, R0, R0p, Ew_d, Ewp_d, Nu_k, Nu_d, Ru};
+        };
+
+        // ── δp stufenweise herabsetzen bis Nu ≥ 0 (Gl.49/50, §5.4); Start δp = φ/2 (ST-konform)
+        let dpf = 0.5, y_nl = 0.001, f = null;
+        for(let step=0; step<11; step++){
+          // Nulllinie aus Gl.54: Ew − E'w − H* − Ru = 0  (monoton fallend in y)
+          const g = y => { const q = F(y, dpf); return q.Ew_d - q.Ewp_d - H_d_dir - q.Ru; };
           let ylo=0.001, yhi=t*0.98;
-          if((gztBalance(ylo)-tgt)*(gztBalance(yhi)-tgt)>0) return t*0.08;
-          for(let i=0;i<50;i++){const ym=(ylo+yhi)/2;(gztBalance(ym)-tgt>0)?ylo=ym:yhi=ym;}
-          return (ylo+yhi)/2;
+          if(g(ylo) <= 0)      y_nl = 0.001;               // Ew zu klein → NL in Sohle (Gl.64/65)
+          else if(g(yhi) >= 0) y_nl = yhi;
+          else { for(let i=0;i<60;i++){ const ym=(ylo+yhi)/2; g(ym)>0 ? ylo=ym : yhi=ym; } y_nl=(ylo+yhi)/2; }
+          f = F(y_nl, dpf);
+          if(f.Nu_k >= 0 || dpf <= 0.001) break;
+          dpf = Math.max(0, dpf - 0.05);                   // Gl.50: δp reduzieren
         }
-        let y_nl = Math.max(0.001, Math.min(t*0.499, bisect(H_d_dir + R_u_approx)));
+        const h = f.h;
 
-        // ── Pass 2: exaktes R_u am gefundenen y_nl, Bisektionsverfeinerung
-        {
-          const f1 = gztForces(y_nl);
-          const Ra1 = f1.Ea_d  * Math.tan(0.5 * phi_k_rad);
-          const Rp1 = (f1.Ep_a_d + f1.Ep_b_d) * Math.tan(0.5 * phi_k_rad);  // δ₁=φ/2 (HB Gl.39/40)
-          const Nu1 = Math.max(0.1, Nd + Ra1 - Rp1);
-          const Ru1 = Nu1 * Math.tan(phi_k_rad);
-          y_nl = Math.max(0.001, Math.min(t*0.499, bisect(H_d_dir + Ru1)));
-        }
+        // ── Hebelarme ab OK Block (Gl.36/37, trapezkorrigiert für Überdeckung ü)
+        const arm_v   = Math.max(0.001, (h - ue) * (2*h + ue) / (3 * (h + ue)));
+        const arm_vp  = Math.max(0.001, h + y_nl*(2*t + h)/(3*(t + h)) - ue);
 
-        const f = gztForces(y_nl);
-        const h = t - y_nl;
+        // ── Bodendruckkeil (Gl.47/48): x = Nu/(B·pu),  u = (A−x)/2
+        // ST-verifiziert: u = 0.630 (Test02), u ≈ 0.599 (Test03)
+        const x_keil = Math.min(A_pl, f.Nu_d / Math.max(1e-6, B_q * pu_d));
+        const u_ecc  = Math.max(0.001, (A_pl - x_keil) / 2);
 
-        // ── Hebelarme (gemessen ab H* = OK Fundament = OK Block)
-        // v (Gl.36): Steckner verwendet 2/3·(D-y) ab GOK → ab OK Block: 2h/3 − ü
-        const arm_v   = Math.max(0.001, 2*h/3 - ue);
-        // v' (Gl.37 − ü): Schwerpunkt Kräfte unter NL ab OK Block
-        const arm_vp  = Math.max(0.001,
-          h + y_nl*(2*t + h)/(3*(t + h)) - ue);                // v' = arm_Epb − ü
-
-        // ── Vertikale Reibungskomponenten (nach ST)
-        const Ra_v   = f.Ea_d    * Math.tan(0.5 * phi_k_rad);  // abwärts (+)
-        const Rp_va  = f.Ep_a_d  * Math.tan(0.5 * phi_k_rad);  // aufwärts (−) δ₁=φ/2 (HB Gl.39)
-        const Rp_vb  = f.Ep_b_d  * Math.tan(0.5 * phi_k_rad);  // aufwärts (−) δ₁=φ/2 (HB Gl.40)
-
-        // ── N_u, R_u (exakt am gefundenen y_NL)
-        const Nu = Math.max(0.1, Nd + Ra_v - Rp_va - Rp_vb);
-        const Ru = Nu * Math.tan(phi_k_rad);                    // φ_k (ST: Sohlreibungswinkel)
-
-        // ── u: Exzentrizität Sohlnormalkraft (Winkler-Näherung, validiert gegen ST)
-        const u_ecc = Math.max(0.001, (B/2) * (1 - (y_nl/B)**2));
-
-        // ── Grenzmoment Steckner Gl. 66
-        // Mu = −(Ew_d − Ea_d + E0_a_d) · v   ← Kräftebilanz über NL
-        //    + (Ep_b_d + E0_b_d) · v'          ← E'w unter NL (Gl.44)
-        //    + (Ra_v + Rp_va + Rp_vb) · B/2    ← Reibungskräfte
-        //    + Ru · (t − ü)                    ← Sohlreibung × H_Block
-        //    + Nu · u                           ← Sohlreaktion × Exzentrizität
-        const Mu = -(f.Ew_d - f.Ea_d + f.E0_a_d) * arm_v
-                 + (f.Ep_b_d + f.E0_b_d) * arm_vp
-                 + (Ra_v + Rp_va + Rp_vb) * (B/2)
-                 + Ru * (t - ue)
-                 + Nu * u_ecc;
+        // ── Grenzmoment Gl.66 (Bezugspunkt OK Block):
+        //   Mu = −Ew·v + E'w·v' + (Rp+Ra+R'p)·A/2 + Ru·(t−ü) + Nu·u
+        // R0/R'0 wirken horizontal — nur in Ew/E'w, NICHT im A/2-Term (ST-verifiziert 404.2/277.2)
+        const Mu = -f.Ew_d * arm_v
+                 + f.Ewp_d * arm_vp
+                 + (f.Ra + f.Rp + f.Rpp) * (A_pl / 2)
+                 + f.Ru * (t - ue)
+                 + f.Nu_d * u_ecc;
 
         return {
           eta: Math.max(Mu, 0) / Math.max(0.001, M_ok_dir),
           Mu: Math.max(0, Mu), y_nl,
-          Ew: f.Ew_d, E0b: f.E0_b_d, E0a: f.E0_a_d, Epb: f.Ep_b_d, Epa: f.Ep_a_d, Ea_d: f.Ea_d,
-          Nu, Ru, u_ecc, Ra_v, Rp_va, Rp_vb, arm_v, arm_vp
+          Ew: f.Ew_d, E0b: f.E0p_k, E0a: f.E0_k, Epb: f.Epp_d, Epa: f.Ep_d, Ea_d: f.Ea_d,
+          Nu: f.Nu_d, Ru: f.Ru, u_ecc, Ra_v: f.Ra, Rp_va: f.Rp, Rp_vb: f.Rpp, arm_v, arm_vp,
+          dp_fac: dpf, x_keil, pu_d
         };
       }
 
-      // M_d an OK-Block (= GOK − ü) für Steckner GZT
-      // Quer  (x): H_xd×(H_Kopf+ü) + M_Gy_d + M_Wy_d  (MGy = Moment um y-Achse = Querbiegung)
-      // Längs (y): H_yd×(H_Kopf+ü) + M_Gx_d + M_Wx_d  (MGx = Moment um x-Achse = Längsbiegung)
+      // M_d an OK Block (= GOK − ü) für Steckner GZT — Arm von Lastangriff (OK Kopf) bis OK Block
+      // Quer  (x): H_xd×(H_Kopf+ü) + M_Gy_d + M_Wy_d
+      // Längs (y): H_yd×(H_Kopf+ü) + M_Gx_d + M_Wx_d
       const M_ok_x = Math.abs(Hxd*(Hk+ue) + gG*MGy_lf + gW*MWy_lf + Nd*eyk);
       const M_ok_y = Math.abs(Hyd*(Hk+ue) + gG*MGx_lf + gW*MWx_lf + Nd*exk);
-      const rx = computeGZT_dir(Math.abs(Hxd), M_ok_x);
-      const ry = computeGZT_dir(Math.abs(Hyd), M_ok_y);
+      const rx = computeGZT_dir(Math.abs(Hxd), M_ok_x, B, L);  // x: A=B (Momentenebene), quer L
+      const ry = computeGZT_dir(Math.abs(Hyd), M_ok_y, L, B);  // y: A=L, quer B
       const use_x = Math.abs(Hxd) >= Math.abs(Hyd);
       etaGZT   = use_x ? rx.eta  : ry.eta;
       Mu_GZT   = use_x ? rx.Mu   : ry.Mu;
@@ -5917,12 +6273,15 @@ function _doCalculate(){
       // M_α = M₁ + M₂ − HD (Gl.18/19/20), begrenzt auf M_u,char (Gl.21)
       {
         const tan_zul = SETTINGS.alphaZul ?? 0.005;
-        const Hxk_g  = HGx_lf + HWx_lf;
-        const Hyk_g  = HGy_lf + HWy_lf;
-        const Nk_g   = NG_lf + Gk;   // N_α charakteristisch (kein γ_G)
-        // Momente an OK-Block charakteristisch (korrekte Richtungs-Zuordnung)
-        const Mxk_g = Math.abs(Hxk_g*(Hk+ue) + (MGy_lf+MWy_lf) + Nk_g*eyk);
-        const Myk_g = Math.abs(Hyk_g*(Hk+ue) + (MGx_lf+MWx_lf) + Nk_g*exk);
+        // GZG-Lastbeiwerte aus Lastbeiwerte-Karte (Default 1.00 = charakteristisch, SIA)
+        const gGz_ = +gi('lw_G_gzg') || 1.00;
+        const gQz_ = +gi('lw_Q_gzg') || 1.00;
+        const Hxk_g  = gGz_*HGx_lf + gQz_*HWx_lf;
+        const Hyk_g  = gGz_*HGy_lf + gQz_*HWy_lf;
+        const Nk_g   = gGz_*NG_lf + Gk;   // G_k Eigengewicht: γ=1.00 (SIA 267 §4.4.3, GZG)
+        // Momente an OK-Block mit GZG-Beiwerten (korrekte Richtungs-Zuordnung)
+        const Mxk_g = Math.abs(Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk);
+        const Myk_g = Math.abs(Hyk_g*(Hk+ue) + gGz_*MGx_lf + gQz_*MWx_lf + Nk_g*exk);
         const ux_g  = Math.abs(Hxk_g) >= Math.abs(Hyk_g);
         const H_kg  = ux_g ? Math.abs(Hxk_g) : Math.abs(Hyk_g);
         const M_ok_g= ux_g ? Mxk_g : Myk_g;
@@ -5965,53 +6324,12 @@ function _doCalculate(){
         const Mafn = ta => M1fn(ta) + M2fn(ta) - HDfn(ta);
 
         // Gl.21 — M_u,char: GZT Grenzmoment unter charakteristischen Lasten
-        // Bisektionsverfahren wie GZT, aber N = N_k und gEa=gEp=1 (charakteristisch)
+        // Gleicher Rechenpfad wie GZT (computeGZT_dir), aber N = N_k und γ_Ea = γ_Ep = 1
         let Mu_c = 0;
         if(H_kg > 0.01) {
-          const Ea_c_f = intEarthPress(t,bid,'a',1,1,true,false).E;
-          const Ep_c_f = intEarthPress(t,bid,'p',1,1,true,true ).E;
-          const E0_c_f = intEarthPress(t,bid,'0',1,1,true,false).E;
-          const gztFc = y => {
-            const h=Math.max(0.001,t-y);
-            const Ea  =intEarthPress(h,bid,'a',1,1,true,false).E;
-            const Ep_a=intEarthPress(h,bid,'p',1,1,true,true ).E;
-            const E0_a=intEarthPress(h,bid,'0',1,1,true,false).E;
-            // Steckner Gl.43: Ew = Ep − Ea + R₀  (charakteristisch, gEa=gEp=1)
-            const R0 = E0_a*Math.tan(2/3*phi_k_rad);
-            const Ew =Math.max(0, Ep_a - Ea + R0);
-            return {Ea,Ew,Ep_a,Ep_b:Math.max(0,Ep_c_f-Ep_a),
-                    E0_b:Math.max(0,E0_c_f-E0_a),E0_a};
-          };
-          const bisC = tgt => {
-            let ylo=0.001,yhi=t*0.98;
-            const fb=y=>{const f=gztFc(y);return f.Ew-f.Ep_b-tgt;};
-            if(fb(ylo)*fb(yhi)>0) return t*0.08;
-            for(let i=0;i<50;i++){const ym=(ylo+yhi)/2;fb(ym)>0?ylo=ym:yhi=ym;}
-            return (ylo+yhi)/2;
-          };
-          const Ra0=Ea_c_f*Math.tan(0.5*phi_k_rad);
-          const Rp0=Ep_c_f*Math.tan(2/3*phi_k_rad);
-          const Ru0=Math.max(0.1,N_al+Ra0-Rp0)*Math.tan(phi_k_rad);
-          let y_c=bisC(H_kg+Ru0);
-          const fc1=gztFc(y_c);
-          const Rp1=(fc1.Ep_a+fc1.Ep_b)*Math.tan(2/3*phi_k_rad);
-          const Ru1=Math.max(0.1,N_al+fc1.Ea*Math.tan(0.5*phi_k_rad)-Rp1)*Math.tan(phi_k_rad);
-          y_c=bisC(H_kg+Ru1);
-          const fc=gztFc(y_c);
-          const hc=t-y_c;
-          const Ra_c =fc.Ea *Math.tan(0.5*phi_k_rad);
-          const Rp_ca=fc.Ep_a*Math.tan(2/3*phi_k_rad);
-          const Rp_cb=fc.Ep_b*Math.tan(2/3*phi_k_rad);
-          const Nu_c =Math.max(0.1,N_al+Ra_c-Rp_ca-Rp_cb);
-          const Ru_c =Nu_c*Math.tan(phi_k_rad);
-          const av_c =Math.max(0.001,2*hc/3-ue);
-          const avp_c=Math.max(0.001,hc+y_c*(2*t+hc)/(3*(t+hc))-ue);
-          const u_c  =Math.max(0,B/2*(1-(y_c/B)**2));
-          Mu_c=Math.max(0.001,
-            -(fc.Ew-fc.Ea+fc.E0_a)*av_c
-            +(fc.Ep_b+fc.E0_b)*avp_c
-            +(Ra_c+Rp_ca+Rp_cb)*(B/2)
-            +Ru_c*(t-ue)+Nu_c*u_c);
+          const _Ag = ux_g ? B : L, _Bq = ux_g ? L : B;
+          Mu_c = Math.max(0.001,
+            computeGZT_dir(H_kg, Math.max(0.001, M_ok_g), _Ag, _Bq, {gEa:1, gEp:1, N:N_al}).Mu);
         }
         Mu_char_GZG = Mu_c;
 
@@ -6080,8 +6398,8 @@ function _doCalculate(){
       phi_k_GZT: isBlock ? Math.atan(Math.tan(phi_d) * gph) : 0,
       // Bodenparameter für Spannungsdarstellung im Diagramm
       gs_GZT: isBlock ? gs : 0,
-      Ka_GZT: isBlock ? (()=>{ const pk=Math.atan(Math.tan(phi_d)*gph); const da=pk/2; const inner=Math.sin(pk+da)*Math.sin(pk)/Math.cos(da); const denom=1+Math.sqrt(Math.max(0,inner)); return denom>0.001?(Math.cos(pk)/denom)**2:0.001; })() : 0,
-      Kph_GZT: isBlock ? (() => { const pk=Math.atan(Math.tan(phi_d)*gph); const dp=-0.5*pk; const cd=Math.cos(dp),c2p=Math.cos(pk)**2,sq=Math.sin(pk+dp)*Math.sin(pk)/cd; return sq>0&&cd>0&&cd*(1-Math.sqrt(sq))**2>0.001?c2p/(cd*(1-Math.sqrt(sq))**2)*Math.abs(cd):c2p; })() : 0,
+      Ka_GZT: isBlock ? (()=>{ const pk=Math.atan(Math.tan(phi_d)*gph); const da=(2/3)*pk; const inner=Math.sin(pk+da)*Math.sin(pk)/Math.cos(da); const denom=1+Math.sqrt(Math.max(0,inner)); return denom>0.001?(Math.cos(pk)/denom)**2:0.001; })() : 0,  // λa Gl.27, δ₁=2/3φ
+      Kph_GZT: isBlock ? (() => { const pk=Math.atan(Math.tan(phi_d)*gph); const dp=0.5*pk; const cd=Math.cos(dp); const sq=Math.sin(pk+dp)*Math.sin(pk)/cd; const den=1-Math.sqrt(Math.max(0,Math.min(0.9999,sq))); return (Math.cos(pk)/Math.max(0.05,den))**2; })() : 0,  // λp Gl.28, δp=φ/2
       K0_GZT: isBlock ? (1-Math.sin(Math.atan(Math.tan(phi_d)*gph))) : 0,
       cd_GZT: c_d, gEa_GZT: gEa, gEp_GZT: gEp, mob_GZT: mob,
       ok:chk.length===0||chk.every(Boolean)
@@ -6202,11 +6520,11 @@ const NW_FORMULAS = {
            const ue=(R.ue_GZT||0).toFixed(2);
            const h_block=(G.Hb-(R.ue_GZT||0)).toFixed(2);
            return `v=${av} m, v'=${avp} m, H_Block=${h_block} m → M_u=${Mu.toFixed(1)} kNm`; }},
-  eta: { sym:'η = M_u / M_d  ≥ 1.0  (η=1: Grenzzustand nach Steckner)',
+  eta: { sym:'η = M_u / M_d  ≥ 1.0  (η=1: Grenzzustand nach Steckner, Bezug: OK Block)',
          num:(R,G,cm)=>{ const gEp=R.gEp_GZT||1.4;
            const use_x=Math.abs(R.Hxd)>=Math.abs(R.Hyd);
-           const t=G.Hb;
-           const Md_d=use_x?Math.abs(R.Mxd-R.Hxd*t):Math.abs(R.Myd-R.Hyd*t);
+           // M_d an OK Block (= Hd×(Hk+ü) + My_ext) — konsistent mit M_ok_x in Berechnung
+           const Md_d=use_x?(R.M_ok_x_d||0):(R.M_ok_y_d||0);
            const Md_k=use_x?(R.M_ok_x_k||0):(R.M_ok_y_k||0);
            const Mu_=cm?(R.Mu_GZT*gEp):R.Mu_GZT;
            const Md_=cm?Md_k:Md_d;
@@ -6747,7 +7065,7 @@ function buildNachweisDoc(results,G){
   var nwPages=results.map(function(r){
     var use_x=Math.abs(r.Hxd||0)>=Math.abs(r.Hyd||0);
     var Hd=use_x?Math.abs(r.Hxd||0):Math.abs(r.Hyd||0);
-    var Md_ok=use_x?Math.abs((r.Mxd||0)-(r.Hxd||0)*t):Math.abs((r.Myd||0)-(r.Hyd||0)*t);
+    var Md_ok=use_x?Math.abs((r.Mxd||0)-(r.Hxd||0)*Hblock):Math.abs((r.Myd||0)-(r.Hyd||0)*Hblock);
     var dir=use_x?'x (quer)':'y (längs)';
     var phi_k=r.phi_k_GZT||0;
     var mob=r.mob_GZT!=null?r.mob_GZT:0.25;
@@ -6909,7 +7227,14 @@ function buildNachweisDoc(results,G){
         '<tr><td>N_α</td><td>Charakteristische Normalkraft (Eigengewicht + Aufbaulast)</td><td class="r">'+_npN(N_al)+' kN</td></tr>'+
         '<tr><td>H_k</td><td>Charakteristische Horizontalkraft ('+(use_x?'x-Richtung':'y-Richtung')+')</td><td class="r">'+_npN(Hk_g)+' kN</td></tr>'+
         '<tr><td>M_ok</td><td>Moment an OK Block (Steckner Bezugspunkt, char.)</td><td class="r">'+_npN(M_ok_g)+' kNm</td></tr>'+
-        '<tr><td>C₁ = C₂</td><td>Bettungsziffer (Steckner Gl.3)</td><td class="r">'+_npN(+gi('bg_c1'))+' MN/m³</td></tr>'+
+        '<tr><td>C₁ = C₂</td><td>Bettungsziffer</td><td class="r">'+_npN(+gi('bg_c1'))+' MN/m³</td></tr>'+(function(){
+          var cd=window._c1Calc||{};
+          var meth=cd.zoneKey==='ok'  ? 'Steckner Gl.3 (M_E ≥ '+cd.grenzwert+' MN/m²)' :
+                   cd.zoneKey==='mid' ? 'Blend: '+(((cd.w||0)*100).toFixed(0))+'% Steckner + '+((((1-(cd.w||0))*100).toFixed(0)))+'% Winkler M_E·Kp/B' :
+                   cd.zoneKey==='soft'? 'Winkler M_E·Kp/B (Steckner nicht gültig — M_E < 12 MN/m²)' : '—';
+          var me_info = cd.me_avg!=null ? ' · M_E,avg = '+cd.me_avg.toFixed(0)+' MN/m²' : '';
+          return '<tr><td style="font-size:7.5px;color:var(--dim)">C₁-Methode</td><td style="font-size:7.5px;color:var(--dim)">'+meth+me_info+'</td><td></td></tr>';
+        })()+
       '</table>'+
 
       '<div class="np-sh2">7.2  Kennzeichnende Winkel (Gl.11 und Gl.12)</div>'+
@@ -6970,37 +7295,6 @@ function buildNachweisDoc(results,G){
       _npEta(r.etaGZG,false)+
     '</div>';
   }).join('');
-
-  // ────────────────────────────────────────────────────────────────
-  // LETZTE SEITE: ZUSAMMENFASSUNG (Kapitel 8)
-  // ────────────────────────────────────────────────────────────────
-  var sumHead=results.map(function(r){return '<th>'+r.name+'</th>';}).join('');
-  var gztRow=results.map(function(r){
-    var ok=r.etaGZT>=1.0&&isFinite(r.etaGZT);
-    return '<td class="'+(ok?'ok':'fail')+' r">'+(ok?'✓':'✗')+' η = '+_npN(r.etaGZT)+'</td>';
-  }).join('');
-  var gzgRow=results.map(function(r){
-    var ok=r.etaGZG>=1.0&&isFinite(r.etaGZG);
-    return '<td class="'+(ok?'ok':'fail')+' r">'+(ok?'✓':'✗')+' η = '+_npN(r.etaGZG)+'</td>';
-  }).join('');
-  var allOk=results.every(function(r){return r.ok;});
-
-  var summary='<div class="np-page">'+ph()+
-    ch('8','Ergebniszusammenfassung')+
-    '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
-    'Massgebende Nachweise: GZT (Standsicherheit nach Steckner Gl.66) und GZG (Schiefstellung nach Steckner/Winkler). '+
-    'Nachweis erbracht wenn η ≥ 1.0.'+
-    '</div>'+
-    '<table class="np-tbl">'+
-      '<tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr>'+
-      '<tr class="hl"><td><b>GZT · Standsicherheit</b><br><span style="font-size:7.5px;color:var(--xdim)">η = M_u / M_d ≥ 1.0  (Steckner Gl.66)</span></td>'+gztRow+'</tr>'+
-      '<tr><td><b>GZG · Schiefstellung</b><br><span style="font-size:7.5px;color:var(--xdim)">η = M_α / M_ok ≥ 1.0  (Steckner Gl.11–21)</span></td>'+gzgRow+'</tr>'+
-    '</table>'+
-    '<div class="np-verdict '+(allOk?'ok':'fail')+'">'+
-      '<div class="np-verdict-v">'+(allOk?'✓  Alle massgebenden Nachweise (GZT und GZG) sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt')+'</div>'+
-      '<div class="np-verdict-s">Berechnungsmodell: Steckner Blockfundament · SIA 267:2013 · '+datStr+'</div>'+
-    '</div>'+
-  '</div>';
 
   // ────────────────────────────────────────────────────────────────
   // INHALTSVERZEICHNIS
@@ -9519,9 +9813,9 @@ function toggleGZTExpand(evt, key){
 // ════════════════════════════════════════════
 const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datum','p_bemerk',
   'g_bx','g_by','g_hblock','g_kx','g_ky','g_hkopf','g_uberd','g_uberd_flach','g_ex','g_ey','g_gbeton','g_gauf','flach-material',
-  'bg_phi','bg_c','bg_gamma','bg_gamma2','bg_qu','bg_me','bg_c1','bg_delta_fac','bg_delta_sohle','bg_gw','bg_gwt',
+  'bg_phi','bg_c','bg_gamma','bg_gamma2','bg_qu','bg_me','bg_c1','bg_koernig','bg_c1_methode','bg_delta_fac','bg_delta_sohle','bg_gw','bg_gwt',
   'bg_beta','bg_bfuss','bg_btyp',
-  'tw_G','tw_Q','tw_phi','tw_c','tw_Ea','tw_Ep',
+  'tw_G','tw_Q','tw_phi','tw_c','tw_Ea','tw_Ep','lw_G_eig',
   'lw_G','lw_G_inf','lw_Q','lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_gzg','lw_Q_gzg',
   'l_NG','l_HGx','l_HGy','l_MGx','l_MGy',
   'l_HWx','l_HWy','l_MWx','l_MWy',
@@ -9531,6 +9825,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
 
 function collectState(){
   const st={};FDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
+  st.kopf_in_gk = document.getElementById('kopf_in_gk')?.checked ?? true;
   st.LF=JSON.stringify(LF);
   st.SCHICHTEN=JSON.stringify(SCHICHTEN);
   st.MODEL=CALC_MODEL;
@@ -9547,6 +9842,9 @@ function applyState(st){
       if(rng) rng.value=st[f];
     }
   });
+  if(st.kopf_in_gk !== undefined){ const cb=document.getElementById('kopf_in_gk'); if(cb) cb.checked = !!st.kopf_in_gk; }
+  if(st.bg_koernig){ _bgKoernig=st.bg_koernig; const kSel=document.getElementById('bg_koernig'); if(kSel) kSel.value=_bgKoernig; }
+  if(st.bg_c1_methode){ _c1Methode=st.bg_c1_methode; const mSel=document.getElementById('bg_c1_methode'); if(mSel) mSel.value=_c1Methode; }
   if(st.LF){LF=JSON.parse(st.LF);renderLF();}
   if(st.SCHICHTEN){SCHICHTEN=JSON.parse(st.SCHICHTEN);renderSchichten();}
   if(st.FLACH_MAT){ FLACH_MAT=st.FLACH_MAT; const sel=document.getElementById('flach-material'); if(sel)sel.value=FLACH_MAT; }
@@ -9562,6 +9860,7 @@ function applyState(st){
   if(quFlEl && st.bg_qu) quFlEl.value = st.bg_qu;
   if(st.MODEL){setModel(st.MODEL,true);}
   rebuildScene();
+  _checkTWOverrides();
   scheduleCalc(150); // Ergebnis nach Laden neu berechnen
 }
 let _currentProjKey = null; // gesetzt beim Laden eines Projekts
@@ -10136,6 +10435,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   updateMatCardSummary();updateGWCardSummary();updateBoeCardSummary();
   initViewer();updateSB();
   setModel(CALC_MODEL, true);
+  autoC1();
   initSicherung();
   rebuildScene(); // Initiale Szene aufbauen
   if(SETTINGS.bearbeiter) si('p_bearbeiter',SETTINGS.bearbeiter);
