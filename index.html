@@ -1270,7 +1270,7 @@ html, body {
           <span id="btn-sicherung-lbl">Sicherung inaktiv — klicken zum Aktivieren</span>
         </button>
 
-        <div class="hint">Vordimensionierung · Broms · freier Pfahlkopf · kein normativer Nachweis.</div>
+        <div class="hint">Vordimensionierung · p-y-Bettungsmodell · freier Pfahlkopf · kein normativer Nachweis.</div>
 
         <!-- Pfähle -->
         <div class="lf-card open" style="margin-top:4px">
@@ -1456,6 +1456,7 @@ html, body {
         <button class="ic-btn" onclick="setCamSide()" title="Seitenansicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/><path d="M5.5 10H3.5M14.5 10H16.5M10 5.5V3.5M10 14.5V16.5"/></svg></button>
         <button class="ic-btn on" id="vc-grid" onclick="toggleGrid()" title="Raster"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="0.5"/><rect x="11" y="3" width="6" height="6" rx="0.5"/><rect x="3" y="11" width="6" height="6" rx="0.5"/><rect x="11" y="11" width="6" height="6" rx="0.5"/></svg></button>
         <button class="ic-btn" id="vc-pfahl" onclick="togglePfahlViz()" title="Pfahlsicherung ein-/ausblenden" style="display:none"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="8" y="3" width="4" height="14" rx="0.5"/><rect x="3" y="5.5" width="14" height="3" rx="0.5"/><rect x="3" y="11.5" width="14" height="3" rx="0.5"/></svg></button>
+        <button class="ic-btn" id="vc-pfahl-keil" onclick="togglePfahlKeil()" title="Bodenpressung-Keile ein-/ausblenden (Block-/Pfahlkeil + Schattenband)" style="display:none"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 16h14L10 3z"/><path d="M10 8l-3.5 6.5h7L10 8z" opacity="0.5"/></svg></button>
       </div>
       <!-- Layer-Steuerung oben rechts -->
       <div class="viewer-fab" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
@@ -1506,7 +1507,7 @@ html, body {
               <div style="margin-top:4px;font-size:8px;color:var(--xdim);letter-spacing:.06em;text-transform:uppercase">Pfahlsicherung</div>
               <div class="lg-row"><div class="lg-sq" style="background:#8899aa"></div>HEB Pfahl</div>
               <div class="lg-row"><div class="lg-sq" style="background:#bbccdd"></div>Richtstütze</div>
-              <div class="lg-row"><div class="lg-sq" style="background:#ffaa44;opacity:0.8"></div>Ep passiv (Broms)</div>
+              <div class="lg-row"><div class="lg-sq" style="background:#ffaa44;opacity:0.8"></div>p_u Bettung (Grenzwert)</div>
               <div class="lg-row"><div class="lg-sq" style="background:#b06040;opacity:0.5"></div>Aushubsohle</div>
             </div>
           </div>
@@ -2338,6 +2339,7 @@ function deleteTpl(id, e){
 // ════════════════════════════════════════════
 let scene, camera, renderer;
 let showGnd=true, showStr=false, showDim=true, showLabels=true, showLyr=false, showVec=false, showText=true, showGrid=true, showPfahl=false, lastRes=null;
+let showPfahlKeil=false;  // Bodenpressung-Keile (Block-/Pfahlkeil + Schattenband) — Start aus
 let _stressHidden=null;
 let _calcTimer=null;
 function scheduleCalc(ms){ clearTimeout(_calcTimer); _calcTimer=setTimeout(calculate, ms??420); scheduleHistPush(); }
@@ -3269,9 +3271,25 @@ function toggleGrid(){
 function togglePfahlViz(){
   showPfahl=!showPfahl;
   document.getElementById('vc-pfahl').classList.toggle('on',showPfahl);
+  _updateKeilBtnVis();
   _updateSicherungBtn();
   calculate();     // Zustand A (Aushub ohne Massnahme) mitberechnen
   rebuildScene();  // stets komplett neu: Block-Labels + Pfähle synchron
+}
+
+// Bodenpressung-Keile separat ein-/ausblenden (Start: aus, sobald Sicherung aktiv)
+function togglePfahlKeil(){
+  showPfahlKeil = !showPfahlKeil;
+  const b = document.getElementById('vc-pfahl-keil');
+  if(b) b.classList.toggle('on', showPfahlKeil);
+  rebuildScene();
+}
+// Keil-Button nur sichtbar, wenn Sicherung aktiv ist
+function _updateKeilBtnVis(){
+  const b = document.getElementById('vc-pfahl-keil');
+  if(!b) return;
+  b.style.display = showPfahl ? '' : 'none';
+  b.classList.toggle('on', showPfahlKeil);
 }
 
 function toggleSicherungAktiv(){
@@ -3279,6 +3297,7 @@ function toggleSicherungAktiv(){
   _updateSicherungBtn();
   const vcPf = document.getElementById('vc-pfahl');
   if(vcPf) vcPf.classList.toggle('on', showPfahl);
+  _updateKeilBtnVis();
   calculate();     // Zustand A (Aushub ohne Massnahme) mitberechnen
   // Immer komplette Szene neu bauen:
   // → Pfähle+Erddruckdiagramme ein/aus
@@ -3590,25 +3609,51 @@ function buildPfahlViz(){
       new THREE.Vector3(vx + ex_sign*0.25, y_sohle/2, ex_z1 + 0.15), 'vl-dim');
   }
 
-  // ── Blockkeil (Rankine) + Wirkungsschatten am Pfahl
+  // ── Blockkeil (Rankine) + Wirkungsschatten am Pfahl — eigener Layer (Start aus)
   // Keil von der Sohlenvorderkante unter 45°−φ/2 zur Oberfläche (Pfahlseite);
   // Pfähle innerhalb des Keils: Schattenband 0…z_ov (teilbeanspruchter Boden)
-  {
+  if(showPfahlKeil){
     const _phiW  = (SCHICHTEN[0]?.phi ?? (+gi('bg_phi') || 30)) * Math.PI / 180;
     const _tanW  = Math.tan(Math.PI/4 + _phiW/2);
     const _t_bl  = Math.max(0.1, +gi('g_hblock') || 2.0) + ue;
     const _L_emb = L;  // Pfähle stehen gegenüber dem Aushub → volle Einbindung
     const _sprT  = Math.tan(_phiW / 2);                  // seitliche Keilausbreitung im Grundriss
+    // ── Reale Geländeoberfläche für die Keil-Begrenzung (Aushubsohle / Böschung).
+    //    Keile enden an dieser Fläche statt an der flachen GOK (y=0).
+    const _beta = (+gi('bg_beta') || 0) * Math.PI/180;
+    const _btyp = gi('bg_btyp') || 'none';
+    const _bfu  = +gi('bg_bfuss') || 0;
+    const _bho  = Math.max(0, +gi('bg_bhoehe') || 0);
+    const surfY = (x, z) => {
+      // Aushub: innerhalb der Grube auf der Aushubseite → Sohle bei −d_ex
+      if(d_ex > 0.05){
+        const onEx = ex_sign > 0 ? x > bx/2 - 0.01 : x < -bx/2 + 0.01;
+        if(onEx && Math.abs(x) < bx/2 + 2.5 && Math.abs(z) < by/2 + 2.5) return -d_ex;
+      }
+      // Böschung: +x jenseits Böschungsfuss, geneigt, durch h_β begrenzt
+      if(_btyp !== 'none' && Math.abs(_beta) > 0.002){
+        const fuss = bx/2 + Math.max(0, _bfu);
+        if(x > fuss){
+          let dy = (x - fuss) * Math.tan(_beta);
+          if(_bho > 0.05) dy = Math.sign(dy) * Math.min(Math.abs(dy), _bho);
+          return dy;
+        }
+      }
+      return 0;
+    };
     pfahl_sign.forEach(ps => {
       const x0 = ps * bx/2;                              // Blockflanke
       const reach = _t_bl * _tanW;
       const x1 = ps * (bx/2 + reach);                    // Keilspitze an GOK
       const hZ0 = by/2;                                  // halbe Breite an der Blockflanke
       const hZ1 = by/2 + reach * _sprT;                  // halbe Breite an der Spitze (Spreizung φ/2)
+      // Keildecke folgt der realen Oberfläche (Aushubsohle / Böschung) statt y=0
+      const ky0n = surfY(x0, -hZ0), ky1n = surfY(x1, -hZ1);
+      const ky0p = surfY(x0,  hZ0), ky1p = surfY(x1,  hZ1);
       // Keilprisma (6 Vertices): Flanke oben/unten + Spitzlinie, seitlich gespreizt
       const v = new Float32Array([
-        x0, 0,      -hZ0,  x0, -_t_bl, -hZ0,  x1, 0, -hZ1,
-        x0, 0,       hZ0,  x0, -_t_bl,  hZ0,  x1, 0,  hZ1,
+        x0, ky0n, -hZ0,  x0, -_t_bl, -hZ0,  x1, ky1n, -hZ1,
+        x0, ky0p,  hZ0,  x0, -_t_bl,  hZ0,  x1, ky1p,  hZ1,
       ]);
       const ix = [0,1,2, 3,5,4, 0,2,5,0,5,3, 1,4,5,1,5,2, 0,3,4,0,4,1];
       const wgeo = new THREE.BufferGeometry();
@@ -3616,12 +3661,12 @@ function buildPfahlViz(){
       wgeo.setIndex(ix); wgeo.computeVertexNormals();
       grp.add(new THREE.Mesh(wgeo, new THREE.MeshLambertMaterial(
         {color:0xc9a84c, transparent:true, opacity:0.10, side:THREE.DoubleSide, depthWrite:false})));
-      // Gleitflächen-Kontur (vordere Fläche) + Grundriss-Umriss an GOK
-      ln(new THREE.Vector3(x0, -_t_bl, -hZ0), new THREE.Vector3(x1, 0, -hZ1),
+      // Gleitflächen-Kontur (vordere Fläche) + Grundriss-Umriss an der Oberfläche
+      ln(new THREE.Vector3(x0, -_t_bl, -hZ0), new THREE.Vector3(x1, ky1n, -hZ1),
          new THREE.LineBasicMaterial({color:0xc9a84c, transparent:true, opacity:0.6}));
-      ln(new THREE.Vector3(x0, 0, -hZ0), new THREE.Vector3(x1, 0, -hZ1),
+      ln(new THREE.Vector3(x0, ky0n, -hZ0), new THREE.Vector3(x1, ky1n, -hZ1),
          new THREE.LineBasicMaterial({color:0xc9a84c, transparent:true, opacity:0.45}));
-      ln(new THREE.Vector3(x0, 0, hZ0), new THREE.Vector3(x1, 0, hZ1),
+      ln(new THREE.Vector3(x0, ky0p, hZ0), new THREE.Vector3(x1, ky1p, hZ1),
          new THREE.LineBasicMaterial({color:0xc9a84c, transparent:true, opacity:0.45}));
       _vlAdd(`Blockkeil 45°−φ/2`, new THREE.Vector3((x0+x1)/2, -_t_bl*0.35, -hZ0-0.05), 'vl-dim');
       // Schattenband PRO Pfahl: Grundriss-Prüfung gegen die Keilkante (wie Berechnung)
@@ -3637,10 +3682,11 @@ function buildPfahlViz(){
         const over  = e_lat - d_abstand * _sprT;
         const zov_i = (over < B_pf) ? _zovGeo : 0;   // ausserhalb Keilkante (+B-Rampe) → kein Band
         if(zov_i > 0.05){
+          const _sBand = surfY(xp, zo);   // Oberkante Band an realer Oberfläche
           const band = new THREE.Mesh(
             new THREE.BoxGeometry(B_pf+0.06, zov_i, B_pf+0.06),
             new THREE.MeshLambertMaterial({color:0xc9a84c, transparent:true, opacity:0.30, depthWrite:false}));
-          band.position.set(xp, -zov_i/2, zo);
+          band.position.set(xp, _sBand - zov_i/2, zo);
           grp.add(band);
           if(zov_i > _zovMax){ _zovMax = zov_i; _zovPos = zo; }
         }
@@ -3666,19 +3712,23 @@ function buildPfahlViz(){
           const xf1 = xf0 + wDir * reachP;         // Keilspitze an GOK
           const hp0 = B_pf/2;
           const hp1 = B_pf/2 + reachP * _sprT;     // Spreizung φ/2 im Grundriss
+          // Keildecke folgt der realen Oberfläche (Aushubsohle / Böschung)
+          const py0n = surfY(xf0, zo-hp0), py1n = surfY(xf1, zo-hp1);
+          const py0p = surfY(xf0, zo+hp0), py1p = surfY(xf1, zo+hp1);
+          const py1c = surfY(xf1, zo);
           const vp = new Float32Array([
-            xf0, 0,    zo-hp0,  xf0, -_z_r, zo-hp0,  xf1, 0, zo-hp1,
-            xf0, 0,    zo+hp0,  xf0, -_z_r, zo+hp0,  xf1, 0, zo+hp1,
+            xf0, py0n, zo-hp0,  xf0, -_z_r, zo-hp0,  xf1, py1n, zo-hp1,
+            xf0, py0p, zo+hp0,  xf0, -_z_r, zo+hp0,  xf1, py1p, zo+hp1,
           ]);
           const pgeo = new THREE.BufferGeometry();
           pgeo.setAttribute('position', new THREE.BufferAttribute(vp,3));
           pgeo.setIndex([0,1,2, 3,5,4, 0,2,5,0,5,3, 1,4,5,1,5,2, 0,3,4,0,4,1]);
           pgeo.computeVertexNormals();
           grp.add(new THREE.Mesh(pgeo, matPK));
-          // Grundriss-Umriss an GOK + Gleitflächen-Linie
-          ln(new THREE.Vector3(xf0, 0, zo-hp0), new THREE.Vector3(xf1, 0, zo-hp1), matPKl);
-          ln(new THREE.Vector3(xf0, 0, zo+hp0), new THREE.Vector3(xf1, 0, zo+hp1), matPKl);
-          ln(new THREE.Vector3(xf0, -_z_r, zo), new THREE.Vector3(xf1, 0, zo), matPKl);
+          // Grundriss-Umriss an der Oberfläche + Gleitflächen-Linie
+          ln(new THREE.Vector3(xf0, py0n, zo-hp0), new THREE.Vector3(xf1, py1n, zo-hp1), matPKl);
+          ln(new THREE.Vector3(xf0, py0p, zo+hp0), new THREE.Vector3(xf1, py1p, zo+hp1), matPKl);
+          ln(new THREE.Vector3(xf0, -_z_r, zo), new THREE.Vector3(xf1, py1c, zo), matPKl);
           if(zi === 0) _vlAdd(`Pfahlkeil 45°−φ/2`,
             new THREE.Vector3((xf0+xf1)/2, -_z_r*0.3, zo - hp1 - 0.1), 'vl-dim');
         });
@@ -3727,14 +3777,20 @@ function buildPfahlViz(){
     grp.add(mesh);
   }
 
-  // ── Erddruckdiagramm am Pfahl (Broms passiv) ─────────────────────────────
+  // ── p_u-Grenzhülle am Pfahl (3D-Overlay) ─────────────────────────────────
   // Vollständig isoliert — kein Eingriff in calculate() / renderResults()
-  // Visualisiert die passive Erddruckverteilung p(z)=3·Kp·γ·z·B entlang des Pfahls
+  // Visualisiert die Bettungsgrenzhülle p_u(z)=3·Kp·σ'v·B (schichtweise, GW) entlang des Pfahls
   function addErddruckDiagPfahl(cx, cz, e_h_val, L_val, phi_deg, gamma_val, prof_val, rot_y_val){
-    const phi   = phi_deg * Math.PI / 180;
-    const Kp    = Math.tan(Math.PI/4 + phi/2)**2;
     const B_pf  = prof_val.b;
-    const p_max = 3 * Kp * gamma_val * L_val * B_pf;   // kPa (Broms, Spitzendruck)
+    // p_u [kN/m] schichtweise (GW-wirksam); d = Abstand vom Kopf, Tiefe ab GOK = d−e_h.
+    const pu3d  = d => {
+      const z = Math.max(0, d - e_h_val);              // Tiefe unter GOK (freie Länge ohne Druck)
+      const s = schichtAtDepth(z), ph = s.phi ?? phi_deg;
+      if(ph <= 5) return z > 1.5*B_pf ? 9*Math.max(0, s.c ?? 0)*B_pf : 0;
+      const Kpi = Math.tan(Math.PI/4 + ph*Math.PI/360)**2;
+      return 3 * Kpi * sigVeffTo(z) * B_pf;
+    };
+    let p_max = 0; for(let i=0;i<=16;i++) p_max = Math.max(p_max, pu3d(i/16*L_val));
     if(p_max < 0.5) return;
 
     // Visuelle Skalierung: p_max kPa → max. 0.55m Bildbreite
@@ -3748,7 +3804,7 @@ function buildPfahlViz(){
     for(let i = 1; i <= nSeg; i++){
       const t  = i / nSeg;
       const py = e_h_val - t * L_val;                   // y-Tiefe
-      const px = 3 * Kp * gamma_val * t * L_val * B_pf * vis;  // Druckbreite
+      const px = pu3d(t * L_val) * vis;                 // Druckbreite (schichtweise p_u)
       shape.lineTo(px, py);
     }
     shape.lineTo(0, e_h_val - L_val);                   // Pfahlspitze, zurück
@@ -3764,7 +3820,7 @@ function buildPfahlViz(){
     for(let i = 0; i <= nSeg; i++){
       const t  = i / nSeg;
       const py = e_h_val - t * L_val;
-      const px = 3 * Kp * gamma_val * t * L_val * B_pf * vis;
+      const px = pu3d(t * L_val) * vis;
       pts2d.push(new THREE.Vector3(px, py, 0));
     }
     pts2d.unshift(new THREE.Vector3(0, e_h_val, 0));   // Pfahlkopf (kein Druck)
@@ -3785,7 +3841,7 @@ function buildPfahlViz(){
     const matTick = new THREE.LineBasicMaterial({color:0xffaa44, opacity:0.4, transparent:true});
     for(let z_d = step; z_d < L_val - 0.01; z_d += step){
       const py   = e_h_val - z_d;
-      const px   = 3 * Kp * gamma_val * z_d * B_pf * vis;
+      const px   = pu3d(z_d) * vis;
       sub.add(new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(0, py, 0),
@@ -3794,11 +3850,11 @@ function buildPfahlViz(){
     }
     grp.add(sub);
 
-    // Labels: p_max an Spitze + Tiefe
-    const p_mid = 3 * Kp * gamma_val * (L_val/2) * B_pf;
-    _vlAdd(`${p_max.toFixed(0)} kPa`,
+    // Labels: p_u an Spitze + Mitte (kN/m, schichtweise)
+    const p_mid = pu3d(L_val/2);
+    _vlAdd(`p_u ${p_max.toFixed(0)} kN/m`,
       new THREE.Vector3(cx, e_h_val - L_val * 0.92, cz), 'vl-dim');
-    _vlAdd(`${p_mid.toFixed(0)} kPa`,
+    _vlAdd(`${p_mid.toFixed(0)} kN/m`,
       new THREE.Vector3(cx, e_h_val - L_val * 0.5, cz), 'vl-dim');
   }
 
@@ -4765,6 +4821,8 @@ function setModel(m, silent){
   if(sNavEl) sNavEl.style.display = isBlock ? '' : 'none';
   const vcPf = document.getElementById('vc-pfahl');
   if(vcPf) vcPf.style.display = isBlock ? '' : 'none';
+  const vcKeil = document.getElementById('vc-pfahl-keil');
+  if(vcKeil) vcKeil.style.display = (isBlock && showPfahl) ? '' : 'none';
   if(!isBlock && document.getElementById('tab-sicherung')?.classList.contains('active')){
     switchTab('lasten');
   }
@@ -5102,41 +5160,41 @@ function openC1Info(){
   ov.style.display='flex';
 }
 
-function autoC1(){
+// Reiner Auto-C₁-Wert (3-Zonen-Blend Winkler/Steckner, β/B/t/φ-abhängig) — ohne UI-Effekte.
+// Wird von autoC1() (mit UI) UND von _doCalculate() (Auto-Modus, live) genutzt, damit C₁ der
+// Geländeneigung, Geometrie und φ immer folgt. Quelle: Steckner 1989 Gl.3/4.
+function c1AutoValue(){
   const t         = Math.max(0.1, +gi('g_hblock') + Math.max(0,+gi('g_uberd')||0));
   const B         = Math.max(0.1, +gi('g_bx'));
   const beta      = +gi('bg_beta')||0;
   const grenzwert = _bgKoernig==='fein' ? 12 : 25;
-
-  const phi_avg  = SCHICHTEN.length>1 ? avgPhiToDepth(t) : (+gi('bg_phi')||30);
-  const me_avg   = SCHICHTEN.length>1 ? avgMeToDepth(t) : (SCHICHTEN[0]?.me ?? 20);
-  // bg_me als Display-Feld aktualisieren
-  const bgMeEl = document.getElementById('bg_me');
-  if(bgMeEl) bgMeEl.value = me_avg.toFixed(1);
-  const c1_steck = c1Steckner(phi_avg, t, beta);
-  const c1_me    = c1Effective_layers(t, B);
-
+  const phi_avg   = SCHICHTEN.length>1 ? avgPhiToDepth(t) : (+gi('bg_phi')||30);
+  const me_avg    = SCHICHTEN.length>1 ? avgMeToDepth(t) : (SCHICHTEN[0]?.me ?? 20);
+  const c1_steck  = c1Steckner(phi_avg, t, beta);
+  const c1_me     = c1Effective_layers(t, B);
   let c1_eff, zoneKey, w=0;
   if(_c1Methode === 'winkler'){
     c1_eff=c1_me; zoneKey='soft'; w=0;
   } else if(_c1Methode === 'steckner'){
     c1_eff=c1_steck; zoneKey='ok'; w=1;
   } else {
-    // auto — 3-Zonen, korrekt nach Bodenart-Grenzwert
-    if(me_avg < 12){
-      // Unter absolutem Minimum → Winkler
-      c1_eff=c1_me; zoneKey='soft'; w=0;
-    } else if(me_avg < grenzwert){
-      // Zwischen 12 und grenzwert → Blend (nur bei grobkörnig 12–25; bei feinkörnig grenzwert=12, dieser Ast wird nie erreicht)
+    if(me_avg < 12){ c1_eff=c1_me; zoneKey='soft'; w=0; }
+    else if(me_avg < grenzwert){
       w=(me_avg-12)/Math.max(1, grenzwert-12);
       c1_eff=(1-w)*c1_me+w*c1_steck; zoneKey='mid';
-    } else {
-      // M_E ≥ grenzwert → Steckner gültig
-      c1_eff=c1_steck; zoneKey='ok'; w=1;
-    }
+    } else { c1_eff=c1_steck; zoneKey='ok'; w=1; }
   }
+  return {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert,
+          c1_steck, c1_me, stecknerGueltig: me_avg >= grenzwert};
+}
 
-  const stecknerGueltig = me_avg >= grenzwert;
+function autoC1(){
+  const a = c1AutoValue();
+  let {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert,
+       c1_steck, c1_me, stecknerGueltig} = a;
+  // bg_me als Display-Feld aktualisieren
+  const bgMeEl = document.getElementById('bg_me');
+  if(bgMeEl) bgMeEl.value = me_avg.toFixed(1);
 
   // Feld nur setzen wenn nicht manuell überschrieben
   if(!_c1Manual){
@@ -5356,8 +5414,11 @@ function _updatePfahlGeomHint(){
   // Anschlusshöhe über GOK: OK Kopf über GOK + Offset
   const y_ok_kopf_gok = Math.max(0, hk - ue);           // OK Kopf über GOK
   const h_anschluss   = y_ok_kopf_gok + hs_off;         // Anschluss über GOK
-  // Stütze: von Pfahlkopf (y=0, GOK) zum Blockanschluss (y=h_anschluss)
-  const delta_y       = h_anschluss;                      // Höhe Anschluss über GOK (Pfahlkopf=0)
+  // Stütze: vom PFAHLKOPF (y = e = OK Pfahlkopf über GOK) zum Blockanschluss (y = h_anschluss).
+  // delta_y signiert: > 0 = Anschluss höher (Stütze steigt zum Block) · < 0 = Pfahlkopf höher
+  // (Stütze fällt zum Block → α negativ, Axialkomponente kehrt sich um). FRÜHER e ignoriert
+  // (Pfahlkopf fälschlich auf GOK angenommen) → α/F_s/V falsch, sobald e ≠ h_anschluss.
+  const delta_y       = h_anschluss - e;
   const alpha_eff     = Math.atan2(delta_y, d) * 180 / Math.PI;
   const L_stuetze     = Math.sqrt(d*d + delta_y*delta_y);
 
@@ -5415,13 +5476,207 @@ function syncPfahlFromSchicht(){
   calcPfahlsicherung();
 }
 
+// Passiver Erddruckbeiwert bei geneigtem Gelände (Rankine) — für Pfähle, die in eine
+// abfallende Böschung hinein widerstehen. β = Böschungsmagnitude [°]. Reduziert sich für
+// β→0 exakt auf Kp = tan²(45+φ/2); bei β→φ kollabiert der passive Keil (Restwert cosφ).
+//   Kp,β = cosβ · (cosβ + √(cos²β − cos²φ)) / (cosβ − √(cos²β − cos²φ))
+function kpSlopeRankine(phi_deg, beta_deg){
+  const phi = phi_deg * Math.PI / 180;
+  const b   = Math.min(Math.abs(beta_deg), phi_deg - 0.5) * Math.PI / 180;  // β < φ erzwingen
+  const cb = Math.cos(b), cp = Math.cos(phi);
+  const disc = cb*cb - cp*cp;
+  if(disc <= 1e-6) return Math.cos(phi);   // β ≈ φ: unterer Grenzwert
+  const root = Math.sqrt(disc);
+  return cb * (cb + root) / (cb - root);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// GLOBALE STANDSICHERHEIT — Bishop vereinfachtes Lamellenverfahren (GEO)
+// ⚠️ WIP / NICHT VALIDIERT / NICHT VERDRAHTET — die Kreissuche liefert am vertikalen
+//    Anschnitt noch unplausible η (steigt mit Aushubtiefe). Erst nach Benchmark-Validierung
+//    (Taylor-Stabilitätszahl, Standsicherheitscharts) in die Nachweise aufnehmen. Bis dahin
+//    bleibt die textliche Warnung „globale Standsicherheit gesondert prüfen" massgebend.
+// ════════════════════════════════════════════════════════════════════════
+// Kreisgleitflächen-Suche über das reale Geländeprofil (Böschung + Aushub).
+// Bishop simplified: η = Σ[c'·b + (W − u·b)·tanφ'] / m_α  /  Σ[W·sinα + M_H/R]
+//   m_α = cosα·(1 + tanα·tanφ'/η)  — iterativ.
+// Strenge: φ_d = atan(tanφ_k/γ_φ), c_d = c_k/γ_c (SIA 267) → η ≥ 1.0 Kriterium.
+// Koordinaten: x horizontal (0 = Blockmitte, +x = Feldseite), Y Elevation (GOK = 0, ab).
+// Vereinfachungen (ausgewiesen): kreisförmig, Block als Auflast-Surcharge + H als
+// destab. Moment, Pfähle NICHT als Widerstand angesetzt (konservativ — Pfahl-Dübelwirkung
+// vernachlässigt), ebener Schnitt (2D).
+function bishopStability(opts){
+  opts = opts || {};
+  const bx     = Math.max(0.3, +gi('g_bx') || 1);
+  const t_bl   = Math.max(0.3, +gi('g_hblock') || 2) + Math.max(0, +gi('g_uberd') || 0);
+  const d_ex   = (typeof showPfahl!=='undefined' && showPfahl) ? Math.max(0, +gi('pfahl_dex') || 0) : 0;
+  const exSign = (gi('pfahl_dex_seite') || 'gleis') === 'gleis' ? -1 : 1;
+  const beta   = (+gi('bg_beta') || 0) * Math.PI/180;
+  const btyp   = gi('bg_btyp') || 'none';
+  const bfuss  = +gi('bg_bfuss') || 0;
+  const bhoehe = Math.max(0, +gi('bg_bhoehe') || 0);
+  const hasSlope = btyp !== 'none' && Math.abs(beta) > 0.002;
+  const gwd    = gwDepth();                 // GW-Tiefe [m u. GOK], Infinity = kein GW
+  const gamW   = 10;
+  // Teilsicherheiten Scherfestigkeit (SIA 267)
+  const gph    = Math.max(1, +gi('tph') || 1.2);
+  const gc     = Math.max(1, +gi('tc')  || 1.5);
+
+  // Geländeoberfläche (Elevation) als Funktion von x
+  const surfY = x => {
+    if(d_ex > 0.05){
+      const onEx = exSign > 0 ? x > bx/2 - 0.01 : x < -bx/2 + 0.01;
+      if(onEx && Math.abs(x) < bx/2 + 3.0) return -d_ex;
+    }
+    if(hasSlope){
+      const fuss = bx/2 + Math.max(0, bfuss);
+      if(x > fuss){
+        let dy = (x - fuss) * Math.tan(beta);
+        if(bhoehe > 0.05) dy = Math.sign(dy) * Math.min(Math.abs(dy), bhoehe);
+        return dy;
+      }
+    }
+    return 0;
+  };
+  // Bodeneigenschaften bei Elevation Y (Y ≤ 0 unter GOK), Bemessungswerte
+  const soilAtY = Y => {
+    const s = schichtAtDepth(Math.max(0, -Y));
+    const phid = Math.atan(Math.tan((s.phi||30)*Math.PI/180) / gph);
+    return { tanphi: Math.tan(phid), c: (s.c||0)/gc,
+             gam: (Y < -gwd) ? (s.gamma2>0?s.gamma2:Math.max(1,(s.gamma||20)-gamW)) : (s.gamma||20) };
+  };
+  // Block-Surcharge: Eigengewicht + ständige Vertikallast über den Footprint |x|<bx/2
+  const Gk_block = bx * t_bl * (+gi('g_gbeton') || 25);
+  const N_perm   = +gi('l_NG') || 0;
+  const q_block  = (Gk_block + N_perm) / bx;     // [kN/m²] gleichmässig
+  // Horizontale Bemessungslast am Block (destabilisierend) — aus letztem Ergebnis
+  let H_des = 0, y_H = -t_bl*0.5;
+  if(_lastResults && _lastResults.length){
+    const w = _lastResults.reduce((a,b)=>Math.max(Math.abs(b.Hxd),Math.abs(b.Hyd))>Math.max(Math.abs(a.Hxd),Math.abs(a.Hyd))?b:a);
+    H_des = Math.abs(w.Hxd) || 0;        // quer (in Schnittebene)
+    y_H   = Math.max(0, +gi('g_hkopf')||0) - Math.max(0,+gi('g_uberd')||0) + 0.0; // ~OK Kopf
+  }
+  // Richtung des kritischen Rutschens: zur tieferen Seite (Aushub/abfallende Böschung)
+  const failSide = d_ex > 0.05 ? exSign : (hasSlope && beta < 0 ? 1 : (hasSlope && beta>0 ? -1 : exSign));
+  // Charakteristische Geländehöhe (Aushubtiefe bzw. Böschungs-Sprunghöhe) — skaliert Suche
+  const slopeDrop = hasSlope ? (bhoehe > 0.05 ? bhoehe : Math.min(4*Math.abs(Math.tan(beta)), 3.5)) : 0;
+  const Hgeo = Math.max(d_ex, slopeDrop, 1.0);
+  const hmin = 0.45 * Hgeo;                       // Mindest-Lamellenhöhe → keine Mini-Kreise
+
+  // Bishop für EINEN Kreis (xc, Yc Elevation, R)
+  const bishopCircle = (xc, Yc, R) => {
+    const N = 28;
+    // x-Bereich, in dem der untere Bogen unter der Oberfläche liegt
+    const xa = xc - R, xb = xc + R;
+    const x0 = Math.max(xa, xc - R), x1 = Math.min(xb, xc + R);
+    const bw = (x1 - x0) / N;
+    if(bw <= 0.001) return null;
+    let num = 0, denDriv = 0, anyValid = false, hmax = 0, maxAbsA = 0, minYb = Infinity, exitFail = false;
+    const slices = [];
+    for(let i = 0; i < N; i++){
+      const xm = x0 + (i + 0.5) * bw;
+      const dxc = xm - xc;
+      const disc = R*R - dxc*dxc;
+      if(disc <= 0) continue;
+      const Yb = Yc - Math.sqrt(disc);          // untere Bogen-Elevation (Gleitfläche)
+      const Ys = surfY(xm);                       // Oberfläche
+      const h = Ys - Yb;                          // Lamellenhöhe
+      if(h <= 0.02) continue;                      // Bogen über/an Oberfläche → keine Lamelle
+      anyValid = true; hmax = Math.max(hmax, h); minYb = Math.min(minYb, Yb);
+      if(failSide * xm > bx/2) exitFail = true;    // Lamelle daylightet auf der Versagensseite
+      const tanA = dxc / Math.sqrt(disc);          // Basisneigung tan α
+      const alpha = Math.atan(tanA);
+      maxAbsA = Math.max(maxAbsA, Math.abs(alpha));
+      // Gewicht: Bodensäule (geschichtetes γ) + Block-Surcharge falls unter Footprint
+      let W = 0; const nz = 6;
+      for(let k = 0; k < nz; k++){ const Yk = Yb + (k+0.5)/nz*h; W += soilAtY(Yk).gam * (h/nz) * bw; }
+      if(Math.abs(xm) < bx/2 && Ys > -t_bl + 0.01) W += q_block * bw;  // Blockauflast
+      // Basis-Eigenschaften
+      const sb = soilAtY(Yb);
+      // Porendruck an der Basis
+      const u = (Yb < -gwd) ? gamW * ((-gwd) - Yb) : 0;
+      const phi_t = sb.tanphi, c_ = sb.c;
+      // Bishop-Beiträge (m_α später mit η)
+      slices.push({xm, Yb, Ys, alpha, W, u, b: bw, tanphi: phi_t, c: c_});
+      denDriv += W * Math.sin(alpha);
+    }
+    // ── Gültigkeits-Constraints (gegen Mini-Kreis-/Numerik-Artefakte)
+    if(!anyValid || slices.length < 8) return null;
+    if(hmax < 0.40 * Hgeo) return null;            // Kreis zu flach → kein globaler Bruch
+    if(maxAbsA > 1.20) return null;                // |α| > ~69° → Bishop unzuverlässig
+    if(minYb > -0.25 * Hgeo) return null;          // erreicht keine relevante Tiefe
+    // Destabilisierendes Moment der Horizontallast (am Block), wenn Kreis den Block fasst
+    const M_H = (xc > -bx/2 && xc < bx/2 + 6 && Math.abs(failSide) > 0)
+      ? H_des * Math.max(0, (Yc - y_H)) / R : 0;
+    const driv = denDriv + M_H;
+    if(driv <= 0.1) return null;                  // kein treibendes Moment → kein Versagen
+    // η iterieren — m_α nach unten auf 0.2 gedeckelt (konservativ; verhindert das
+    // Verwerfen kritischer Toe-Kreise mit steiler Basis, ohne η zu überschätzen).
+    let eta = 1.3;
+    for(let it = 0; it < 50; it++){
+      let res = 0;
+      for(const s of slices){
+        let m_a = Math.cos(s.alpha) * (1 + Math.tan(s.alpha) * s.tanphi / eta);
+        m_a = Math.max(m_a, 0.2);
+        res += (s.c * s.b + (s.W - s.u * s.b) * s.tanphi) / m_a;
+      }
+      const etaNew = res / driv;
+      if(!isFinite(etaNew) || etaNew <= 0) return null;
+      if(Math.abs(etaNew - eta) < 1e-4){ eta = etaNew; break; }
+      eta = etaNew;
+    }
+    return { eta, xc, Yc, R, slices, hmax, M_H, driv };
+  };
+
+  // ── Toe-verankerte Kreissuche (robust für Anschnitt/Böschung):
+  // Kreis durch den FUSS (Aushub-/Böschungsfuss) + Eintrittsstelle hinter der Krone.
+  // Zentrum auf der Mittelsenkrechten der Sehne Fuss–Eintritt, Tiefe variiert.
+  let toeX, toeY;
+  if(d_ex > 0.05){ toeX = failSide * bx/2; toeY = -d_ex; }                       // Aushubfuss
+  else if(hasSlope){ const Ls = Hgeo/Math.max(0.05, Math.abs(Math.tan(beta)));   // Böschungsfuss
+    toeX = (bx/2 + Math.max(0, bfuss)) + failSide*Ls; toeY = surfY(toeX); }
+  else { toeX = failSide * bx/2; toeY = 0; }                                      // flach: Blockkante
+  let best = null;
+  const nE = 16, nS = 13, dEmax = 3*Hgeo + bx + 1;
+  for(let ie = 1; ie <= nE; ie++){
+    const dE = 0.5 + dEmax * ie/nE;
+    const xE = toeX - failSide*dE, yE = surfY(xE);          // Eintritt hinter der Krone
+    const mx = (toeX+xE)/2, my = (toeY+yE)/2;
+    const tex = xE-toeX, tey = yE-toeY, Lte = Math.hypot(tex,tey) || 1;
+    let perpx = -tey/Lte, perpy = tex/Lte;
+    if(perpy < 0){ perpx = -perpx; perpy = -perpy; }         // Zentrum oberhalb
+    const sMax = 0.3 + 2.8*Hgeo + dE*0.5;
+    for(let is = 1; is <= nS; is++){
+      const s = 0.2 + sMax * is/nS;
+      const cx = mx + perpx*s, cy = my + perpy*s;
+      if(cy < Math.max(toeY, yE) + 0.2) continue;            // Zentrum über der Sehne
+      const R = Math.hypot(cx-toeX, cy-toeY);
+      const r = bishopCircle(cx, cy, R);
+      if(r && r.eta > 0.05 && (!best || r.eta < best.eta)) best = r;
+    }
+  }
+  if(!best) return { ok:false, eta:Infinity };
+  return { ok:true, eta:best.eta, xc:best.xc, Yc:best.Yc, R:best.R,
+           slices:best.slices, failSide, surfY, gwElev:isFinite(gwd)?-gwd:null,
+           gph, gc, t_bl, bx, d_ex, exSign, hasSlope, beta_deg:+gi('bg_beta')||0 };
+}
+
 // Broms-Methode: freier Kopf, kurzer Pfahl
 // gamma2: Wichte unter GW (γ' = γ_sat−γ_w); z_gw: GW-Tiefe ab GOK [m] (Infinity = kein GW)
-// φ > 5°  → Sand/Schluff-Formel mit GW-korrigiertem γ_avg (c ignoriert, konservativ)
-// φ ≤ 5°  → Clay-Formel mit c_u (undrained, γ irrelevant)
-function bromsFreeShort(phi_deg, c_kPa, gamma_kNm3, L, B, e, gamma2, z_gw){
+// betaRed_deg: Böschungsmagnitude [°], falls der Pfahl in eine ABFALLENDE Böschung
+//   widersteht (talseitig) → passiver Beiwert auf Kp,β reduziert; 0 = waagrecht
+// exClip: {dEx, Lhor} — Aushub-Begrenzung des Bruchkörpers (Zugfall): der passive
+//   Keil daylightet jenseits der Aushubkante (Horizontaldistanz Lhor) in die Grube →
+//   wirksame Überdeckung dort um d_ex reduziert (geometrisch, stetig). null = kein Aushub.
+// φ > 5°  → Reibungsboden-Formel mit GW-korrigiertem γ_avg, drainiert mit φ' massgebend
+//           (gewachsener Boden / Erdbauwerk-Auffüllung; c'/scheinbare Kohäsion konservativ
+//            vernachlässigt, da langfristig unzuverlässig)
+// φ ≤ 5°  → Clay-Formel mit c_u (undrainiert/bindig, γ irrelevant)
+function bromsFreeShort(phi_deg, c_kPa, gamma_kNm3, L, B, e, gamma2, z_gw, betaRed_deg, exClip){
   const phi  = phi_deg * Math.PI / 180;
-  const Kp   = Math.tan(Math.PI/4 + phi/2)**2;
+  const Kp   = (betaRed_deg && betaRed_deg > 0.1)
+             ? kpSlopeRankine(phi_deg, betaRed_deg)        // geneigtes Gelände (talseitig)
+             : Math.tan(Math.PI/4 + phi/2)**2;             // waagrecht
   const g2   = (gamma2 != null && isFinite(+gamma2)) ? +gamma2 : gamma_kNm3;
   const zgw  = (z_gw  != null && isFinite(+z_gw))   ? +z_gw   : Infinity;
 
@@ -5431,24 +5686,78 @@ function bromsFreeShort(phi_deg, c_kPa, gamma_kNm3, L, B, e, gamma2, z_gw){
       9 * c_kPa * B * Math.max(0, L - 1.5*B) / Math.max(0.01, L + 2*e + 1.5*B));
   }
 
-  // Sand/Kies/Schluff (φ > 5°): GW-korrigiertes γ_avg
+  // Reibungsboden (φ > 5°: gewachsener Boden, Erdbauwerk-Auffüllung): GW-korrigiertes γ_avg
   // γ_avg gewichtet nach ∫γ(z)·z dz / ∫z dz = [γ·zw² + γ'·(L²−zw²)] / L²
   const zw    = Math.min(zgw, L);
   const g_avg = (gamma_kNm3 * zw**2 + g2 * Math.max(0, L**2 - zw**2)) / L**2;
 
-  if(c_kPa < 0.1){
-    // Reiner Reibungsboden
-    return Math.max(0.1,
-      1.5 * Kp * g_avg * B * L**2 / Math.max(0.01, L + 2*e));
+  // Aushub-Clip (Zugfall): Bruchkörper reicht über die Aushubkante → wirksame Überdeckung
+  // reduziert. Numerische Momentenintegration um den Fuss mit reduzierter Überdeckung
+  // z_eff(z) = z − d_ex·(Keilanteil über Aushub). Block-Abschirmung konservativ ignoriert.
+  if(exClip && exClip.dEx > 0.01){
+    const tanW = Math.tan(Math.PI/4 + phi/2);
+    const Lh = Math.max(0.01, exClip.Lhor), dE = exClip.dEx;
+    let M = 0; const N = 48;
+    for(let i = 0; i < N; i++){
+      const z  = (i + 0.5) / N * L;
+      const xd = z * tanW;                                  // Keil-Daylight-Distanz
+      const frac = Math.max(0, xd - Lh) / Math.max(0.01, xd); // Anteil über Aushub
+      const z_eff = Math.max(0.05 * z, z - dE * frac);      // reduzierte Überdeckung
+      M += 3 * Kp * g_avg * z_eff * B * (L - z) * (L / N);  // Moment um Fuss
+    }
+    return Math.max(0.1, M / Math.max(0.01, L + e));
   }
 
-  // Gemischt (φ>5°, c>0): netto passive Spannung 3·Kp·γ_avg·z + 2·c·√Kp
-  const sqKp = Math.sqrt(Kp);
-  const Ep   = (1.5 * Kp * g_avg * L**2 + 2 * c_kPa * sqKp * L) * B;
-  const z_ep = Ep > 0.01
-    ? (Kp * g_avg * L**3 + 2 * c_kPa * sqKp * L**2) * B / Ep
-    : L * 2/3;
+  // Textbuch-Broms (1964), kurzer Pfahl, freier Kopf — Momentengleichgewicht um den
+  // Pfahlfuss: H_u·(e+L) = E_p·(L − z_ep). Passive Dreieckverteilung 3·Kp·γ_avg·z·B,
+  // Resultierende E_p = 1.5·Kp·γ_avg·B·L² im Schwerpunkt z_ep = 2L/3 →
+  //   H_u = 0.5·Kp·γ_avg·B·L³ / (e+L)   (klassische Broms-Lösung Reibungsboden).
+  // Kohäsion wird im Reibungsboden bewusst vernachlässigt (konservativ, vgl. hasC-Label);
+  // c_u-massgebende Böden laufen oben über den Clay-Zweig (φ ≤ 5°).
+  const Ep   = 1.5 * Kp * g_avg * B * L**2;
+  const z_ep = 2 * L / 3;
   return Math.max(0.1, Ep * (L - z_ep) / Math.max(0.01, L + e));
+}
+
+// ── Mehrschicht-Broms (numerisch, freier Kopf, kurzer Pfahl) ──────────────────
+// Integriert das passive Widerstandsprofil p(z) schichtweise per Momentengleich-
+// gewicht um den Pfahlfuss: H_u·(L+e) = ∫₀ᴸ p(z)·(L−z) dz.
+//   Reibungsschicht (φ>5): p(z) = 3·Kp_i·σ'v(z)·B   — σ'v(z) GW-wirksam (sigVeffTo),
+//     Kp_i je Schicht aus schichtAtDepth(z); c' konservativ vernachlässigt (wie 1-Schicht).
+//   bindige Schicht (φ≤5): p(z) = 9·c_u,i·B für z > 1.5·B, sonst 0 (Broms-Clay-Profil).
+// Reduziert sich für HOMOGENEN Boden ohne GW exakt auf bromsFreeShort (Reibungszweig):
+//   ∫ 3·Kp·γ·z·B·(L−z) dz = 0.5·Kp·γ·B·L³  →  H_u = 0.5·Kp·γ·B·L³/(L+e). ✓
+// betaRed_deg: talseitige Böschung → Kp,β (kpSlopeRankine). exClip {dEx,Lhor}: Aushub-
+// Begrenzung des Bruchkörpers (Zugfall) — wirksame Überdeckung σ'v(z) lokal reduziert.
+// GW wird über sigVeffTo()/gwDepth() konsistent erfasst (kein z_gw-Parameter nötig).
+function bromsLayered(L, B, e, betaRed_deg, exClip){
+  const N = 60, dz = L / N;
+  const useSlope = (betaRed_deg && betaRed_deg > 0.1);
+  let M = 0;
+  for(let i = 0; i < N; i++){
+    const z   = (i + 0.5) * dz;
+    const s   = schichtAtDepth(z);
+    const phi = s.phi ?? 30;
+    let p;
+    if(phi <= 5){
+      p = z > 1.5*B ? 9 * Math.max(0, s.c ?? 0) * B : 0;            // Broms-Clay (c_u)
+    } else {
+      const Kp = useSlope ? kpSlopeRankine(phi, betaRed_deg)
+                          : Math.tan(Math.PI/4 + phi*Math.PI/360)**2;
+      p = 3 * Kp * sigVeffTo(z) * B;                               // 3·Kp·σ'v(z)·B
+    }
+    // Aushub-Clip (Zugfall): Keil daylightet jenseits der Aushubkante → σ'v(z) lokal
+    // reduziert. Skalierung p·(z_eff/z) — im 1-Schicht-Fall identisch zu bromsFreeShort.
+    if(exClip && exClip.dEx > 0.01 && z > 0.001){
+      const tanWedge = Math.tan(Math.PI/4 + Math.max(5,phi)*Math.PI/360);
+      const xd   = z * tanWedge;
+      const frac = Math.max(0, xd - Math.max(0.01, exClip.Lhor)) / Math.max(0.01, xd);
+      const z_eff= Math.max(0.05*z, z - exClip.dEx*frac);
+      p *= z_eff / z;
+    }
+    M += p * (L - z) * dz;                                          // Moment um den Fuss
+  }
+  return Math.max(0.1, M / Math.max(0.01, L + e));
 }
 
 // Wirkungsschatten Block → Pfahl: tiefengestaffelte Kapazitätsabminderung.
@@ -5463,8 +5772,16 @@ function bromsShadowFactor(phi_deg, c_kPa, gamma, gamma2, z_gw, L, B, z_ov, e){
   const sqKp = Math.sqrt(Kp);
   const g2   = (gamma2 != null && isFinite(+gamma2)) ? +gamma2 : gamma;
   const zgw  = (z_gw  != null && isFinite(+z_gw))   ? +z_gw   : Infinity;
-  // Einheitswiderstand p(z) [kN/m] — gleiche Basis wie bromsFreeShort/p_max-Referenz
+  const multiLayer = (typeof SCHICHTEN !== 'undefined' && SCHICHTEN.length > 1);
+  // Einheitswiderstand p(z) [kN/m] — gleiche Basis wie bromsFreeShort/p_max-Referenz.
+  // Mehrschicht: φ/c/Kp je Schicht aus schichtAtDepth(z), σ'v(z) GW-wirksam (sigVeffTo).
   const pz = z => {
+    if(multiLayer){
+      const s = schichtAtDepth(z), ph = s.phi ?? phi_deg;
+      if(ph <= 5) return z > 1.5*B ? 9 * Math.max(0, s.c ?? 0) * B : 0;
+      const Kp_i = Math.tan(Math.PI/4 + ph*Math.PI/360)**2;
+      return (3 * Kp_i * sigVeffTo(z) + 2 * Math.max(0, s.c ?? 0) * Math.sqrt(Kp_i)) * B;
+    }
     if(phi_deg <= 5) return z > 1.5*B ? 9 * c_kPa * B : 0;       // Broms Clay
     const sv = z <= zgw ? gamma*z : gamma*zgw + g2*(z - zgw);    // σ'v GW-wirksam
     return (3 * Kp * sv + 2 * c_kPa * sqKp) * B;
@@ -5511,6 +5828,264 @@ function winklerDeflection(H_kN, e_m, L_m, EI_kNm2, k_s_kNm3, B_m){
   return Math.max(0.1, Math.max(d_rigid, d_long));
 }
 
+// ── Dichtes Gleichungssystem A·x = b (Gauss mit Teilpivotisierung) ─────────────
+function solveLinearDense(A, b){
+  const n = b.length;
+  // Arbeitskopien
+  const M = A.map(r => r.slice()), x = b.slice();
+  for(let col = 0; col < n; col++){
+    // Pivot
+    let piv = col, mx = Math.abs(M[col][col]);
+    for(let r = col+1; r < n; r++){ const v = Math.abs(M[r][col]); if(v > mx){ mx = v; piv = r; } }
+    if(mx < 1e-300) return null;                       // singulär
+    if(piv !== col){ const tm = M[piv]; M[piv] = M[col]; M[col] = tm;
+                     const tb = x[piv]; x[piv] = x[col]; x[col] = tb; }
+    const dgn = M[col][col];
+    for(let r = col+1; r < n; r++){
+      const f = M[r][col] / dgn;
+      if(f === 0) continue;
+      for(let k = col; k < n; k++) M[r][k] -= f * M[col][k];
+      x[r] -= f * x[col];
+    }
+  }
+  // Rückwärts
+  const sol = new Array(n).fill(0);
+  for(let r = n-1; r >= 0; r--){
+    let s = x[r];
+    for(let k = r+1; k < n; k++) s -= M[r][k] * sol[k];
+    sol[r] = s / M[r][r];
+  }
+  return sol;
+}
+
+// ── p-y-Pfahl: elastischer Mehrschicht-Bettungsbalken (Hermite-Balken-FE) ──────
+// Euler-Bernoulli-Balken auf Winkler-Bettung: EI·y'''' + k_s(z)·B·y = 0.
+// Modelliert ab dem Lastangriffspunkt (Pfahlkopf): freie Länge e (k=0), dann
+// Einbindelänge L mit schichtweiser Bettung k_s(z). Beide Enden frei — die Bettung
+// stabilisiert das System (keine Lagerung nötig). Last H als Knotenkraft am Kopf.
+// Hermite-FE (kubische Ansatzfunktionen, 2 DOF/Knoten w,θ): exakt im lastfreien Feld,
+// konsistente Bettungsmatrix (∫ k·NᵀN); Punktlast exakt am Knoten → schnelle, stabile
+// Konvergenz (kein Punktlast-Diskretisierungsfehler wie bei FD). Ein Knoten liegt exakt
+// auf GOK (s=e). ksAt(z): laterale Bettungsziffer [kN/m³] in Tiefe z. Validiert gegen
+// Hetényi (langer Pfahl).
+// opts.puAt(z): optionaler Grenzwert der Bettungsreaktion p_u(z) [kN/m] (Reese-artige
+//   elasto-plastische p-y-Kennlinie: p = min(k_s·B·|y|, p_u)·sign(y)). Sekanten-Iteration
+//   mit Unterrelaxation; ohne puAt → 1 linearer Solve (skalierbar). Reaktion p im Profil
+//   ist gedeckelt. Querkraft V(z)=EI·w''' (je Element konstant) zusätzlich im Profil.
+// Rückgabe: {yHead_mm, yGround_mm, Mmax_kNm, sMmax, Vhead_kN, profile:[{z,y_mm,M,p,V}],
+//            converged, yielded} oder null.
+function bddBeamPY(EI, B, e, L, H, ksAt, opts){
+  opts = opts || {};
+  const puAt = (typeof opts === 'function') ? null : opts.puAt;        // (Alt-Aufrufe ohne opts)
+  // Vernetzung: Knoten exakt auf GOK; Elementgrösse (Push nutzt gröber für Tempo)
+  const dTarget = opts.dTarget || 0.10;
+  const nFree = Math.max(2, Math.round(e / dTarget));
+  const nEmb  = Math.max(20, Math.round(L / dTarget));
+  const sNodes = [];
+  for(let i = 0; i <= nFree; i++) sNodes.push(e * i / nFree);          // 0..e
+  for(let i = 1; i <= nEmb;  i++) sNodes.push(e + L * i / nEmb);       // e..e+L
+  const NN = sNodes.length, ND = 2 * NN, nEl = NN - 1;
+  const lEl = [], zMid = [], kLin = [];                                // Element-Geometrie + lin. Bettung
+  for(let el = 0; el < nEl; el++){
+    lEl[el]  = sNodes[el+1] - sNodes[el];
+    const sM = 0.5 * (sNodes[el] + sNodes[el+1]);
+    zMid[el] = sM - e;
+    kLin[el] = sM >= e - 1e-9 ? Math.max(0, ksAt(sM - e)) * B : 0;     // [kN/m²]
+  }
+  // Solve mit gegebener Element-Bettung kArr → Verschiebungsvektor u
+  const assembleSolve = kArr => {
+    const K = Array.from({length: ND}, () => new Array(ND).fill(0));
+    const F = new Array(ND).fill(0);
+    for(let el = 0; el < nEl; el++){
+      const l = lEl[el]; if(l <= 1e-9) continue;
+      const l2 = l*l, eb = EI / (l2*l), fb = kArr[el] * l / 420;
+      const Ke = [
+        [ eb*12 + fb*156,   eb*6*l + fb*22*l,   -eb*12 + fb*54,   eb*6*l - fb*13*l ],
+        [ eb*6*l + fb*22*l, eb*4*l2 + fb*4*l2,  -eb*6*l + fb*13*l, eb*2*l2 - fb*3*l2],
+        [ -eb*12 + fb*54,  -eb*6*l + fb*13*l,    eb*12 + fb*156,  -eb*6*l - fb*22*l ],
+        [ eb*6*l - fb*13*l, eb*2*l2 - fb*3*l2,  -eb*6*l - fb*22*l, eb*4*l2 + fb*4*l2]
+      ];
+      const map = [2*el, 2*el+1, 2*el+2, 2*el+3];
+      for(let a = 0; a < 4; a++) for(let bb = 0; bb < 4; bb++) K[map[a]][map[bb]] += Ke[a][bb];
+    }
+    F[0] = H;                                                          // Schub am Kopf
+    return solveLinearDense(K, F);
+  };
+  // Element-Mittenverschiebung aus Knoten-DOF (Hermite, ξ=0.5)
+  const yMidEl = (u, el) => {
+    const l = lEl[el], w1=u[2*el], t1=u[2*el+1], w2=u[2*el+2], t2=u[2*el+3];
+    return 0.5*w1 + 0.5*w2 + l*(t1 - t2)/8;                            // N(0.5)·u
+  };
+  let u = assembleSolve(kLin), converged = true, yielded = false;
+  if(!u) return null;
+  if(puAt){
+    // Elasto-plastische p-y: k_sec = min(k_lin, p_u/|y|), Sekanten-Iteration mit
+    // Unterrelaxation + kleiner Resttragsteifigkeit (1 % Verfestigung → stabil, keine
+    // Singularität). Bei Nicht-Konvergenz (nahe Grenzlast) Fallback auf linear.
+    const uLinear = u;                                                 // linearer Startwert (Fallback)
+    const kSec = kLin.slice();
+    const kFloor = kLin.map(k => 0.01 * k);                            // Resttragsteifigkeit
+    converged = false;
+    const maxIt = opts.maxIt || 90;
+    for(let it = 0; it < maxIt; it++){
+      let maxRel = 0;
+      for(let el = 0; el < nEl; el++){
+        if(kLin[el] <= 0){ kSec[el] = 0; continue; }
+        const y  = Math.abs(yMidEl(u, el));
+        const pu = Math.max(0, puAt(zMid[el]));
+        let kNew = (pu > 0 && kLin[el]*y > pu && y > 1e-9)
+                 ? Math.max(pu / y, kFloor[el]) : kLin[el];
+        kNew = Math.min(kNew, kLin[el]);
+        const kRel = 0.5*kNew + 0.5*kSec[el];                          // Unterrelaxation
+        maxRel = Math.max(maxRel, Math.abs(kRel - kSec[el]) / Math.max(1e-6, kLin[el]));
+        kSec[el] = kRel;
+      }
+      const uNew = assembleSolve(kSec);
+      if(!uNew) break;
+      const dHead = Math.abs(uNew[0] - u[0]) / Math.max(1e-9, Math.abs(uNew[0]));
+      u = uNew;
+      if(maxRel < 5e-4 && dHead < 2e-5){ converged = true; break; }
+    }
+    yielded = kSec.some((k, el) => kLin[el] > 0 && k < 0.99*kLin[el]);
+    if(!converged) u = uLinear;                                        // Fallback: lineare Antwort
+  }
+  // Profil: y, Bodenreaktion p (gedeckelt), Moment M, Querkraft V
+  const profile = [];
+  for(let i = 0; i < NN; i++){
+    const z = sNodes[i] - e;
+    let p = 0;
+    if(z >= -1e-9){
+      const pl = Math.max(0, ksAt(z)) * B * u[2*i];                    // linear
+      p = (puAt) ? Math.sign(pl) * Math.min(Math.abs(pl), Math.max(0, puAt(z))) : pl;
+    }
+    profile.push({ z, y_mm: u[2*i]*1000, M: 0, p, V: 0 });
+  }
+  let Mmax = 0, sMmax = 0;
+  for(let el = 0; el < nEl; el++){
+    const l = lEl[el]; if(l <= 1e-9) continue;
+    const w1=u[2*el], t1=u[2*el+1], w2=u[2*el+2], t2=u[2*el+3];
+    const M1 = EI/(l*l) * ( 6*w1 + 4*l*t1 - 6*w2 + 2*l*t2);            // M = EI·w''(0)
+    const M2 = EI/(l*l) * (-6*w1 - 2*l*t1 + 6*w2 - 4*l*t2);            // M = EI·w''(l)
+    const Vel = -EI/(l*l*l) * (12*w1 + 6*l*t1 - 12*w2 + 6*l*t2);       // V = -EI·w''' (const/Element)
+    if(Math.abs(M1) > Math.abs(profile[el].M))   profile[el].M   = M1;
+    if(Math.abs(M2) > Math.abs(profile[el+1].M)) profile[el+1].M = M2;
+    // Querkraft: Elementwert beiden Knoten zuordnen (stückweise konstant, gemittelt am Knoten)
+    profile[el].V   += Vel * 0.5;
+    profile[el+1].V += Vel * 0.5;
+  }
+  profile[0].V = -EI/(lEl[0]**3) * (12*u[0] + 6*lEl[0]*u[1] - 12*u[2] + 6*lEl[0]*u[3]); // Kopf voll
+  for(const p of profile){ if(p.z >= -1e-9 && Math.abs(p.M) > Math.abs(Mmax)){ Mmax = p.M; sMmax = p.z + e; } }
+  const iGround = nFree;
+  return { yHead_mm: u[0]*1000, yGround_mm: u[2*iGround]*1000,
+           Mmax_kNm: Math.abs(Mmax), sMmax, Vhead_kN: profile[0].V,
+           profile, converged, yielded };
+}
+
+// ── Laterale Grenzlast: plastisches Grenzgleichgewicht (Rotationspunkt-Mechanismus) ──
+// Freier kurzer Pfahl: p = +p_u über [0,z_r], −p_u über [z_r,L]. Momentengleichgewicht
+// um den Lastangriff (Kopf, e über GOK) liefert z_r, Horizontalgleichgewicht H_u.
+// Schichtweise über puAt(z) (GW/Böschung stecken in puAt). Exakt der Grenzwert, gegen
+// den der inkrementelle p-y-Push konvergiert → robuster Bracket/Fallback. H_u,k [kN].
+function pileLatCapLimitEq(L, B, e, puAt){
+  const integ = (z1, z2) => {                         // ∫p_u dz, ∫p_u·(e+z) dz auf [z1,z2]
+    const n = Math.max(4, Math.round((z2-z1)/0.05)), h = (z2-z1)/n;
+    let i0=0, i1=0;
+    for(let i=0;i<n;i++){ const z=z1+(i+0.5)*h, pu=Math.max(0,puAt(z)); i0+=pu*h; i1+=pu*(e+z)*h; }
+    return {i0, i1};
+  };
+  const Mfn = zr => integ(0, zr).i1 - integ(zr, L).i1;  // = 0 am Rotationspunkt
+  let lo = 1e-3, hi = L - 1e-3;
+  if(Mfn(lo) * Mfn(hi) > 0) return null;                // kein Vorzeichenwechsel
+  for(let i=0;i<44;i++){ const mid=(lo+hi)/2; if(Mfn(mid) < 0) lo=mid; else hi=mid; }
+  const zr = (lo+hi)/2;
+  const Hu = integ(0, zr).i0 - integ(zr, L).i0;
+  return Math.max(0, Hu);
+}
+
+// ── Laterale Grenzlast aus dem inkrementellen p-y-Push ──
+// Steigert die Kopflast bis zum Verformungs-Kollaps (Mechanismus): grobe Kopf-
+// verschiebung > 8 % L. Bisektion, gröberes Netz (Tempo), gebracketed durch das
+// Grenzgleichgewicht (Hseed). Liefert charakteristische H_u,k [kN].
+function pileLatCapPush(EI, B, e, L, ksAt, puAt, Hseed){
+  if(!(Hseed > 0)) return null;
+  // Tangenten-Kollaps: H steigern, dδ/dH verfolgen; bricht die Tangentensteifigkeit auf
+  // <4 % der elastischen Anfangssteifigkeit ein → Mechanismus (= plastischer Grenzwert,
+  // schwellwert-unabhängig). Grobes Netz (Tempo). Start nahe Hseed.
+  const sol = H => bddBeamPY(EI,B,e,L,H,ksAt,{puAt, dTarget:0.22});
+  const Href = 0.05*Hseed, p0 = sol(Href);
+  if(!p0 || !p0.converged || p0.yHead_mm <= 0) return null;
+  const k0 = Href / p0.yHead_mm;                       // elastische Anfangssteifigkeit [kN/mm]
+  let Hp = Href, yp = p0.yHead_mm;
+  for(let H = 0.5*Hseed; H < 2.2*Hseed; H *= 1.06){
+    const py = sol(H);
+    if(!py || !py.converged || py.yHead_mm <= yp) return Hp;
+    const kT = (H - Hp) / (py.yHead_mm - yp);          // Tangentensteifigkeit [kN/mm]
+    if(kT < 0.04 * k0) return Hp;                       // Kollaps → Grenzlast
+    Hp = H; yp = py.yHead_mm;
+  }
+  return Hp;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// PFAHLBOCK — räumliches Gruppengleichgewicht (starres Bankett, geneigte Mikropfähle)
+// ════════════════════════════════════════════════════════════════════════
+// Mikropfahl = primär AXIALES Glied (Mantelreibung, Ø≤300 mm): die Neigung (Batter) trägt
+// die Horizontallast axial ab, Biegung ist sekundär (Lateral-p-y separat). Starres Bankett,
+// 6 Freiheitsgrade q=[u,v,w,θx,θy,θz] an der Referenz (UK Sockel).
+//   Pfahl i: Einheits-Achsvektor abwärts u_i = normalize(tan(αx), tan(αy), −1)
+//            (αx/αy = Neigung quer/längs [°], tan = Horizontal/Vertikal).
+//            Kopf-Position r_i = [x_i, y_i, 0]; Axialdehnung e_i = u_i·(u_trans + θ×r_i)
+//            = B_i·q  mit B_i = [u_i ; r_i×u_i]. Axialkraft F_i = kAx_i·e_i (>0 = Druck).
+//   K = Σ kAx_i·B_iB_iᵀ  (6×6) ; Last P = [Hx,Hy,−N,Mx,My,Mz] (N>0 = Druck abwärts).
+// Jeder Pfahlkopf trägt eine 3×3-Translationssteifigkeit diag(kAx, kLat, kLat) im lokalen
+// Rahmen (Achse + 2 ⊥); kLat (p-y-Lateralsteifigkeit) schliesst die sonst freien DOF (Torsion,
+// Querverschiebung) — Default 0.05·kAx (Mikropfahl biegeweich). Kopf gelenkig (keine Momenten-
+// einleitung in den schlanken Pfahl). δ_i = T_i·q mit T_i=[I3 | −skew(r_i)]; K_i = T_iᵀ·Kg_i·T_i.
+// piles[i] = {x, y, axDeg, ayDeg, kAx, kLat?}. Rückgabe {q, dir:[u_i], F:[F_i axial], FLat:[…]} | null.
+function solvePfahlbock(piles, load){
+  if(!piles || !piles.length) return null;
+  const K = Array.from({length:6}, () => new Array(6).fill(0));
+  const store = [];
+  for(const p of piles){
+    const tx = Math.tan((p.axDeg||0)*Math.PI/180), ty = Math.tan((p.ayDeg||0)*Math.PI/180);
+    const Ln = Math.hypot(tx, ty, 1);
+    const u = [tx/Ln, ty/Ln, -1/Ln];                     // Achse abwärts
+    // zwei Senkrechte zur Achse
+    const ref = Math.abs(u[2]) > 0.9 ? [1,0,0] : [0,0,1];
+    const cross = (a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    let e2 = cross(u, ref); const n2 = Math.hypot(...e2)||1; e2 = e2.map(v=>v/n2);
+    const e3 = cross(u, e2);
+    const kAx = Math.max(1e-6, p.kAx), kLat = Math.max(1e-9, p.kLat!=null ? p.kLat : 0.05*kAx);
+    const axes = [u, e2, e3], kloc = [kAx, kLat, kLat];
+    // globale 3×3-Kopfsteifigkeit Kg = Σ k_a · (axis_a ⊗ axis_a)
+    const Kg = [[0,0,0],[0,0,0],[0,0,0]];
+    for(let a=0;a<3;a++) for(let i=0;i<3;i++) for(let j=0;j<3;j++) Kg[i][j] += kloc[a]*axes[a][i]*axes[a][j];
+    const r = [p.x||0, p.y||0, 0];
+    // T (3×6) = [I3 | −skew(r)] ;  −skew(r) Spalten 3..5
+    const T = [ [1,0,0,  0,    0,   -r[1]],
+                [0,1,0,  0,    0,    r[0]],
+                [0,0,1,  r[1],-r[0], 0   ] ];
+    for(let a=0;a<6;a++) for(let b=0;b<6;b++){ let s=0;
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++) s += T[i][a]*Kg[i][j]*T[j][b];
+      K[a][b] += s; }
+    store.push({u, e2, e3, kAx, kLat, T});
+  }
+  const P = [ load.Hx||0, load.Hy||0, -(load.N||0), load.Mx||0, load.My||0, load.Mz||0 ];
+  const q = solveLinearDense(K, P);
+  if(!q) return null;
+  const F=[], FLat=[], dir=[];
+  for(const s of store){
+    const d = [0,1,2].map(i => s.T[i].reduce((acc,Tij,j)=>acc+Tij*q[j], 0)); // Kopfverschiebung
+    const eA = s.u[0]*d[0]+s.u[1]*d[1]+s.u[2]*d[2];       // axiale Komponente
+    const eL2= s.e2[0]*d[0]+s.e2[1]*d[1]+s.e2[2]*d[2];
+    const eL3= s.e3[0]*d[0]+s.e3[1]*d[1]+s.e3[2]*d[2];
+    F.push(s.kAx*eA);                                     // >0 = Druck
+    FLat.push(s.kLat*Math.hypot(eL2, eL3));               // resultierende Lateral-Kopfkraft
+    dir.push(s.u);
+  }
+  return { q, dir, F, FLat };
+}
+
 // Sichtbarkeit f_eff-Eingabe nach Lastverteilungs-Modus
 function _updateLvModeUI(){
   const wrap = document.getElementById('pfahl-laf-wrap');
@@ -5545,7 +6120,7 @@ function calcPfahlsicherung(){
   const n       = +gi('pfahl_anzahl') || 2;
   const L       = +gi('pfahl_l')      || 4.0;
   const s_abst  = +gi('pfahl_s')      || 0.5;
-  const alpha   = +gi('pfahl_alpha')  || 60;
+  const alpha   = (() => { const v = +gi('pfahl_alpha'); return isFinite(v) ? v : 60; })();  // signiert (kann < 0)
   const e_last  = +(document.getElementById('pfahl_e')?.value ?? '0');
   const d_abst  = +gi('pfahl_abstand')|| 2.0;
   // h_s live aktualisieren
@@ -5567,15 +6142,27 @@ function calcPfahlsicherung(){
 
   // Bodenmodell-Typ für Hinweise
   const useClay  = phi_deg <= 5;
-  const hasC     = c_kPa > 0.5 && !useClay;  // c vorhanden aber ignoriert (Sand-Formel)
+  const hasC     = c_kPa > 0.5 && !useClay;  // c' vorhanden, aber im Reibungsboden ignoriert
 
   // Info-Label aktualisieren
   const soilInfo = document.getElementById('pfahl-soil-info');
   if(soilInfo){
-    let info = `Boden (Schicht 1): φ = ${phi_deg}° · c = ${c_kPa} kPa · γ = ${gamma} kN/m³ · M_E = ${me} MN/m²`;
-    if(hasGW)   info += ` · GW=${z_gw.toFixed(1)}m · γ'=${gamma2} kN/m³`;
-    if(useClay) info += ' · Formel: Clay (c_u)';
-    if(hasC)    info += ' · c ignoriert (Sand-Formel, konservativ)';
+    let info;
+    if(SCHICHTEN.length > 1){
+      // Mehrschicht: Profil kompakt auflisten (Pfahl rechnet schichtweise)
+      let zc = 0;
+      const parts = SCHICHTEN.map((s, i) => {
+        const top = zc; const bot = s.d === 999 ? '∞' : (zc + s.d).toFixed(1);
+        zc += s.d === 999 ? 0 : s.d;
+        return `${top.toFixed(1)}–${bot}m: φ=${s.phi}° c=${s.c} γ=${s.gamma}`;
+      });
+      info = `Boden (${SCHICHTEN.length} Schichten, schichtweise): ` + parts.join(' · ');
+    } else {
+      info = `Boden (Schicht 1): φ = ${phi_deg}° · c = ${c_kPa} kPa · γ = ${gamma} kN/m³ · M_E = ${me} MN/m²`;
+      if(useClay) info += ' · Formel: bindig (c_u, undrainiert)';
+      if(hasC)    info += ' · Reibungsboden (φ′ massgebend) — c′ konservativ vernachlässigt';
+    }
+    if(hasGW)   info += ` · GW=${z_gw.toFixed(1)}m`;
     soilInfo.textContent = info;
   }
 
@@ -5672,8 +6259,22 @@ function calcPfahlsicherung(){
   // α_lat Standard 0.30; einstellbar via SETTINGS.pfahlAlphaLat
   const alpha_lat  = Math.min(1.0, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 0.30)));
   const nu         = 0.3;
-  const k_s_vert   = me * 1000 / ((1 - nu**2) * B);   // vertikal [kN/m³]
-  const k_s        = k_s_vert * alpha_lat;             // lateral  [kN/m³]
+  // Mehrschicht: M_E schichtdickengewichtet über die Einbindelänge (1 Schicht → me)
+  const multiLayer = SCHICHTEN.length > 1;
+  let me_eff = me;
+  if(multiLayer){
+    let zz = 0, sumM = 0, tt = 0;
+    for(const s of SCHICHTEN){
+      const th = Math.min(s.d === 999 ? Math.max(0, L_emb - zz) : s.d, Math.max(0, L_emb - zz));
+      if(th <= 0) break;
+      sumM += Math.max(0.5, s.me ?? me) * th; tt += th;
+      zz   += s.d === 999 ? th : s.d;
+      if(zz >= L_emb) break;
+    }
+    if(tt > 0.01) me_eff = sumM / tt;
+  }
+  const k_s_vert   = me_eff * 1000 / ((1 - nu**2) * B);   // vertikal [kN/m³]
+  const k_s        = k_s_vert * alpha_lat;                 // lateral  [kN/m³]
 
   // Charakteristische Länge
   const lam  = Math.pow(k_s * B / (4 * EI), 0.25);
@@ -5719,9 +6320,20 @@ function calcPfahlsicherung(){
   const f_overlap = f_shadow;
   const r_overlap = z_ov > 0.01 ? z_ov / Math.max(0.1, t_bl) : 0;
 
+  // ── p-y-Pfahl: laterale Bettungsziffer je Tiefe (schichtweise, M_E·α_lat)
+  const ksAt = z => {
+    const meZ = multiLayer ? Math.max(0.5, schichtAtDepth(Math.max(0, z)).me ?? me) : me_eff;
+    return meZ * 1000 / ((1 - nu**2) * B) * alpha_lat;               // [kN/m³]
+  };
+  // Einheitslast-FE-Solve (linear → mit tatsächlicher Last skalierbar): Kopf-/GOK-
+  // Verschiebung [mm/kN] und max. Biegemoment [kNm/kN]. Fallback Winkler-Closed-Form.
+  const py1 = bddBeamPY(EI, B, e_eff, L_emb, 1, ksAt);
+  const yHead1 = py1 ? py1.yHead_mm : winklerDeflection(1, e_eff, L_emb, EI, k_s, B);
+  const Mmax1  = py1 ? py1.Mmax_kNm : (e_eff + 0.4 * L_emb);          // [kNm pro kN]
+
   // ── Steifigkeitsbasierte Lastverteilung Block ↔ Pfahlsystem (Serienfedern)
   // Pfahlkopf-Horizontalfeder (n Pfähle, Gruppenabminderung wie Verformung)
-  const _d1mm   = winklerDeflection(1, e_eff, L_emb, EI, k_s, B);     // [mm] bei H = 1 kN
+  const _d1mm   = yHead1;                                             // [mm] bei H = 1 kN (p-y)
   const k_pf    = n * f_gr * 1000 / Math.max(0.01, _d1mm);            // [kN/m]
   // Richtstütze axial als Horizontalfeder (Rohr 60×4, E = 210 GPa)
   const A_st    = 7.04e-4;                                            // [m²]
@@ -5745,11 +6357,20 @@ function calcPfahlsicherung(){
   const H_d   = H_d_bemessung * f_eff;
   const M_d   = M_d_bemessung * f_eff;
 
-  // Kräfte am Pfahlkopf — Moment-Anteil via Richtstütze
+  // Kräfte am Pfahlkopf — Moment-Anteil via Richtstütze.
+  // Freikörper (VERTIKALER Pfahl, geneigte Stütze, Winkel α von Horizontale):
+  //   Die Stütze muss horizontal H_eff liefern → Stabkraft F_s = H_eff / cos α.
+  //   Am Pfahlkopf zerlegt sich F_s in: Horizontal F_s·cos α = H_eff  (Broms-Lateral, ⊥ vert. Pfahl)
+  //                                     Vertikal   F_s·sin α = H_eff·tan α  (axial, Mantelreibung).
+  // FRÜHER: H_pfahl_d = H_eff·cos α — zusätzliches cos α war falsch (Lateral um cos α
+  //   unterschätzt, unkonservativ; bei steiler Stütze gravierend). Korrigiert Jun 2026.
   const H_eff       = H_d + M_d / arm_stuetze;
-  const H_pfahl_d   = H_eff * Math.cos(alpha_rad);  // Horizontalkraft am Pfahlkopf
-  const F_s         = H_eff / Math.max(0.01, Math.cos(alpha_rad));  // Stützenstabkraft
-  const V_pfahl     = H_eff * Math.tan(alpha_rad);  // Druckkraft vertikal
+  const H_pfahl_d   = H_eff;                         // Horizontallast am vertikalen Pfahl (Broms)
+  const F_s         = H_eff / Math.max(0.01, Math.abs(Math.cos(alpha_rad)));  // Stützenstabkraft (axial)
+  const V_pfahl     = H_eff * Math.abs(Math.tan(alpha_rad));  // |Vertikalkomponente| → axiale Pfahllast
+  // Axialrichtung: Herausziehen iff (Stütze Zug & Anschluss höher) oder (Druck & Pfahlkopf höher).
+  // α-Vorzeichen = sign(h_anschluss − e): α>0 Anschluss höher · α<0 Pfahlkopf höher.
+  const axial_pullout = fall_zug ? (alpha_rad > 0) : (alpha_rad < 0);
 
   // ── Ep-Verlust durch Aushub (Anzeige; als Einwirkung nur im MANUELLEN Modus —
   //    im Auto-Modus steckt der Verlust rigoros in Mu_ex und D_eff der Verteilung)
@@ -5771,14 +6392,77 @@ function calcPfahlsicherung(){
   // Massgebende Gesamtlast am Pfahlkopf
   const H_pfahl_total = H_pfahl_d + dH_ep_eff;
 
+  // ── Böschung: Pfahl widersteht in eine abfallende Böschung? → passiver Beiwert reduziert.
+  // Geometrie: Böschung liegt im Viewer immer auf +x (Feldseite); Pfähle stehen gegenüber
+  // dem Aushub. Talseitig (ungünstig) nur, wenn die Pfähle auf der Böschungsseite stehen
+  // (Aushub gleisseitig → Pfähle +x) UND die Böschung dort ABFÄLLT (β < 0). Bergauf (β > 0)
+  // ist günstig → konservativ ignoriert. Aushub feldseitig → Pfähle auf −x, keine Böschung.
+  const _slBeta  = +gi('bg_beta') || 0;
+  const _slBtyp  = gi('bg_btyp') || 'none';
+  const betaRed  = (_slBtyp !== 'none' && ex_seite === 'gleis' && _slBeta < -0.1)
+                 ? Math.abs(_slBeta) : 0;
+  const kp_full  = Math.tan(Math.PI/4 + phi_r_b/2)**2;
+  const kp_eff   = betaRed > 0.1 ? kpSlopeRankine(phi_deg, betaRed) : kp_full;
+
+  // ── Aushub-Begrenzung des Pfahl-Bruchkörpers (NUR Zugfall):
+  // Im Zugfall mobilisiert der Pfahl seinen passiven Keil zum Block/Aushub hin. Reicht der
+  // Keil über die Aushubkante (Horizontaldistanz Pfahl → Aushubkante = G_bx + d_abst),
+  // daylightet er in die Grube → wirksame Überdeckung dort reduziert. Block-Abschirmung
+  // konservativ vernachlässigt. Druckfall: Keil zeigt vom Aushub weg → keine Begrenzung.
+  const L_horiz_ex = G_bx + d_abst;
+  const exClip = (fall_zug && d_ex > 0.01)
+               ? {dEx: Math.min(d_ex, 0.95 * L_emb), Lhor: L_horiz_ex} : null;
+
   // ── B) Widerstandsteilsicherheit γ_R (SIA 267 §14, Pfahlwiderstände)
   const gamma_R  = Math.max(1.0, +(SETTINGS.pfahlGammaR ?? 1.40));
-  const Hu_1k    = bromsFreeShort(phi_deg, c_kPa, gamma, L_emb, B, e_eff, gamma2, z_gw)
-                 * f_shadow;          // charakteristisch, schattenreduziert
-  const Hu_1     = Hu_1k / gamma_R;   // Bemessungswert
 
-  // Stahlnachweis pro Pfahl: M_max ≈ (H/n)·(e_eff + 0.4·L_emb)
-  const M_max_1  = (H_pfahl_total / n) * (e_eff + 0.4 * L_emb);
+  // ── p-y-Grenzwert der Bettungsreaktion p_u(z) [kN/m] — Reibungsboden 3·Kp·σ'v·B
+  //    (schichtweise, GW-wirksam, Böschung über betaRed), bindig 9·c_u·B (z > 1.5B).
+  //    Identische Hüllkurve für p-y-Antwort UND Grenzlast → konsistent.
+  const puAt = z => {
+    const s = schichtAtDepth(Math.max(0, z)), ph = s.phi ?? phi_deg;
+    if(ph <= 5) return z > 1.5*B ? 9 * Math.max(0, s.c ?? 0) * B : 0;
+    const Kp_i = betaRed > 0.1 ? kpSlopeRankine(ph, betaRed) : Math.tan(Math.PI/4 + ph*Math.PI/360)**2;
+    return 3 * Kp_i * sigVeffTo(z) * B;
+  };
+  // Aushub-Begrenzung (Zugfall): p_u über die Aushubkante reduziert (Keil daylightet)
+  const puAtEx = exClip ? (z => {
+    const tanW = Math.tan(Math.PI/4 + phi_r_b/2), xd = z * tanW;
+    const frac = Math.max(0, xd - Math.max(0.01, exClip.Lhor)) / Math.max(0.01, xd);
+    const z_eff = Math.max(0.05*z, z - exClip.dEx * frac);
+    return puAt(z) * z_eff / Math.max(1e-6, z);
+  }) : puAt;
+
+  // ── Laterale Grenzlast aus dem p-y-Modell: inkrementeller Push (Tangenten-Kollaps),
+  //    gebracketed durch das plastische Grenzgleichgewicht (Rotationspunkt). Fallback:
+  //    Grenzgleichgewicht, dann alte Broms-Formel. Ersetzt die simplifizierte Broms-
+  //    Momentenformel (die den kurzen Pfahl überschätzte).
+  const bromsFallback = clip => multiLayer
+    ? bromsLayered(L_emb, B, e_eff, betaRed, clip)
+    : bromsFreeShort(phi_deg, c_kPa, gamma, L_emb, B, e_eff, gamma2, z_gw, betaRed, clip);
+  const latCap = (pu, clip) => {
+    const le = pileLatCapLimitEq(L_emb, B, e_eff, pu);
+    if(!(le > 0)) return bromsFallback(clip);
+    return pileLatCapPush(EI, B, e_eff, L_emb, ksAt, pu, le) || le;
+  };
+  const Hcap_full = latCap(puAt, null);
+  const Hcap      = exClip ? latCap(puAtEx, exClip) : Hcap_full;
+  const Hu_1k_full = Hcap_full * f_shadow;          // ohne Aushub-Clip (Referenz)
+  const Hu_1k    = Hcap      * f_shadow;            // schattenreduziert (+ Böschung + Aushub-Clip)
+  const exClipRed = (exClip && Hu_1k_full > 0.01) ? (1 - Hu_1k / Hu_1k_full) : 0;
+  const Hu_1     = Hu_1k / gamma_R;                 // Bemessungswert
+
+  // Nichtlinearer p-y-Service-Solve bei der tatsächlichen Last/Pfahl (Reaktion auf p_u
+  // gedeckelt). Bei Nicht-Konvergenz (nahe Grenzlast) Fallback auf linear (py1 skaliert).
+  const H_per  = H_pfahl_total / n;
+  const pyNL   = bddBeamPY(EI, B, e_eff, L_emb, H_per, ksAt, {puAt});
+  const pyUse  = (pyNL && pyNL.converged) ? pyNL : null;
+  // Max. Bettungs-Ausnutzung p/p_u im Pfahl (für die p-y-Kennlinien-Skizze)
+  let pyMob = 0.5;
+  if(pyUse){ pyMob = 0; for(const pt of pyUse.profile){ if(pt.z>0){ const pu=puAt(pt.z); if(pu>0.1) pyMob=Math.max(pyMob, Math.abs(pt.p)/pu); } } }
+
+  // Stahlnachweis pro Pfahl: M_max aus der nichtlinearen p-y-Biegelinie (Fallback linear).
+  const M_max_1  = pyUse ? pyUse.Mmax_kNm : Mmax1 * H_per;
   const etaStahl = Mpl / Math.max(0.001, M_max_1);
 
   const Hu_gruppe = n * Hu_1 * f_gr;
@@ -5786,18 +6470,25 @@ function calcPfahlsicherung(){
   // ── C) Gesamtnachweis Tragfähigkeit
   const eta_H = H_pfahl_total > 0.01 ? Hu_gruppe / H_pfahl_total : Infinity;
 
-  // Verformung
-  const delta_1_mm = winklerDeflection(H_pfahl_total / n, e_eff, L_emb, EI, k_s, B);
+  // Verformung — Kopfverschiebung aus der nichtlinearen p-y-Biegelinie (Fallback linear)
+  const delta_1_mm = pyUse ? pyUse.yHead_mm : yHead1 * H_per;
   const delta_gruppe_mm = delta_1_mm * (1 / f_gr);       // Gruppe verformt sich mehr
   const neig_mm_m = delta_gruppe_mm;                      // tan α × 1000 (h_Ref = 1 m)
   const eta_V = d_krit / Math.max(0.001, neig_mm_m);
 
   // ── Axialer Pfahlnachweis: V = H_eff·tan(α) drückt den Pfahl (Mantelreibung HEB-Kasten)
   const V_1     = V_pfahl / n;
-  const K0_ax   = 1 - Math.sin(phi_r_b);
-  const sigv_av = avgSigV(L_emb);                           // mittlere σ'v über L_emb [kPa]
   const U_box   = 2 * (prof.h + prof.b);                    // Kastenumfang [m]
-  const R_ax_k  = K0_ax * sigv_av * Math.tan((2/3)*phi_r_b) * U_box * L_emb;  // [kN], Spitze vernachlässigt
+  // Mantelreibung schichtweise: ∫ K₀(z)·σ'v(z)·tan(2/3·φ(z))·U_box dz (Spitze vernachlässigt).
+  // 1 Schicht: identisch zu K₀·avgSigV·tan(2/3φ)·U·L (avgSigV = mittlere σ'v).
+  let R_ax_k = 0;
+  { const Na = 40, dza = L_emb / Na;
+    for(let i = 0; i < Na; i++){
+      const z  = (i + 0.5) * dza;
+      const ph = (schichtAtDepth(z).phi ?? phi_deg) * Math.PI/180;
+      R_ax_k  += (1 - Math.sin(ph)) * sigVeffTo(z) * Math.tan((2/3)*ph) * U_box * dza;
+    }
+  }
   const R_ax_d  = R_ax_k / gamma_R;
   const eta_ax  = V_1 > 0.05 ? R_ax_d / V_1 : Infinity;
 
@@ -5844,10 +6535,9 @@ function calcPfahlsicherung(){
     ? `<div style="margin-top:6px;padding:6px 10px;background:var(--warn-s);border-left:2px solid var(--warn);border-radius:3px;font-size:9.5px;color:var(--warn);font-family:var(--f-mono)">Grenzwert Massnahme überschritten</div>`
     : '';
 
-  // Broms Ep_max für Referenz
-  const phi_b   = phi_deg * Math.PI / 180;
-  const Kp_b    = Math.tan(Math.PI/4 + phi_b/2)**2;
-  const Ep_max  = 3 * Kp_b * gamma * L_emb * B;  // kPa Spitzendruck (Broms)
+  // p_u,max [kN/m] — Maximum der Bettungsgrenzhüllkurve (schichtweise/GW/Böschung via puAt)
+  let Ep_max = 0;
+  for(let i=0;i<=20;i++) Ep_max = Math.max(Ep_max, puAt(i/20*L_emb));
 
   // Zuklappbare Nachweis-Karten (gleiches Pattern wie GZT/GZG im Nachweis-Panel)
   // gov=true markiert die massgebende Karte (Akzent-Rahmen)
@@ -5916,6 +6606,9 @@ function calcPfahlsicherung(){
         <span style="font-weight:600;color:${!isFinite(eta_massgebend)?'var(--xdim)':eta_massgebend>=1.5?'var(--ok)':eta_massgebend>=1.0?'var(--warn)':'var(--fail)'}">${isFinite(eta_massgebend)?'η = '+eta_massgebend.toFixed(2)+' · '+nw_massgebend:'n.m.'}</span>
       </div>
 
+      <!-- Globale Böschungsstandsicherheit — Modellgrenze, immer sichtbar bei Böschung -->
+      ${(_slBtyp !== 'none' && Math.abs(_slBeta) > 0.1) ? `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--fail);background:var(--fail-s);border-radius:3px;font-size:9.5px;color:var(--fail)">Böschung β = ${_slBeta}° aktiv — die <b>globale Standsicherheit (Gleitkreis durch Block, Pfähle &amp; Aushub)</b> ist NICHT Teil dieses Moduls und gesondert nachzuweisen (Lamellenverfahren / GEO). Broms/Steckner erfassen nur den lokalen Bauteilwiderstand.</div>` : ''}
+
       <!-- Richtungsfall Stütze — immer sichtbar -->
       ${fall_zug ? (pile_active
         ? `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Momentrichtung zum Aushub — Richtstütze wirkt auf ZUG. Anschlüsse müssen zugfest ausgebildet sein (Annahme: zugfest).</div>`
@@ -5948,8 +6641,11 @@ function calcPfahlsicherung(){
         <div style="color:var(--dim);margin-bottom:2px">Moment-Anteil via Richtstütze</div>
         ${row('H_eff = H_d + M_d / arm', H_eff.toFixed(1), 'kN')}
       </div>` : ''}
-      ${row('H_Pfahl = H_eff · cos(α)', H_pfahl_d.toFixed(1), 'kN')}
-      ${row('V_Pfahl = H_eff · sin(α)', V_pfahl.toFixed(1), 'kN')}
+      ${row('H_Pfahl = H_eff (⊥ vert. Pfahl)', H_pfahl_d.toFixed(1), 'kN')}
+      ${row('V_Pfahl = H_eff · |tan(α)| ('+(axial_pullout?'Herausziehen':'Druck')+')', V_pfahl.toFixed(1), 'kN')}
+      ${row('F_s = H_eff / cos(α) — Stützenstab', F_s.toFixed(1), 'kN')}
+      ${Math.abs(alpha) < 4 ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">α = ${alpha.toFixed(1)}° — Stütze fast waagrecht (Pfahlkopf ≈ Anschlusshöhe) → geringe Axialkraft</div>` : ''}
+      <div style="margin-top:6px">${buildStrutDecompSVG(alpha, H_eff, F_s, V_pfahl, H_pfahl_d, fall_zug, axial_pullout)}</div>
       ${dH_ep > 0.01 ? `
       <div style="margin:6px 0 2px;padding:6px 8px;background:${lv_auto?'var(--s2)':'var(--warn-s)'};border-left:2px solid ${lv_auto?'var(--ol2)':'var(--warn)'};border-radius:3px">
         <div style="font-size:8px;color:${lv_auto?'var(--xdim)':'var(--warn)'};margin-bottom:3px;letter-spacing:.05em">Ep-Verlust durch Aushub (d_ex = ${d_ex.toFixed(1)} m)${lv_auto?' — informativ, steckt im Auto-Modus in M_u,ex / D_eff':''}</div>
@@ -5964,9 +6660,22 @@ function calcPfahlsicherung(){
       </div>
 
       ${CARD_END}
-      ${cardHd('Tragfähigkeit (Broms 1964)', eta_H, null, nw_massgebend==='Tragf.')}
-      ${row('Ep passiv (Spitzendruck)', Ep_max.toFixed(0), 'kPa')}
-      ${row('H_u,1,k charakteristisch', Hu_1k.toFixed(1), 'kN')}
+      ${cardHd('Lateraltragfähigkeit (Grenzgleichgewicht p_u)', eta_H, null, nw_massgebend==='Tragf.')}
+      ${betaRed > 0.1 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)">
+        <span style="color:var(--warn)">Böschung talseitig (β = ${_slBeta}°)
+          <span style="color:var(--xdim);font-size:9px"> Kp,β geneigtes Gelände (Rankine)</span>
+        </span>
+        <span style="font-weight:500;font-family:var(--f-mono);color:var(--warn)">Kp ${kp_full.toFixed(2)} → ${kp_eff.toFixed(2)} (−${((1-kp_eff/kp_full)*100).toFixed(0)}%)</span>
+      </div>` : ''}
+      ${exClip && exClipRed > 0.005 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)">
+        <span style="color:var(--warn)">Bruchkörper reicht in Aushub (Zugfall)
+          <span style="color:var(--xdim);font-size:9px"> Keil daylightet ab z=${(L_horiz_ex/Math.tan(Math.PI/4+phi_r_b/2)).toFixed(2)}m in Grube · Überdeckung −d_ex</span>
+        </span>
+        <span style="font-weight:500;font-family:var(--f-mono);color:var(--warn)">H_u −${(exClipRed*100).toFixed(0)}%</span>
+      </div>
+      <div style="font-size:8px;color:var(--xdim);padding:1px 0 3px;border-bottom:1px solid var(--ol)">Block-Abschirmung konservativ vernachlässigt — globale Standsicherheit gesondert prüfen</div>` : ''}
+      ${row('p_u,max Bettungsgrenzwert (3·Kp·σ′v·B)', Ep_max.toFixed(0), 'kN/m')}
+      ${row('H_u,1,k (p-y-Push, Rotationsmech.)'+(exClip&&exClipRed>0.005?' (Aushub-red.)':''), Hu_1k.toFixed(1), 'kN')}
       ${row('γ_R Widerstandsteilsicherheit', gamma_R.toFixed(2), '')}
       ${row('H_u,1,d = H_u,k / γ_R', Hu_1.toFixed(1), 'kN')}
       ${row('f_gr Gruppeneffekt (s/B='+sB.toFixed(1)+')', f_gr.toFixed(2), '')}
@@ -5984,19 +6693,19 @@ function calcPfahlsicherung(){
 
       ${CARD_END}
       ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
-      ${row('M_max,1 ≈ (H/n)·(e + 0.4·L)', M_max_1.toFixed(1), 'kNm')}
+      ${row('M_max,1 (p-y'+(pyUse?(pyUse.yielded?', plastisch':', elastisch')+', z='+(pyUse.sMmax-e_eff).toFixed(2)+'m u.GOK':' — Näherung')+')', M_max_1.toFixed(1), 'kNm')}
       ${row('M_pl (S355)', Mpl.toFixed(1), 'kNm')}
       <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
         <span style="color:var(--dim)">η_Stahl = M_pl / M_max,1</span>
         <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
       </div>
       ${CARD_END}
-      ${cardHd('Verformung (Winkler-Bettung)', eta_V, null, nw_massgebend==='Verform.')}
-      ${row('k_s vertikal (M_E)', (k_s_vert/1000).toFixed(0), 'MN/m³')}
+      ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
+      <div style="font-size:8px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
+      ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
       ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
-      ${row('k_s lateral = k_s,vert × α', (k_s/1000).toFixed(0), 'MN/m³')}
       ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
-      ${row('δ Pfahlkopf bei H_d', delta_gruppe_mm.toFixed(1), 'mm')}
+      ${row('δ Pfahlkopf bei H_d (p-y)', delta_gruppe_mm.toFixed(1), 'mm')}
       ${row('Verkippung tan α × 1000', neig_mm_m.toFixed(1), 'mm/m')}
       <div style="display:flex;gap:8px;margin-top:2px">
         <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':neig_mm_m>=d_mass?'var(--warn-s)':'var(--ok-s)'};border-radius:3px;font-size:9px">
@@ -6014,7 +6723,7 @@ function calcPfahlsicherung(){
       ${CARD_END}
       ${cardHd('Axialer Pfahlnachweis'+(fall_zug?' (Herausziehen)':''), eta_ax, null, nw_massgebend==='Axial')}
       ${row((fall_zug?'Zugkraft (Herausziehen)':'V_Pfahl')+' pro Pfahl = H_eff·tan(α)/n', V_1.toFixed(1), 'kN')}
-      ${row('q_s = K₀·σ̄′v·tan(2/3φ)', (K0_ax*sigv_av*Math.tan((2/3)*phi_r_b)).toFixed(1), 'kPa')}
+      ${row('q̄_s = K₀·σ′v·tan(2/3φ)'+(multiLayer?' (schichtweise)':''), (R_ax_k/Math.max(0.01,U_box*L_emb)).toFixed(1), 'kPa')}
       ${row('R_ax,k (Kastenumfang '+(U_box*100).toFixed(0)+' cm × L)', R_ax_k.toFixed(1), 'kN')}
       ${row('R_ax,d = R_ax,k / γ_R', R_ax_d.toFixed(1), 'kN')}
       <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
@@ -6059,7 +6768,7 @@ function calcPfahlsicherung(){
       })()}
 
       <div style="margin-top:10px;padding:5px 8px;background:var(--s3);border-radius:3px;font-size:8px;color:var(--xdim);line-height:1.55">
-        Vordimensionierung · Broms 1964, freier Kopf · Stütze: ${fall_zug?'Zugfall':'Druckfall (Knicknachweis offen)'} · Bodenkennwerte aus Schicht 1 · Kein Ersatz für normativen Nachweis
+        Vordimensionierung · p-y-Bettungsmodell (elasto-plastisch, Grenzlast aus p_u-Hüllkurve) · Stütze: ${fall_zug?'Zugfall':'Druckfall (Knicknachweis offen)'} · ${multiLayer?'schichtweiser Boden':'Boden Schicht 1'} · Kein Ersatz für normativen Nachweis
       </div>
     </div>`;
 
@@ -6072,7 +6781,8 @@ function calcPfahlsicherung(){
     Hu_1, Hu_gruppe, H_pfahl_total, eta_H, eta_V, etaStahl,
     delta_gruppe_mm, neig_mm_m, n, typ,
     k_s, k_s_vert, alpha_lat, gamma_R, aL, pfahlTypLabel,
-    d_mass, d_krit_v: d_krit, pfaehle_im_aushub, Hu_1k, ex_seite, fall_zug
+    d_mass, d_krit_v: d_krit, pfaehle_im_aushub, Hu_1k, ex_seite, fall_zug,
+    kp_eff, betaRed, exClipRed, L_horiz_ex, puAt, puAtEx, multiLayer
   };
   const sysId = '_pfahl_sys_diag';
   let sysWide = window[sysId+'_wide'] || false;
@@ -6096,7 +6806,7 @@ function calcPfahlsicherung(){
   snDiv.style.cssText = 'margin-top:10px';
   snDiv.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Schnittgrössen — Winkler</span>
+      <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Schnittgrössen — p-y (FE)</span>
       <button onclick="togglePfahlDiagWide('${snId}')"
         style="background:var(--s3);border:1px solid var(--ol);border-radius:3px;color:var(--dim);font-family:var(--f-mono);font-size:9px;padding:1px 7px;cursor:pointer">
         ${snWide ? '↙' : '⤢'}
@@ -6105,8 +6815,21 @@ function calcPfahlsicherung(){
     ${buildPfahlSchnittSVG({
       H_1: H_pfahl_total/n, e_eff, L_emb, k_s, B_pf: B, EI, Mpl,
       etaStahl, phi_deg, gamma, gamma2, z_gw, hasGW, useClay, hasC,
-      aL, pfahlTypLabel, d_ex, pfaehle_im_aushub, alpha_lat, gamma_R
-    }, snWide)}`;
+      aL, pfahlTypLabel, d_ex, pfaehle_im_aushub, alpha_lat, gamma_R, kp_eff, betaRed,
+      pyProfile: pyUse ? pyUse.profile : (py1 ? py1.profile : null),
+      pyScale: pyUse ? 1 : (H_pfahl_total/n),
+      puAt, pyYielded: pyUse ? pyUse.yielded : false, pyNonlin: !!pyUse, multiLayer
+    }, snWide)}
+    <details style="margin-top:6px">
+      <summary style="font-family:var(--f-mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--xdim);cursor:pointer">p-y-Kennlinie erklärt</summary>
+      <div style="margin-top:4px">${buildPyKennlinieSVG(pyMob, pyUse?pyUse.yielded:false)}</div>
+      <div style="font-size:8.5px;color:var(--xdim);line-height:1.5;margin-top:4px">
+        Jede Bodentiefe ist eine Feder: Reaktion <b>p</b> steigt elastisch mit der Verschiebung (Steigung k_s·B),
+        bis sie den Grenzwert <b>p_u</b> (Bodenfliessen) erreicht — danach konstant. Die <b>p_u-Grenzhülle</b>
+        im Schnittgrössen-Diagramm ist p_u(z) über die Tiefe; die Querkraft V(z) = ∫p dz. Grenzlast = wenn p
+        über genügend Länge an p_u klebt (Mechanismus).
+      </div>
+    </details>`;
   box.appendChild(snDiv);
 
   // ── Viewer-Badge im Sicherungsmodus aktualisieren
@@ -6140,6 +6863,7 @@ function initSicherung(){
   _updateSicherungBtn();
   const btn = document.getElementById('vc-pfahl');
   if(btn) btn.classList.toggle('on', showPfahl);
+  _updateKeilBtnVis();
 }
 
 // ════════════════════════════════════════════
@@ -6194,9 +6918,17 @@ function _doCalculate(){
   // Mehrschicht: tiefengewichteter Mittelwert φ_k; Einzelschicht: φ_k global
   const beta_deg_c1 = +gi('bg_beta') || 0;
   const phi_k_c1 = SCHICHTEN.length > 1 ? avgPhiToDepth(t) : (phi_k * 180/Math.PI);
-  const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1);  // MN/m³
-  // C₁ aus Feld lesen (wird von autoC1() verwaltet, nicht hier überschreiben)
-  const C1_val = Math.max(1, +gi('bg_c1') || C1_auto);
+  const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1);  // MN/m³ (Steckner-Anteil, Fallback)
+  // C₁: im Auto-Modus den vollen 3-Zonen-Blend live nehmen (folgt β/B/t/φ) und das
+  // Feld nachführen; im manuellen Modus (_c1Manual) den Feldwert verwenden.
+  const _c1m = (typeof _c1Manual !== 'undefined' && _c1Manual);
+  const C1_val = _c1m
+    ? Math.max(1, +gi('bg_c1') || C1_auto)
+    : Math.max(1, (typeof c1AutoValue === 'function' ? c1AutoValue().c1_eff : C1_auto));
+  if(!_c1m){
+    const _c1El = document.getElementById('bg_c1');
+    if(_c1El && Math.abs((+_c1El.value || 0) - C1_val) > 0.05) _c1El.value = C1_val.toFixed(1);
+  }
   const C1_kN = C1_val * 1000;
 
   // ── Geländeneigung
@@ -6433,7 +7165,7 @@ function _doCalculate(){
     let u_ecc_GZT_=0, arm_v_GZT_=0, arm_vp_GZT_=0;
     let komb_GZT_=0;   // massgebende Lastfall-Kombination (1-8, 0 = n/a)
     // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
-    let etaGZT_ex_=Infinity, Mu_GZT_ex_=0, komb_GZT_ex_=0, dEx_used_=0, dEx_side_='', dEx_gov_=0;
+    let etaGZT_ex_=Infinity, Mu_GZT_ex_=0, komb_GZT_ex_=0, dEx_used_=0, dEx_side_='', dEx_gov_=0, yNL_ex_=0;
     let etaGZG_ex_=Infinity, alpha_GZG_ex_=0, Mu_char_GZG_ex_=0;
     const mob = SETTINGS.mob ?? 0.25;  // ausserhalb if(isBlock) — wird im return-Objekt benötigt
     const _lfNW = lf.nw || 'beide';
@@ -6657,6 +7389,7 @@ function _doCalculate(){
         komb_GZT_ex_ = isFinite(best_ex.eta) ? best_ex.nr : 0;
         dEx_side_    = best_ex.side;
         dEx_gov_     = best_ex.dGov || d_ex_sich;
+        yNL_ex_      = best_ex.r.y_nl ?? 0;
       }
       dEx_used_ = d_ex_sich;
 
@@ -6824,7 +7557,7 @@ function _doCalculate(){
       arm_vp_GZT: arm_vp_GZT_,
       komb_GZT:   komb_GZT_,
       // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
-      etaGZT_ex: etaGZT_ex_, Mu_GZT_ex: Mu_GZT_ex_, komb_GZT_ex: komb_GZT_ex_,
+      etaGZT_ex: etaGZT_ex_, Mu_GZT_ex: Mu_GZT_ex_, komb_GZT_ex: komb_GZT_ex_, y_NL_GZT_ex: yNL_ex_,
       etaGZG_ex: etaGZG_ex_, alpha_GZG_ex: alpha_GZG_ex_, Mu_char_GZG_ex: Mu_char_GZG_ex_,
       dEx_used: dEx_used_, dEx_side: dEx_side_, dEx_gov: dEx_gov_,
       ue_GZT: isBlock ? ue : 0,
@@ -7744,7 +8477,7 @@ function buildNachweisDoc(results,G){
         '6·('+_npN(N_al)+'·'+_npN(Math.tan(phi_k),3)+' + '+_npN(Hk_g)+') / ('+_npN(B)+'·'+_npN(t*t,2)+'·'+_npN(+gi('bg_c1')*1000,0)+')',
         tan_a1.toFixed(5),'[Überwindung Sohlreibung]')+
       calc('tan α₂ = 2·N_α / (A²·B·C₂)',
-        '2·'+_npN(N_al)+' / ('+_npN(t,2)+'²... wait A = '+_npN(+gi('g_by'))+' m²·'+_npN(B)+'·'+_npN(+gi('bg_c1')*1000,0)+')',
+        '2·'+_npN(N_al)+' / ('+_npN(+gi('g_by'),2)+'²·'+_npN(B)+'·'+_npN(+gi('bg_c1')*1000,0)+')',
         tan_a2.toFixed(5),'[Abheben hintere Sohlkante]')+
       '<div style="font-size:8px;color:var(--xdim);margin:3px 0 6px">'+
       'Bereich: tan α_zul = '+tanZul+
@@ -8255,56 +8988,70 @@ function buildPfahlSchnittSVG(params, wide=false){
   const g2  = (gamma2 != null) ? gamma2 : gamma;
   const zgw = (z_gw   != null && isFinite(z_gw)) ? z_gw : Infinity;
 
-  // ── Analytische Lösung starrer freier Pfahl (Winkler)
   const k_w   = k_s * B_pf;                                  // [kN/m²] Federsteifigkeit×B
-  const delta0 = 2*H_1*(2*L_emb + 3*e_eff) / (k_w * L_emb**2); // Kopfverschiebung [m]
-  const theta  = 6*H_1*(2*e_eff + L_emb)   / (k_w * L_emb**3); // Rotationswinkel [rad]
-  const z_r    = delta0 / Math.max(1e-9, theta);               // Nulllinie [m]
-
-  // Kurven berechnen (von -e_eff bis L_emb, N Punkte)
-  const N = 60;
-  const pts_y = [], pts_p = [], pts_M = [];
-  const z_total = e_eff + L_emb;
-  for(let i=0; i<=N; i++){
-    const z_abs = -e_eff + i/N * z_total;   // < 0 = über GOK, >= 0 = in Boden
-    const z     = z_abs;
-    // y(z): ausserhalb Boden = δ₀ + |z|·θ (Starrkörper linear verlängert)
-    const y_m  = z < 0 ? (delta0 - z*theta) : (delta0 - z*theta);
-    // p(z): nur im Boden
-    const p    = z < 0 ? 0 : k_w * y_m;
-    // M(z): H·(e+z) − Bodenreaktion-Moment (analytisch exakt für z≥0)
-    const M    = z < 0
-      ? H_1 * (e_eff + z)            // linear von 0 bis GOK
-      : H_1*(e_eff + z) - k_w*(delta0*z**2/2 - theta*z**3/6);
-    pts_y.push({z: z_abs, v: y_m * 1000});  // mm
-    pts_p.push({z: z_abs, v: p});            // kN/m
-    pts_M.push({z: z_abs, v: M});            // kNm
+  const pts_y = [], pts_p = [], pts_M = [], pts_V = [];
+  const usePy = params.pyProfile && params.pyProfile.length > 3;
+  const psc   = params.pyScale ?? H_1;                       // 1 = Profil bereits bei realer Last
+  let z_r;
+  if(usePy){
+    // ── p-y-Lösung (Bettungsbalken): Profil skalieren (pyScale=1 → schon reale Last)
+    for(const pt of params.pyProfile){
+      pts_y.push({z: pt.z, v: pt.y_mm * psc});     // mm
+      pts_p.push({z: pt.z, v: pt.p   * psc});      // kN/m
+      pts_M.push({z: pt.z, v: pt.M   * psc});      // kNm
+      pts_V.push({z: pt.z, v: (pt.V ?? 0) * psc}); // kN (Querkraft)
+    }
+    // Nulllinie: Vorzeichenwechsel der Verschiebung (Rotationspunkt)
+    z_r = L_emb/2;
+    for(let i=1;i<pts_y.length;i++){
+      if(pts_y[i].z >= 0 && pts_y[i-1].v*pts_y[i].v < 0){
+        const t = Math.abs(pts_y[i-1].v)/(Math.abs(pts_y[i-1].v)+Math.abs(pts_y[i].v));
+        z_r = pts_y[i-1].z + t*(pts_y[i].z - pts_y[i-1].z); break;
+      }
+    }
+  } else {
+    // ── Fallback: analytische Lösung starrer freier Pfahl (Winkler)
+    const delta0 = 2*H_1*(2*L_emb + 3*e_eff) / (k_w * L_emb**2);
+    const theta  = 6*H_1*(2*e_eff + L_emb)   / (k_w * L_emb**3);
+    z_r    = delta0 / Math.max(1e-9, theta);
+    const N = 60, z_total = e_eff + L_emb;
+    for(let i=0; i<=N; i++){
+      const z = -e_eff + i/N * z_total;
+      const y_m = delta0 - z*theta;
+      const p   = z < 0 ? 0 : k_w * y_m;
+      const M   = z < 0 ? H_1*(e_eff + z) : H_1*(e_eff + z) - k_w*(delta0*z**2/2 - theta*z**3/6);
+      pts_y.push({z, v: y_m * 1000}); pts_p.push({z, v: p}); pts_M.push({z, v: M});
+    }
   }
 
   const M_max  = Math.max(...pts_M.map(p=>p.v));
   const M_min  = Math.min(...pts_M.map(p=>p.v));
-  const z_Mmax = pts_M.find(p=>p.v===M_max)?.z ?? L_emb/2;
+  const M_gov  = Math.abs(M_max) >= Math.abs(M_min) ? M_max : M_min;
+  const z_Mmax = pts_M.find(p=>p.v===M_gov)?.z ?? L_emb/2;
   const y_max  = Math.max(...pts_y.map(p=>Math.abs(p.v)));
 
   // p_u(z) = 3·Kp·γ_eff(z)·z·B  (Broms passive Grenzspannung, mit GW-Knick)
+  // bei talseitiger Böschung mit reduziertem Kp,β (geneigtes Gelände)
   const phi_r   = phi_deg * Math.PI/180;
-  const Kp      = Math.tan(Math.PI/4 + phi_r/2)**2;
+  const Kp      = params.kp_eff ?? Math.tan(Math.PI/4 + phi_r/2)**2;
   const g_eff   = z => z < zgw ? (gamma ?? 20) : g2;
-  const pu_fn   = z => useClay
-    ? 9 * (params.c_kPa ?? 0) * B_pf  // Clay: konstant mit Tiefe
-    : 3 * Kp * g_eff(z) * z * B_pf;   // Sand: linear mit GW-Knick
-  const p_u_max = pu_fn(L_emb);
+  // p_u-Hüllkurve: bevorzugt die Berechnungs-Funktion params.puAt (schichtweise, GW,
+  // Böschung) — identisch zum p-y-Deckel; Fallback homogen 3·Kp·γ·z·B / 9·c_u·B.
+  const pu_fn   = z => params.puAt ? Math.max(0, params.puAt(z))
+    : (useClay ? 9 * (params.c_kPa ?? 0) * B_pf : 3 * Kp * g_eff(z) * z * B_pf);
+  const p_u_max = Math.max(pu_fn(L_emb), ...(usePy ? pts_p.map(p=>pu_fn(Math.max(0,p.z))) : [0]));
   const p_max   = Math.max(...pts_p.map(p=>Math.abs(p.v)), p_u_max);
 
-  // ── SVG Layout
-  const VB = 380, H_VB = wide ? 420 : 320;
+  // ── SVG Layout — Panels: y | p | (V) | M. Mit p-y zusätzlich Querkraft V(z).
+  const n_panels = usePy ? 4 : 3;
+  const VB = usePy ? (wide ? 520 : 440) : 380, H_VB = wide ? 420 : 320;
   const PAD_L=16, PAD_R=10, PAD_T=38, PAD_B=44;
   const ph = H_VB - PAD_T - PAD_B;  // plot height px
   const pw = VB - PAD_L - PAD_R;    // total width px
-  // 3 panels: y | p | M — gleiche Breite
-  const n_panels = 3;
   const col_w = pw / n_panels;
-  const axis_x = [PAD_L + col_w*0.5, PAD_L + col_w*1.5, PAD_L + col_w*2.5]; // Nullachsen
+  const axis_x = Array.from({length:n_panels}, (_,i)=>PAD_L + col_w*(i+0.5)); // Nullachsen
+  const iY=0, iP=1, iV=usePy?2:-1, iM=usePy?3:2;    // Panel-Indizes
+  const V_max = usePy ? Math.max(0.001, ...pts_V.map(p=>Math.abs(p.v))) : 1;
 
   // Tiefen-Pixel
   const depPy = z => PAD_T + ((z + e_eff) / (e_eff + L_emb)) * ph;
@@ -8315,13 +9062,14 @@ function buildPfahlSchnittSVG(params, wide=false){
   const c_dim = _lt?'#70727e':'#787a84', c_xdim=_lt?'#9a9caa':'#4e5058';
   const c_on2 = _lt?'#3a3c48':'#b8bac4';
   const c_acc = '#7c8de0', c_ep='#ffaa44', c_ok='#6fcf8e';
-  const c_fail= '#cf7070', c_warn='#c9a84c';
+  const c_fail= '#cf7070', c_warn='#c9a84c', c_pu_v='#4db8c9';
   const etaCls = e => e>=1.5?c_ok:e>=1.0?c_warn:c_fail;
 
   // Skalierung: Wert → Pixel-Abstand von Nullachse
   const sc_y = v => (v / Math.max(0.001, y_max)) * col_w * 0.42;
   const sc_p = v => (v / Math.max(0.001, p_max)) * col_w * 0.42;
   const sc_M = v => (v / Math.max(0.001, Math.max(Math.abs(M_max), Math.abs(M_min)))) * col_w * 0.42;
+  const sc_V = v => (v / V_max) * col_w * 0.42;
 
   // Kurve → SVG Polyline
   const curve = (pts, scFn, ax, col, fillPos=false) => {
@@ -8355,7 +9103,7 @@ function buildPfahlSchnittSVG(params, wide=false){
 
   <!-- Titel -->
   <text x="${VB/2}" y="14" font-family="'DM Mono',monospace" font-size="8" letter-spacing=".07em"
-    text-anchor="middle" fill="${c_dim}">WINKLER SCHNITTGRÖSSEN — STARRER PFAHL</text>
+    text-anchor="middle" fill="${c_dim}">${usePy ? 'p-y SCHNITTGRÖSSEN — FE-BETTUNG'+(params.multiLayer?' (mehrschichtig)':'') : 'WINKLER SCHNITTGRÖSSEN — STARRER PFAHL'}</text>
   <text x="${VB/2}" y="25" font-family="'DM Mono',monospace" font-size="7.5"
     text-anchor="middle" fill="${c_dim}">H_1=${H_1.toFixed(1)}kN · k_s=${(k_s/1000).toFixed(0)} MN/m³ · γ_R=${gamma_R.toFixed(2)} · λL=${aL.toFixed(1)} (${pfahlTypLabel})</text>
 
@@ -8364,21 +9112,21 @@ function buildPfahlSchnittSVG(params, wide=false){
     fill="${c_dim}" fill-opacity="0.05"/>
 
   <!-- Trennlinien Panels -->
-  <line x1="${PAD_L+col_w}"   y1="${PAD_T-6}" x2="${PAD_L+col_w}"   y2="${PAD_T+ph+4}"
-    stroke="${c_ol}" stroke-width="0.8" stroke-dasharray="3,2"/>
-  <line x1="${PAD_L+col_w*2}" y1="${PAD_T-6}" x2="${PAD_L+col_w*2}" y2="${PAD_T+ph+4}"
-    stroke="${c_ol}" stroke-width="0.8" stroke-dasharray="3,2"/>
+  ${Array.from({length:n_panels-1},(_,i)=>`<line x1="${PAD_L+col_w*(i+1)}" y1="${PAD_T-6}" x2="${PAD_L+col_w*(i+1)}" y2="${PAD_T+ph+4}"
+    stroke="${c_ol}" stroke-width="0.8" stroke-dasharray="3,2"/>`).join('')}
 
   <!-- Panel-Titel -->
-  <text x="${axis_x[0]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${axis_x[iY]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
     text-anchor="middle" fill="${c_acc}">y(z) [mm]</text>
-  <text x="${axis_x[1]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${axis_x[iP]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
     text-anchor="middle" fill="${c_ep}">p(z) [kN/m]</text>
-  <text x="${axis_x[2]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  ${usePy ? `<text x="${axis_x[iV]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+    text-anchor="middle" fill="${c_pu_v}">V(z) [kN]</text>` : ''}
+  <text x="${axis_x[iM]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
     text-anchor="middle" fill="${etaCls(etaStahl??1)}">M(z) [kNm]</text>
 
   <!-- Null-Achsen -->
-  ${[0,1,2].map(i=>`<line x1="${axis_x[i]}" y1="${PAD_T}" x2="${axis_x[i]}" y2="${PAD_T+ph}"
+  ${axis_x.map(ax=>`<line x1="${ax}" y1="${PAD_T}" x2="${ax}" y2="${PAD_T+ph}"
     stroke="${c_dim}" stroke-width="0.7" stroke-dasharray="2,2"/>`).join('')}
 
   <!-- GOK-Linie über alle Panels -->
@@ -8400,9 +9148,9 @@ function buildPfahlSchnittSVG(params, wide=false){
 
   <!-- Bodenmodell-Hinweise -->
   ${useClay ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="'DM Mono',monospace" font-size="6.5"
-    text-anchor="middle" fill="${c_warn}">Clay-Formel (c_u)</text>` : ''}
+    text-anchor="middle" fill="${c_warn}">bindig (c_u, undrainiert)</text>` : ''}
   ${hasC ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="'DM Mono',monospace" font-size="6.5"
-    text-anchor="middle" fill="${c_warn}">c ignoriert (konservativ)</text>` : ''}
+    text-anchor="middle" fill="${c_warn}">c′ vernachlässigt (konservativ)</text>` : ''}
 
   <!-- Nulllinie (Rotationszentrum) -->
   ${z_r > 0 && z_r < L_emb ? `
@@ -8412,38 +9160,37 @@ function buildPfahlSchnittSVG(params, wide=false){
     fill="${c_ok}">NL  z=${Math.min(z_r,L_emb).toFixed(2)}m</text>` : ''}
 
   <!-- M_max Linie -->
-  ${M_max > 0.01 ? `
-  <line x1="${PAD_L+col_w*2}" y1="${Mmax_y}" x2="${PAD_L+pw}" y2="${Mmax_y}"
+  ${Math.abs(M_gov) > 0.01 ? `
+  <line x1="${axis_x[iM]-col_w*0.5}" y1="${Mmax_y}" x2="${PAD_L+pw}" y2="${Mmax_y}"
     stroke="${etaCls(etaStahl??1)}" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
-  <text x="${PAD_L+col_w*2+2}" y="${Mmax_y-3}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${etaCls(etaStahl??1)}">M_max=${M_max.toFixed(1)}kNm</text>` : ''}
+  <text x="${axis_x[iM]-col_w*0.5+2}" y="${Mmax_y-3}" font-family="'DM Mono',monospace" font-size="7"
+    fill="${etaCls(etaStahl??1)}">M_max=${Math.abs(M_gov).toFixed(1)}kNm</text>` : ''}
 
   <!-- M_pl Grenzlinien -->
-  <line x1="${axis_x[2]+Mpl_px}" y1="${PAD_T}" x2="${axis_x[2]+Mpl_px}" y2="${PAD_T+ph}"
+  <line x1="${axis_x[iM]+Mpl_px}" y1="${PAD_T}" x2="${axis_x[iM]+Mpl_px}" y2="${PAD_T+ph}"
     stroke="${c_fail}" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>
-  <text x="${axis_x[2]+Mpl_px+2}" y="${PAD_T+10}" font-family="'DM Mono',monospace" font-size="6.5"
+  <text x="${axis_x[iM]+Mpl_px+2}" y="${PAD_T+10}" font-family="'DM Mono',monospace" font-size="6.5"
     fill="${c_fail}">M_pl=${(Mpl).toFixed(0)}</text>
 
-  <!-- p_u(z) Grenzspannung (Broms passive) — gestrichelt im p-Panel -->
+  <!-- p_u(z) Grenzwert der Bettungsreaktion — gestrichelte Polylinie im p-Panel -->
   ${(() => {
-    // Nur im Boden (z=0 bis L_emb), lineare Linie von 0 bis p_u_max
-    const x0 = axis_x[1] + sc_p(0);          // bei z=0: p_u=0 → Nullachse
-    const x1 = axis_x[1] + sc_p(p_u_max);    // bei z=L: p_u_max
-    const y0 = depPy(0), y1 = depPy(L_emb);
     // Reserve-Füllung zwischen p(z) und p_u(z) (nur wo p < p_u)
     const reservePts = pts_p.filter(pt=>pt.z>=0).map(pt=>{
       const pu = pu_fn(pt.z);
-      const px_mob = axis_x[1] + sc_p(Math.min(pt.v, pu));
-      const px_pu  = axis_x[1] + sc_p(pu);
+      const px_mob = axis_x[iP] + sc_p(Math.min(pt.v, pu));
+      const px_pu  = axis_x[iP] + sc_p(pu);
       return {z:pt.z, px_mob, px_pu};
     });
     const reserveFill = reservePts.map(r=>`${r.px_pu},${depPy(r.z)}`).join(' ')
       + ' ' + [...reservePts].reverse().map(r=>`${r.px_mob},${depPy(r.z)}`).join(' ');
-    // Lokale Überlastung: wo mobilisiertes p > p_u
-    const overPts = pts_p.filter(pt=>pt.z>=0 && pt.v > pu_fn(pt.z));
+    // p_u als Polylinie (schichtweise korrekt, nicht-linear bei Schichtung)
+    const puLine = reservePts.map(r=>`${r.px_pu},${depPy(r.z)}`).join(' ');
+    const last = reservePts[reservePts.length-1];
+    // Lokale Überlastung: wo mobilisiertes p > p_u (sollte bei p-y-Deckel = 0 sein)
+    const overPts = pts_p.filter(pt=>pt.z>=0 && pt.v > pu_fn(pt.z)+0.01);
     const overFill = overPts.length > 1
-      ? overPts.map(pt=>`${axis_x[1]+sc_p(pt.v)},${depPy(pt.z)}`).join(' ')
-        + ' ' + [...overPts].reverse().map(pt=>`${axis_x[1]+sc_p(pu_fn(pt.z))},${depPy(pt.z)}`).join(' ')
+      ? overPts.map(pt=>`${axis_x[iP]+sc_p(pt.v)},${depPy(pt.z)}`).join(' ')
+        + ' ' + [...overPts].reverse().map(pt=>`${axis_x[iP]+sc_p(pu_fn(pt.z))},${depPy(pt.z)}`).join(' ')
       : '';
     return `
     <!-- Reserve-Fläche (grün) zwischen p_mob und p_u -->
@@ -8452,17 +9199,22 @@ function buildPfahlSchnittSVG(params, wide=false){
     <!-- Überlastungs-Fläche (rot) wo p > p_u -->
     ${overFill ? `<polygon points="${overFill}"
       fill="${c_fail}" fill-opacity="0.20"/>` : ''}
-    <!-- p_u-Linie gestrichelt -->
-    <line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"
+    <!-- p_u-Linie gestrichelt (Polylinie) -->
+    <polyline points="${puLine}" fill="none"
       stroke="${c_ok}" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.85"/>
-    <text x="${x1+3}" y="${y1-3}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${(last?last.px_pu:axis_x[iP])+3}" y="${depPy(L_emb)-3}" font-family="'DM Mono',monospace" font-size="6.5"
       fill="${c_ok}" opacity="0.9">p_u</text>`;
   })()}
 
+  <!-- Querkraft V(z) (nur p-y): aus der Bettung; V=0 markiert M_max -->
+  ${usePy ? curve(pts_V, sc_V, axis_x[iV], c_pu_v, true) : ''}
+  ${usePy ? `<text x="${axis_x[iV]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+    text-anchor="middle" fill="${c_pu_v}">V_Kopf=${(pts_V[0]?Math.abs(pts_V[0].v):0).toFixed(0)} kN</text>` : ''}
+
   <!-- Kurven -->
-  ${curve(pts_y, sc_y, axis_x[0], c_acc, true)}
-  ${curve(pts_p.map(p=>({z:p.z, v:p.v})), sc_p, axis_x[1], c_ep, true)}
-  ${curve(pts_M, sc_M, axis_x[2], etaCls(etaStahl??1), true)}
+  ${curve(pts_y, sc_y, axis_x[iY], c_acc, true)}
+  ${curve(pts_p.map(p=>({z:p.z, v:p.v})), sc_p, axis_x[iP], c_ep, true)}
+  ${curve(pts_M, sc_M, axis_x[iM], etaCls(etaStahl??1), true)}
 
   <!-- Tiefenskala -->
   ${depScale}
@@ -8470,17 +9222,115 @@ function buildPfahlSchnittSVG(params, wide=false){
     fill="${c_xdim}" text-anchor="end">m</text>
 
   <!-- Skalenwerte unten -->
-  <text x="${axis_x[0]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iY]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
     text-anchor="middle" fill="${c_acc}">±${y_max.toFixed(1)} mm</text>
-  <text x="${axis_x[1]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iP]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
     text-anchor="middle" fill="${c_ep}">p=${Math.max(...pts_p.map(p=>Math.abs(p.v))).toFixed(0)} / p_u=${p_u_max.toFixed(0)} kN/m</text>
-  <text x="${axis_x[2]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
-    text-anchor="middle" fill="${etaCls(etaStahl??1)}">M_max=${M_max.toFixed(1)} kNm</text>
+  <text x="${axis_x[iM]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+    text-anchor="middle" fill="${etaCls(etaStahl??1)}">M_max=${Math.abs(M_gov).toFixed(1)} kNm</text>
 
-  <!-- Hinweis bei langem Pfahl -->
-  ${aL > 2.0 ? `<text x="${VB/2}" y="${H_VB-6}" font-family="'DM Mono',monospace" font-size="6.5"
-    text-anchor="middle" fill="${c_warn}">Näherung starrer Pfahl — λL=${aL.toFixed(1)} > 2.0, flexibles Verhalten möglich</text>` : ''}
+  <!-- Modell-Hinweis -->
+  ${usePy
+    ? `<text x="${VB/2}" y="${H_VB-6}" font-family="'DM Mono',monospace" font-size="6.5"
+        text-anchor="middle" fill="${c_xdim}">p-y-Bettungsbalken${params.pyNonlin?', elasto-plastisch (p≤p_u)':', linear'}${params.pyYielded?' · Boden teilw. plastisch':''} · λL=${aL.toFixed(1)} (${pfahlTypLabel})</text>`
+    : (aL > 2.0 ? `<text x="${VB/2}" y="${H_VB-6}" font-family="'DM Mono',monospace" font-size="6.5"
+        text-anchor="middle" fill="${c_warn}">Näherung starrer Pfahl — λL=${aL.toFixed(1)} > 2.0, flexibles Verhalten möglich</text>` : '')}
 </svg>`;
+}
+
+// Stützenkraft-Zerlegung am Pfahlkopf — kleines Vektordiagramm.
+// Vertikaler Pfahl + geneigte Stütze (α SIGNIERT): F_s = H_eff/cos α (Stab), zerlegt in
+// H_eff (horizontal, Broms-Lateral) + V = H_eff·|tan α| (axial). strutZug = F_s Zug/Druck;
+// pullout = Axialrichtung am Pfahl (Herausziehen vs. Druck) — kann von strutZug abweichen,
+// wenn der Pfahlkopf höher/tiefer als der Anschluss liegt (α-Vorzeichen).
+function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullout){
+  const a   = alpha_deg * Math.PI/180;                 // signiert
+  const _lt = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
+  const c_s2=_lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
+  const c_dim=_lt?'#70727e':'#787a84', c_xdim=_lt?'#9a9caa':'#4e5058';
+  const c_acc='#7c8de0', c_warn='#c9a84c', c_pu='#4db8c9';
+  const dirC = strutZug ? c_warn : c_acc;
+  const VB=270, HB=126;
+  const px=176, py=64;                                 // Pfahlkopf-Knoten
+  const Lh=104;
+  let Lv = Lh*Math.tan(a); Lv = Math.max(-44, Math.min(44, Lv));  // signiert, gedeckelt
+  const bx=px-Lh, by=py-Lv;                            // Blockanschluss (über/unter je nach Vorzeichen)
+  const arr=(x1,y1,x2,y2,col,w=1.8)=>{const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,ah=5;
+    return `<line x1="${x1}" y1="${y1}" x2="${x2-ux*ah}" y2="${y2-uy*ah}" stroke="${col}" stroke-width="${w}"/>
+    <polygon points="${x2},${y2} ${x2-ux*ah-uy*3},${y2-uy*ah+ux*3} ${x2-ux*ah+uy*3},${y2-uy*ah-ux*3}" fill="${col}"/>`;};
+  const sgnH = strutZug ? -1 : 1;          // H: zum Block (Zug, −x) / vom Block weg (Druck, +x)
+  const sgnV = pullout ? -1 : 1;           // Bild-y: hoch = Herausziehen · runter = Druck
+  const hx2  = px + sgnH*62, vy2 = py + sgnV*34;
+  // Block tiefer als Pfahlkopf? (α<0) → Hinweis
+  const lowBlock = a < -0.005;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${HB}" width="100%" style="max-width:300px;display:block">
+  <rect width="${VB}" height="${HB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
+  <text x="8" y="13" font-family="'DM Mono',monospace" font-size="7.5" letter-spacing=".05em" fill="${c_dim}">KRAFTZERLEGUNG STÜTZE → PFAHLKOPF</text>
+  <text x="${VB-7}" y="13" font-family="'DM Mono',monospace" font-size="7.5" font-weight="500" fill="${dirC}" text-anchor="end">STÜTZE ${strutZug?'ZUG':'DRUCK'}</text>
+  <!-- Block-Anschluss -->
+  <rect x="${bx-13}" y="${by-7}" width="13" height="14" rx="1" fill="${c_acc}" fill-opacity="0.5" stroke="${c_acc}" stroke-width="0.8"/>
+  <text x="${bx-6}" y="${by + (lowBlock?20:-10)}" font-family="'DM Mono',monospace" font-size="6" fill="${c_dim}" text-anchor="middle">Anschluss</text>
+  <!-- Pfahl (vertikal) -->
+  <rect x="${px-3}" y="${py-10}" width="6" height="52" rx="1" fill="${c_acc}" fill-opacity="0.5" stroke="${c_acc}" stroke-width="0.8"/>
+  <text x="${px+6}" y="${py+44}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Pfahl (vert.)</text>
+  <!-- Horizontale Referenz (gestrichelt) am Kopf -->
+  <line x1="${px-34}" y1="${py}" x2="${px}" y2="${py}" stroke="${c_dim}" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <!-- Stütze F_s entlang Achse -->
+  <line x1="${bx}" y1="${by}" x2="${px}" y2="${py}" stroke="${dirC}" stroke-width="2.4" stroke-linecap="round"/>
+  <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="'DM Mono',monospace" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)}</text>
+  <text x="${px-36}" y="${py + (lowBlock?9:-3)}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
+  <!-- H_eff horizontal (Broms-Lateral) -->
+  ${arr(px, py, hx2, py, c_pu)}
+  <text x="${hx2 + sgnH*2}" y="${py - 5}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'end':'start'}">H=${H_pf.toFixed(1)} (Broms)</text>
+  <!-- V vertikal (axial) -->
+  ${arr(px, py, px, vy2, c_pu)}
+  <text x="${px+5}" y="${vy2 + (sgnV>0?9:-3)}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">V=${V_pf.toFixed(1)} (${pullout?'Herausziehen':'Druck'})</text>
+  <text x="${VB-7}" y="${HB-6}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_xdim}" text-anchor="end">F_s=H/cos α · V=H·|tan α|</text>
+</svg>`;
+}
+
+// ── p-y-Kennlinie (Erklär-Skizze): p = min(k_s·B·y, p_u) ──────────────────────
+// Zeigt das elasto-plastische Bettungsgesetz: elastischer Anstieg (k_s·B) bis zum
+// Grenzwert p_u (Bodenfliessen), darüber konstant. Arbeitspunkt = aktuelle max.
+// Ausnutzung p/p_u im Pfahl; Reserve = Abstand zur Grenze.
+function buildPyKennlinieSVG(mobRatio, yielded){
+  const _lt = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
+  const c_s2=_lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740', c_dim=_lt?'#70727e':'#787a84',
+        c_xdim=_lt?'#9a9caa':'#4e5058', c_acc='#7c8de0', c_ok='#6fcf8e', c_pu='#4db8c9', c_warn='#c9a84c';
+  const VB=300, HB=148, PADL=20, PADB=26, PADT=22, PADR=58;
+  const x0=PADL, y0=HB-PADB, pw=VB-PADL-PADR, ph=HB-PADT-PADB;
+  const yYx = x0 + pw*0.46;                 // Fliessknick (Verschiebung y bei p=p_u)
+  const puY = PADT + ph*0.10;               // p_u-Niveau
+  const mob = Math.max(0.04, Math.min(1, isFinite(mobRatio)?mobRatio:0.5));
+  let wx, wy, onPlateau = (mob>=0.999)||yielded;
+  if(onPlateau){ wx = yYx + (x0+pw - yYx)*0.45; wy = puY; }
+  else { wx = x0 + (yYx-x0)*mob; wy = y0 + (puY-y0)*mob; }
+  const wc = onPlateau ? c_warn : c_ok;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${HB}" width="100%" style="max-width:320px;display:block">
+  <rect width="${VB}" height="${HB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
+  <text x="${VB/2}" y="13" font-family="'DM Mono',monospace" font-size="7.5" letter-spacing=".06em" text-anchor="middle" fill="${c_dim}">p-y-KENNLINIE  ·  p = min(k_s·B·y , p_u)</text>
+  <!-- Achsen -->
+  <line x1="${x0}" y1="${PADT-4}" x2="${x0}" y2="${y0}" stroke="${c_dim}" stroke-width="0.8"/>
+  <line x1="${x0}" y1="${y0}" x2="${x0+pw+6}" y2="${y0}" stroke="${c_dim}" stroke-width="0.8"/>
+  <text x="${x0-3}" y="${PADT+2}" font-family="'DM Mono',monospace" font-size="7" text-anchor="end" fill="${c_dim}">p</text>
+  <text x="${x0+pw+6}" y="${y0+10}" font-family="'DM Mono',monospace" font-size="7" text-anchor="end" fill="${c_dim}">y</text>
+  <!-- p_u-Niveau gestrichelt -->
+  <line x1="${x0}" y1="${puY}" x2="${x0+pw}" y2="${puY}" stroke="${c_pu}" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="${x0+pw+4}" y="${puY+3}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">p_u</text>
+  <text x="${x0+pw+4}" y="${puY+13}" font-family="'DM Mono',monospace" font-size="6" fill="${c_xdim}">Boden-</text>
+  <text x="${x0+pw+4}" y="${puY+21}" font-family="'DM Mono',monospace" font-size="6" fill="${c_xdim}">fliessen</text>
+  <!-- Reserve-Band (Arbeitspunkt → p_u) -->
+  ${!onPlateau ? `<line x1="${wx}" y1="${wy}" x2="${wx}" y2="${puY}" stroke="${c_ok}" stroke-width="0.7" stroke-dasharray="2,2" opacity="0.8"/>
+  <text x="${wx+3}" y="${(wy+puY)/2+2}" font-family="'DM Mono',monospace" font-size="6" fill="${c_ok}">Reserve</text>`:''}
+  <!-- Kennlinie: elastisch + Plateau -->
+  <path d="M ${x0},${y0} L ${yYx},${puY} L ${x0+pw},${puY}" fill="none" stroke="${c_acc}" stroke-width="1.8"/>
+  <!-- Steigung-Label -->
+  <text x="${x0+(yYx-x0)*0.5-2}" y="${y0-(y0-puY)*0.5-3}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_acc}" transform="rotate(-32 ${x0+(yYx-x0)*0.5} ${y0-(y0-puY)*0.5})">k_s·B (elastisch)</text>
+  <text x="${(yYx+x0+pw)/2}" y="${puY-4}" font-family="'DM Mono',monospace" font-size="6.5" text-anchor="middle" fill="${c_warn}">plastisch (p = p_u)</text>
+  <!-- Arbeitspunkt -->
+  <circle cx="${wx}" cy="${wy}" r="3" fill="${wc}" stroke="${c_s2}" stroke-width="0.8"/>
+  <text x="${wx}" y="${y0+10}" font-family="'DM Mono',monospace" font-size="6.5" text-anchor="middle" fill="${wc}">Arbeitspkt. ${(mob*100).toFixed(0)}%</text>
+  </svg>`;
 }
 
 function buildPfahlSystemSVG(params, wide=false){
@@ -8489,15 +9339,21 @@ function buildPfahlSystemSVG(params, wide=false){
          d_krit_ov, r_overlap, f_overlap, z_ov, f_shadow, Hu_1, Hu_gruppe, H_pfahl_total,
          eta_H, eta_V, etaStahl, delta_gruppe_mm, neig_mm_m, n, typ,
          k_s, alpha_lat, gamma_R, aL, pfahlTypLabel, d_krit_v,
-         pfaehle_im_aushub, Hu_1k, ex_seite, fall_zug} = params;
+         pfaehle_im_aushub, Hu_1k, ex_seite, fall_zug, kp_eff, betaRed,
+         exClipRed, L_horiz_ex, puAt, puAtEx} = params;
 
   const phi   = phi_deg * Math.PI/180;
-  const Kp    = Math.tan(Math.PI/4 + phi/2)**2;
+  const Kp    = kp_eff ?? Math.tan(Math.PI/4 + phi/2)**2;
   const g2sys = (gamma2 != null) ? gamma2 : gamma;
   const zgwS  = (z_gw != null && isFinite(z_gw)) ? z_gw : Infinity;
   const g_eff_s = z => z < zgwS ? gamma : g2sys;
-  const p_max = 3 * Kp * g_eff_s(L_emb) * L_emb * B_pf;
-  const z_r   = (2*L_emb + 3*e_h) * L_emb / (3*(2*e_h + L_emb));  // NL-Tiefe
+  // p_u(z) [kN/m] — bevorzugt die Berechnungs-Hüllkurve (schichtweise/GW/Böschung),
+  // Fallback homogen. puR = reduziert (Aushub-Clip, Zugfall); puF = voll (Referenz).
+  const puF = z => puAt ? Math.max(0, puAt(Math.max(0,z))) : 3*Kp*g_eff_s(z)*z*B_pf;
+  const puR = z => puAtEx ? Math.max(0, puAtEx(Math.max(0,z))) : puF(z);
+  let p_max = puF(L_emb);
+  for(let i=0;i<=20;i++) p_max = Math.max(p_max, puF(i/20*L_emb));
+  const z_r   = (2*L_emb + 3*e_h) * L_emb / (3*(2*e_h + L_emb));  // (nur noch Layout-Hilfsgrösse)
 
   // ── Layout
   const VB = 430, H_VB = wide ? 440 : 350;
@@ -8543,22 +9399,17 @@ function buildPfahlSystemSVG(params, wide=false){
   const pp_sgn = zugS ? -1 : 1;
   const pp_x   = v => pp_x0 + pp_sgn * (v / Math.max(0.1, p_max)) * pp_avl * 0.88;
   const nSeg = 24;
-  const zr_c = Math.max(0.1, Math.min(z_r, L_emb));
-  let epPts = `${pp_x0},${gok_y}`;          // Hüllkurve (Grenzwert, voll)
-  for(let i=0; i<=nSeg; i++){
-    const t  = i/nSeg;
-    const zz = t * L_emb;
-    epPts += ` ${pp_x(3*Kp*g_eff_s(zz)*zz*B_pf)},${depY(zz)}`;
-  }
+  const _tanW_s = Math.tan(Math.PI/4 + phi/2);
+  const exA     = !!fall_zug && (exClipRed > 0.005) && d_ex > 0.05 && (L_horiz_ex > 0);
+  const zClear  = exA ? L_horiz_ex / _tanW_s : 0;
+  // p_u-Grenzhüllkurve (voll, 0…L) — schichtweise aus puF. Bei Aushub-Clip zusätzlich die
+  // reduzierte Hüllkurve puR (gefüllt) → die Abminderung wird als Differenz sichtbar.
+  let epPts = `${pp_x0},${gok_y}`;
+  for(let i=0; i<=nSeg; i++){ const zz = i/nSeg*L_emb; epPts += ` ${pp_x(puF(zz))},${depY(zz)}`; }
   epPts += ` ${pp_x0},${pl_by}`;
-  let epFrontPts = `${pp_x0},${gok_y}`;     // gefüllt: 0…z_r (vorderseitig)
-  for(let i=0; i<=nSeg; i++){
-    const t  = i/nSeg;
-    const zz = t * zr_c;
-    epFrontPts += ` ${pp_x(3*Kp*g_eff_s(zz)*zz*B_pf)},${depY(zz)}`;
-  }
-  epFrontPts += ` ${pp_x0},${depY(zr_c)}`;
-  const p_zr = 3*Kp*g_eff_s(zr_c)*zr_c*B_pf;   // Druck am Drehpunkt [kPa]
+  let epRedPts = `${pp_x0},${gok_y}`;
+  for(let i=0; i<=nSeg; i++){ const zz = i/nSeg*L_emb; epRedPts += ` ${pp_x(puR(zz))},${depY(zz)}`; }
+  epRedPts += ` ${pp_x0},${pl_by}`;
 
   // Überlappungszone
   const ov_l = blk_r, ov_r = Math.min(pile_l - 1, wd_tip_x);
@@ -8645,50 +9496,31 @@ function buildPfahlSystemSVG(params, wide=false){
     fill="${c_fail}" fill-opacity="0.10" stroke="${c_fail}" stroke-width="0.7" stroke-dasharray="2,1.5"/>
   ${ovHatch}` : ''}
 
-  <!-- Broms 3B-Einflusszone (auf der Widerstandsseite des Pfahls) -->
-  ${(() => {
-    const broms3B_px = Math.max(20, 3 * B_pf * geo_sc);
-    const bz_l = zugS ? Math.max(blk_r + 2, pile_r - broms3B_px) : pile_l;
-    const bz_r = zugS ? pile_r : Math.min(ep_xmax, pile_l + broms3B_px);
-    return `<rect x="${bz_l}" y="${gok_y}" width="${bz_r - bz_l}" height="${pl_by - gok_y}"
-      fill="${c_acc}" fill-opacity="0.10" stroke="${c_acc}" stroke-width="0.9" stroke-dasharray="3,2"/>
-    <text x="${(bz_l + bz_r)/2}" y="${gok_y + (pl_by-gok_y)*0.82}"
-      font-family="'DM Mono',monospace" font-size="7" fill="${c_acc}" text-anchor="middle">3·B</text>`;
-  })()}
-
-  <!-- Pfahl-Bodenpressung (Broms, türkis): Grenzwert-Hüllkurve gestrichelt,
-       mobilisierbarer Anteil 0…z_r gefüllt, Fussreaktion unter Drehpunkt -->
-  <polygon points="${epPts}" fill="${c_pu}" fill-opacity="0.06"
-    stroke="${c_pu}" stroke-width="0.9" stroke-dasharray="4,3"/>
-  <polygon points="${epFrontPts}" fill="${c_pu}" fill-opacity="0.30" stroke="${c_pu}" stroke-width="1"/>
-  <line x1="${pp_x0}" y1="${depY(zr_c)}" x2="${pp_x(p_zr)}" y2="${depY(zr_c)}"
-    stroke="${c_pu}" stroke-width="1"/>
-  <text x="${pp_x(p_zr) + (zugS?-4:4)}" y="${depY(zr_c)-2}" font-family="'DM Mono',monospace"
-    font-size="7" fill="${c_pu}" text-anchor="${zugS?'end':'start'}">${p_zr.toFixed(0)} kPa</text>
+  <!-- Pfahl-Bettungsgrenzwert p_u(z) (türkis): Grenzhüllkurve der Bettungsreaktion
+       (= Kapazität). Voll gestrichelt; bei Aushub-Clip zusätzlich die reduzierte
+       Hüllkurve gefüllt (Differenz = Verlust). Die mobilisierte Reaktion steht im
+       p-y-Schnittgrössen-Diagramm — hier nur die Grenze. -->
+  ${exA ? `<polygon points="${epRedPts}" fill="${c_pu}" fill-opacity="0.16"
+    stroke="${c_pu}" stroke-width="1"/>` : ''}
+  <polygon points="${epPts}" fill="${exA?'none':c_pu}" fill-opacity="0.10"
+    stroke="${exA?c_warn:c_pu}" stroke-width="1" stroke-dasharray="4,3"/>
   <text x="${zugS?pp_x0:ep_xmax}" y="${pl_by+9}" font-family="'DM Mono',monospace"
-    font-size="7" fill="${c_pu}" opacity="0.75" text-anchor="end">${p_max.toFixed(0)} kPa (Grenzwert)</text>
+    font-size="7" fill="${c_pu}" opacity="0.8" text-anchor="end">p_u,max=${p_max.toFixed(0)} kN/m</text>
   <text x="${pp_x(p_max*0.6)}" y="${gok_y+12}" font-family="'DM Mono',monospace"
-    font-size="7" fill="${c_pu}" text-anchor="${zugS?'end':'start'}">3·Kp·γ·z·B${zugS?' (Zugfall, gespiegelt)':''}</text>
-  <!-- Fussreaktion (Broms-Vereinfachung der rückseitigen Reaktion unter z_r):
-       wirkt der Pfahlbewegung am Fuss entgegen — Druckfall von hinten (links),
-       Zugfall von vorne (rechts) -->
-  ${(() => {
-    const fy = pl_by - 5;
-    if(zugS){
-      const fx0 = Math.min(ep_xmax - 4, pile_r + 34);
-      return `<line x1="${fx0}" y1="${fy}" x2="${pile_r+7}" y2="${fy}"
-        stroke="${c_pu}" stroke-width="1.3"/>
-      <polygon points="${pile_r+2},${fy} ${pile_r+9},${fy-4} ${pile_r+9},${fy+4}" fill="${c_pu}"/>
-      <text x="${fx0}" y="${fy-4}" font-family="'DM Mono',monospace" font-size="6.5"
-        fill="${c_pu}" text-anchor="end">R_Fuss</text>`;
-    }
-    const fx0 = Math.max(blk_r + 4, pile_l - 34);
-    return `<line x1="${fx0}" y1="${fy}" x2="${pile_l-7}" y2="${fy}"
-      stroke="${c_pu}" stroke-width="1.3"/>
-    <polygon points="${pile_l-2},${fy} ${pile_l-9},${fy-4} ${pile_l-9},${fy+4}" fill="${c_pu}"/>
-    <text x="${fx0}" y="${fy-4}" font-family="'DM Mono',monospace" font-size="6.5"
-      fill="${c_pu}" text-anchor="start">R_Fuss</text>`;
-  })()}
+    font-size="7" fill="${c_pu}" text-anchor="${zugS?'end':'start'}">p_u (Grenzwert Bettung)${zugS?' · Zugfall':''}</text>
+  <!-- Aushub-Begrenzung (Zugfall): z_clear-Marke + Verlust-Label -->
+  ${exA ? (() => {
+    const zc_y = depY(Math.min(zClear, L_emb));
+    const lx = pile_r + 5;
+    return `<line x1="${zugS?pile_l:pile_r}" y1="${zc_y}" x2="${lx}" y2="${zc_y}" stroke="${c_warn}" stroke-width="0.5" stroke-dasharray="1,1" opacity="0.6"/>
+    <text x="${lx}" y="${zc_y-2}" font-family="'DM Mono',monospace" font-size="6.5"
+      fill="${c_warn}" text-anchor="start">z_clear=${zClear.toFixed(1)}m</text>
+    <text x="${lx}" y="${zc_y+8}" font-family="'DM Mono',monospace" font-size="6.5"
+      fill="${c_warn}" text-anchor="start">Bruchkörper→Aushub: H_u −${(exClipRed*100).toFixed(0)}%</text>` ;
+  })() : ''}
+  <!-- Richtungsannotation Zug/Druck am Pfahlkopf -->
+  <text x="${pile_cx}" y="${pl_ty-4}" font-family="'DM Mono',monospace" font-size="6.5"
+    text-anchor="middle" fill="${zugS?c_warn:c_acc}">${zugS?'ZUG → Keil zum Aushub':'DRUCK → Keil vom Block weg'}</text>
 
   <!-- Block -->
   <rect x="${blk_l}" y="${blk_ty}" width="${blk_r-blk_l}" height="${blk_by-blk_ty}"
@@ -8726,14 +9558,6 @@ function buildPfahlSystemSVG(params, wide=false){
   <!-- Aushub -->
   ${excLine}
 
-  <!-- NL -->
-  ${z_r>0&&z_r<L_emb ? `
-  <line x1="${PAD_L}" y1="${nl_y}" x2="${VB-PAD_R}" y2="${nl_y}"
-    stroke="${c_ok}" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
-  <circle cx="${pile_cx}" cy="${nl_y}" r="3" fill="none" stroke="${c_ok}" stroke-width="1.2"/>
-  <text x="${pile_r+4}" y="${nl_y-3}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_ok}">NL z=${Math.min(z_r,L_emb).toFixed(2)}m</text>` : ''}
-
   <!-- H Pfeil: Druckfall stösst den Pfahl vom Block weg (→), Zugfall zieht ihn hin (←) -->
   ${zugS ? `
   <line x1="${pile_l-2}" y1="${h_arr_y}" x2="${blk_r+12}" y2="${h_arr_y}"
@@ -8749,12 +9573,13 @@ function buildPfahlSystemSVG(params, wide=false){
   <text x="${PAD_L+4}" y="${h_arr_y-4}" font-family="'DM Mono',monospace" font-size="7.5"
     fill="${c_acc}">H=${H_pfahl_total.toFixed(1)}kN</text>`}
 
-  <!-- H_u,1 Resultante Pfeil (Schwerpunkt des mobilisierbaren Anteils 0…z_r),
-       wirkt der Pfahlbewegung entgegen: Druckfall ← · Zugfall → -->
+  <!-- H_u,1 Netto-Lateraltragfähigkeit (Resultante der p_u-Grenzhüllkurve, Schwerpunkt
+       ~2/3·L), wirkt der Pfahlbewegung entgegen: Druckfall ← · Zugfall → -->
   ${(() => {
-    const arr_y = depY(zr_c*2/3);
+    const z_res = L_emb*2/3;
+    const arr_y = depY(z_res);
     if(zugS){
-      const arr_x1 = Math.max(blk_r + 4, pp_x(3*Kp*g_eff_s(zr_c*2/3)*(zr_c*2/3)*B_pf) - 30);
+      const arr_x1 = Math.max(blk_r + 4, pp_x(puF(z_res)) - 30);
       const arr_x2 = pile_l - 7;
       return `<line x1="${arr_x1}" y1="${arr_y}" x2="${arr_x2}" y2="${arr_y}"
         stroke="${c_pu}" stroke-width="1.4"/>
@@ -8762,7 +9587,7 @@ function buildPfahlSystemSVG(params, wide=false){
       <text x="${pile_r+6}" y="${arr_y+12}" font-family="'DM Mono',monospace" font-size="7"
         fill="${c_pu}">H_u,1=${Hu_1.toFixed(1)}kN (γ_R=${gamma_R.toFixed(2)})</text>`;
     }
-    const arr_x1 = Math.min(ep_xmax - 4, pp_x(3*Kp*g_eff_s(zr_c*2/3)*(zr_c*2/3)*B_pf) + 38);
+    const arr_x1 = Math.min(ep_xmax - 4, pp_x(puF(z_res)) + 38);
     const arr_x2 = ep_x0 + 3;
     return `<line x1="${arr_x1}" y1="${arr_y}" x2="${arr_x2}" y2="${arr_y}"
       stroke="${c_pu}" stroke-width="1.4"/>
@@ -8810,10 +9635,10 @@ function buildPfahlSystemSVG(params, wide=false){
   <!-- Legende -->
   <rect x="${PAD_L}"     y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_ep}" fill-opacity="0.4" stroke="${c_ep}" stroke-width="0.7"/>
   <text x="${PAD_L+10}"  y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Rankine (Block)</text>
-  <rect x="${PAD_L+82}"  y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_pu}" fill-opacity="0.30" stroke="${c_pu}" stroke-width="0.7"/>
-  <text x="${PAD_L+92}"  y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">p_u Pfahl (0…z_r)</text>
-  <rect x="${PAD_L+178}" y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_acc}" fill-opacity="0.25" stroke="${c_acc}" stroke-width="0.7" stroke-dasharray="2,1"/>
-  <text x="${PAD_L+188}" y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Broms 3·B</text>
+  <rect x="${PAD_L+82}"  y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_pu}" fill-opacity="0.20" stroke="${c_pu}" stroke-width="0.7" stroke-dasharray="2,1"/>
+  <text x="${PAD_L+92}"  y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">p_u (Grenzwert)</text>
+  ${exA ? `<rect x="${PAD_L+178}" y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_pu}" fill-opacity="0.16" stroke="${c_pu}" stroke-width="0.7"/>
+  <text x="${PAD_L+188}" y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">p_u reduz. (Aushub)</text>` : ''}
   ${showOv ? `<rect x="${PAD_L+248}" y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_fail}" fill-opacity="0.4" stroke="${c_fail}" stroke-width="0.7"/>
   <text x="${PAD_L+258}" y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_fail}">Überlappung</text>` : ''}
 
