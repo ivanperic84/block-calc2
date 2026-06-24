@@ -52,19 +52,53 @@ html, body {
 /* ═══════════════════════════════════════════
    APP SHELL — Desktop 3-col
    ═══════════════════════════════════════════ */
-.app { display:grid; grid-template-rows:48px 1fr 26px; height:100dvh; }
-.workspace { display:grid; grid-template-columns:var(--col-l,350px) minmax(0,1fr) var(--col-r,320px); overflow:hidden; min-height:0; position:relative; transition:grid-template-columns 0.22s ease; }
+.app { display:grid; grid-template-rows:48px 1fr 26px; height:100dvh; position:relative; }
+/* Projekt-Banner: vertikal ausklappbar aus der Topbar (Projektangaben/Metadaten) */
+.proj-banner { position:absolute; top:48px; left:0; right:0; z-index:24; background:var(--s1);
+  border-bottom:1px solid var(--ol); box-shadow:0 10px 26px rgba(0,0,0,.32);
+  overflow:hidden; max-height:0; transition:max-height .28s ease; }
+.proj-banner.open { max-height:min(78vh, 600px); }
+.proj-banner-inner { padding:14px 18px; max-height:min(76vh, 560px); overflow-y:auto; }
+.pb-cols { display:flex; gap:20px; align-items:flex-start; }
+.pb-col { flex:1 1 0; min-width:0; }
+.pb-col.pb-col-wide { flex:1.7 1 0; }
+.pb-col-h { font-family:var(--f-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--acc); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--ol); }
+.pb-grid2 { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:7px 12px; }
+.pb-grid2 .pb-wide { grid-column:span 2; }
+.pb-projlist { max-height:240px; overflow-y:auto; }
+@media (max-width:900px){ .pb-cols { flex-wrap:wrap; } .pb-col, .pb-col.pb-col-wide { flex:1 1 100%; } }
+/* Topbar-Toggle (Projektname + Chevron) */
+.tb-proj-btn { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--ol); cursor:pointer;
+  padding:5px 12px; border-radius:7px; color:inherit; transition:background .15s, border-color .15s; max-width:46vw; }
+.tb-proj-btn:hover { background:var(--s3); border-color:var(--acc); }
+.tb-proj-btn.open { background:var(--acc-s); border-color:var(--acc); }
+.tb-proj-btn .tb-proj { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tb-proj-btn .pbn-chev { flex:none; color:var(--acc); transition:transform .26s ease; }
+.tb-proj-btn.open .pbn-chev { transform:rotate(180deg); }
+/* Live-Plausibilität: Warnzeilen oben im Eingabe-Panel */
+#plaus-bar { display:flex; flex-direction:column; gap:4px; margin:0 0 8px; }
+.plaus-item { font-family:var(--f-mono); font-size:9px; line-height:1.35; padding:5px 8px; border-radius:5px; border:1px solid; }
+.plaus-item.plaus-warn { color:var(--warn); border-color:var(--warn); }
+.plaus-item.plaus-fail { color:var(--fail); border-color:var(--fail); }
+/* Pflichtfeld-Markierung (kurz rot) */
+input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outline-offset:1px; border-color:var(--fail)!important; }
+/* Speichern-Button: Punkt bei ungespeicherten Änderungen */
+#btn-save { position:relative; }
+#btn-save.dirty::after { content:''; position:absolute; top:1px; right:1px; width:8px; height:8px; border-radius:50%;
+  background:var(--warn); border:1.5px solid var(--s1); }
+.workspace { display:grid; grid-template-columns:var(--col-l,400px) minmax(0,1fr); overflow:hidden; min-height:0; position:relative; transition:grid-template-columns 0.22s ease; }
 .workspace.resizing { transition:none; }   /* 1:1 beim Ziehen, kein Lag */
 /* Splitter-Griffe (OnePlus-Open-Stil): dünne Linie + Pille. Ziehen = stufenlos, Tippen = Snap-Zyklus */
 .ws-split { position:absolute; top:0; bottom:0; width:16px; z-index:15; cursor:col-resize; touch-action:none;
   display:flex; align-items:center; justify-content:center; }
-.ws-split::before { content:''; width:1px; height:100%; background:var(--ol); transition:background .15s; }
-.ws-split::after { content:''; position:absolute; width:4px; height:38px; border-radius:3px; background:var(--ol); transition:background .15s, height .15s; }
+.ws-split::before { content:''; width:2px; height:100%; background:var(--ol); transition:background .15s; }
+.ws-split::after { content:''; position:absolute; width:6px; height:52px; border-radius:3px; background:var(--dim);
+  box-shadow:0 1px 4px rgba(0,0,0,.35); transition:background .15s, height .15s, box-shadow .15s; }
 .ws-split:hover::before, .ws-split.drag::before { background:var(--acc); }
-.ws-split:hover::after, .ws-split.drag::after { background:var(--acc); height:60px; }
-#ws-split-l { left:calc(var(--col-l,350px) - 8px); }
-#ws-split-r { right:calc(var(--col-r,320px) - 8px); }
-/* Foldable: Ergebnis-Schublade + Greif-Lasche (nur im mittleren Breitenbereich aktiv) */
+.ws-split:hover::after, .ws-split.drag::after { background:var(--acc); height:68px; box-shadow:0 0 0 3px var(--acc-s); }
+#ws-split-l { left:calc(var(--col-l,400px) - 8px); }
+/* Ergebnis-Schublade: Griff nur ≥768px sichtbar (Smartphone nutzt Tabs) */
 .res-drawer-tab { display:none; }
 
 /* ═══════════════════════════════════════════
@@ -699,6 +733,8 @@ html, body {
   .app { grid-template-rows:52px 1fr; }
   .workspace { grid-template-columns:1fr!important; position:relative; }
   .ws-split { display:none; }   /* Splitter nur Desktop/Foldable; Smartphone nutzt Tabs */
+  .proj-banner { top:52px; }    /* Topbar ist auf Mobile 52px hoch */
+  .pb-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
   .statusbar { display:none; }
   .tb-sub { display:none; }
   .topbar { padding:0 10px; gap:6px; }
@@ -742,29 +778,40 @@ html, body {
 }
 
 /* ═══════════════════════════════════════════
-   FOLDABLE / kleines Tablet (768–1024px):
-   zwei Panes (Eingabe | Viewer) per Splitter, Ergebnisse als Schublade von rechts
+   ERGEBNIS-SCHUBLADE (Desktop + Foldable, ≥768px)
+   Nachweise als ausfahrbare Schublade von rechts; Griff zeigt den GLOBALEN Nachweis-Status
+   (Erfüllt/Nicht erfüllt, farbig). Standard eingeklappt (Fokus 3D), Zustand wird gemerkt.
+   Links bleibt das Eingabe-Panel als per Splitter resizebare Spalte.
    ═══════════════════════════════════════════ */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .workspace { grid-template-columns: var(--col-l,340px) minmax(0,1fr); }
-  #ws-split-r { display:none; }                      /* rechter Splitter entfällt (Schublade) */
+@media (min-width: 768px) {
   #panel-results {
-    position:absolute; top:0; right:0; bottom:0; width:min(440px, 74%);
+    position:absolute; top:0; right:0; bottom:0; width:clamp(360px, 30vw, 560px);
     transform:translateX(100%); transition:transform .26s ease; z-index:18;
     border-left:1px solid var(--ol); box-shadow:-10px 0 28px rgba(0,0,0,.45);
   }
   .workspace.res-open #panel-results { transform:none; }
+  .workspace.res-wide-diag.res-open #panel-results { width:clamp(520px, 46vw, 780px); }  /* Diagramm expandiert */
   .res-drawer-tab {
-    display:flex; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
     position:absolute; top:50%; right:0; transform:translateY(-50%);
-    width:24px; height:66px; border:1px solid var(--ol); border-right:none;
-    border-radius:8px 0 0 8px; background:var(--s2); color:var(--on);
-    z-index:19; cursor:pointer; transition:right .26s ease, background .15s;
+    width:30px; min-height:128px; padding:12px 0; border:1px solid var(--ol); border-right:none;
+    border-radius:9px 0 0 9px; background:var(--s2); color:var(--dim);
+    z-index:19; cursor:pointer; transition:right .26s ease, background .15s, color .15s, border-color .15s;
   }
   .res-drawer-tab:hover { background:var(--s3); }
-  .workspace.res-open .res-drawer-tab { right:min(440px, 74%); }
-  .res-drawer-tab svg { transition:transform .26s ease; }
-  .workspace.res-open .res-drawer-tab svg { transform:rotate(180deg); }
+  .res-drawer-tab .rdt-label { writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--f-mono);
+    font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
+  .res-drawer-tab .rdt-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
+  .res-drawer-tab.ok   { color:var(--ok);   border-color:var(--ok);   }
+  .res-drawer-tab.ok   .rdt-dot { background:var(--ok);   }
+  .res-drawer-tab.fail { color:var(--fail); border-color:var(--fail); }
+  .res-drawer-tab.fail .rdt-dot { background:var(--fail); }
+  .res-drawer-tab.warn { color:var(--warn); border-color:var(--warn); }
+  .res-drawer-tab.warn .rdt-dot { background:var(--warn); }
+  .workspace.res-open .res-drawer-tab { right:clamp(360px, 30vw, 560px); }
+  .workspace.res-wide-diag.res-open .res-drawer-tab { right:clamp(520px, 46vw, 780px); }
+  .res-drawer-tab .rdt-chev { transition:transform .26s ease; }
+  .workspace.res-open .res-drawer-tab .rdt-chev { transform:rotate(180deg); }
 }
 
 /* Lastniveaus Tabelle */
@@ -795,7 +842,10 @@ html, body {
   <span class="tb-logo">BlockCalc</span>
   <span class="tb-sub">SIA 267</span>
   <div class="tb-sep"></div>
-  <span class="tb-proj" id="tb-projname" style="position:absolute;left:50%;transform:translateX(-50%);pointer-events:none"></span>
+  <button class="tb-proj-btn" id="proj-banner-btn" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" style="position:absolute;left:50%;transform:translateX(-50%)">
+    <span class="tb-proj" id="tb-projname"></span>
+    <svg class="pbn-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
   <!-- Icon-Buttons zentriert auf Breite der Nachweise-Sidebar (320px) -->
   <div style="width:320px;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;margin-left:auto">
     <button class="btn btn-icon" onclick="openHandbuch()" title="Handbuch">
@@ -827,86 +877,47 @@ html, body {
 </header>
 
 <!-- ═══════════════════════════════════════════
-     WORKSPACE
+     PROJEKT-BANNER (Metadaten, vertikal ausklappbar aus der Topbar)
      ═══════════════════════════════════════════ -->
-<div class="workspace">
-
-  <!-- Splitter-Griffe: ziehen = Breite stufenlos, tippen = Schnellbreiten (Snap-Zyklus) -->
-  <div class="ws-split" id="ws-split-l" title="Ziehen: Breite anpassen · Tippen: Schnellbreiten"></div>
-  <div class="ws-split" id="ws-split-r" title="Ziehen: Breite anpassen · Tippen: Schnellbreiten"></div>
-  <!-- Foldable: Lasche zum Ein-/Ausfahren der Ergebnis-Schublade -->
-  <button class="res-drawer-tab" id="res-drawer-tab" onclick="toggleResDrawer()" title="Nachweise ein-/ausblenden" aria-label="Nachweise ein-/ausblenden">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg>
-  </button>
-
-  <!-- ── LEFT: INPUT PANEL ── -->
-  <div class="panel panel-l" id="panel-input">
-    <nav class="nav-tabs">
-      <div class="nav-tab active" onclick="switchTab('projekt')">Projekt</div>
-      <div class="nav-tab" onclick="switchTab('geometrie')">Geo</div>
-      <div class="nav-tab" onclick="switchTab('baugrund')">Boden</div>
-      <div class="nav-tab" onclick="switchTab('lasten')">Lasten</div>
-      <div class="nav-tab" id="tab-nav-sicherung" onclick="switchTab('sicherung')" style="display:none">Sicherung</div>
-    </nav>
-    <div class="panel-scroll">
-
-      <!-- PROJEKT -->
-      <div id="tab-projekt" class="tab-panel active">
-        <!-- Hidden p_name für FDS-Kompatibilität; wird per JS gesetzt -->
+<div class="proj-banner" id="proj-banner">
+  <div class="proj-banner-inner">
+    <div class="pb-cols">
+      <!-- Spalte 1: Projekt & Angaben -->
+      <div class="pb-col pb-col-wide">
+        <div class="pb-col-h">Projekt &amp; Angaben</div>
         <input id="p_name" type="hidden" value=""/>
-
-        <div class="sec">Speichern</div>
-
-        <!-- 1. Projekt-Dropdown (Ordner/Gruppe) -->
-        <div class="field">
-          <label>Projekt</label>
+        <div class="field"><label>Projekt</label>
           <select id="proj-sel" onchange="onProjSelChange()" style="width:100%;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:11px;cursor:pointer;outline:none">
             <option value="">— Projekt auswählen —</option>
           </select>
         </div>
-
-        <!-- 2. Neuer Projektname (nur bei "+ Neues Projekt") -->
-        <div id="new-proj-name-field" class="field" style="display:none">
-          <label>Projektname</label>
-          <input id="new-proj-name" type="text" placeholder="z.B. Fahrleitungsmast FM-01" oninput="si('p_name',this.value);updateSB()"/>
-        </div>
-
-        <!-- 3. Fundamentbezeichnung (immer sichtbar) -->
-        <div class="field">
-          <label>Fundamentbezeichnung</label>
-          <input id="p_fundname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="updateSB()"/>
-        </div>
-
-        <!-- 4. Weitere Angaben -->
-        <div class="g2">
+        <div id="new-proj-name-field" class="field" style="display:none"><label>Projektname</label><input id="new-proj-name" type="text" placeholder="z.B. Fahrleitungsmast FM-01" oninput="si('p_name',this.value);updateSB()"/></div>
+        <div class="pb-grid2" style="margin-top:6px">
+          <div class="field pb-wide"><label>Fundamentbezeichnung</label><input id="p_fundname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="updateSB()"/></div>
           <div class="field"><label>Projektnummer</label><input id="p_nr" type="text"/></div>
-          <div class="field"><label>Datum</label><input id="p_datum" type="date"/></div>
-        </div>
-        <div class="g2">
-          <div class="field"><label>KM</label><input id="p_km" type="text" placeholder="000.000" style="font-family:var(--f-mono)"/></div>
           <div class="field"><label>Mast-Nr.</label><input id="p_mastnr" type="text" placeholder="M-001"/></div>
+          <div class="field"><label>Datum</label><input id="p_datum" type="date"/></div>
+          <div class="field"><label>KM</label><input id="p_km" type="text" placeholder="000.000" style="font-family:var(--f-mono)"/></div>
+          <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text" oninput="SETTINGS.bearbeiter=this.value;dbSet('bc_settings',SETTINGS)"/></div>
+          <div class="field pb-wide"><label>Bemerkung</label><input id="p_bemerk" type="text"/></div>
         </div>
-        <div class="field"><label>Bearbeiter</label><input id="p_bearbeiter" type="text" oninput="SETTINGS.bearbeiter=this.value;dbSet('bc_settings',SETTINGS)"/></div>
-        <div class="field"><label>Bemerkung</label><input id="p_bemerk" type="text"/></div>
-
-        <!-- 5. Speichern-Button (immer neuer Eintrag) -->
-        <button class="btn btn-tonal btn-full btn-sm" style="margin-top:4px;margin-bottom:4px" onclick="saveNewEntry()">
-          + Neuer Eintrag
-        </button>
-
-        <!-- Templates -->
-        <div class="sec" style="margin-top:8px">Templates</div>
-        <div class="hint">Grundkonfiguration laden oder eigenes Template speichern.</div>
+        <button class="btn btn-tonal btn-full btn-sm" style="margin-top:8px" onclick="saveNewEntry()" title="Speichert die aktuelle Berechnung als neues Fundament im gewählten Projekt">+ Neues Fundament speichern</button>
+      </div>
+      <!-- Spalte 2: Templates -->
+      <div class="pb-col">
+        <div class="pb-col-h">Templates</div>
+        <div class="hint" style="margin-top:0">Grundkonfiguration laden oder eigenes Template speichern.</div>
         <div class="tpl-grid" id="tpl-grid"></div>
         <button class="btn btn-tonal btn-full btn-sm" style="margin-top:8px" onclick="saveAsTemplate()">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
           Aktuellen Stand als Template speichern
         </button>
-
-        <!-- Gespeicherte Projekte -->
-        <div class="sec" style="margin-top:12px"><span>Gespeicherte Projekte</span></div>
-        <div id="proj-list"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      </div>
+      <!-- Spalte 3: Gespeicherte Projekte -->
+      <div class="pb-col">
+        <div class="pb-col-h">Gespeicherte Projekte</div>
+        <div id="proj-list" class="pb-projlist"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
           <button class="btn btn-tonal btn-full btn-sm" onclick="importJSON()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 14V4M6 10l4 4 4-4"/><path d="M4 16h12"/></svg>
             Importieren
@@ -917,9 +928,38 @@ html, body {
           </button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
-      <!-- GEOMETRIE -->
-      <div id="tab-geometrie" class="tab-panel">
+<!-- ═══════════════════════════════════════════
+     WORKSPACE
+     ═══════════════════════════════════════════ -->
+<div class="workspace">
+
+  <!-- Splitter-Griffe: ziehen = Breite stufenlos, tippen = Schnellbreiten (Snap-Zyklus) -->
+  <div class="ws-split" id="ws-split-l" title="Ziehen: Breite anpassen · Tippen: Schnellbreiten"></div>
+  <!-- Ergebnis-Schublade: Griff mit globalem Nachweis-Status (Erfüllt/Nicht erfüllt) -->
+  <button class="res-drawer-tab" id="res-drawer-tab" onclick="toggleResDrawer()" title="Nachweise ein-/ausblenden" aria-label="Nachweise ein-/ausblenden">
+    <span class="rdt-dot"></span>
+    <span class="rdt-label" id="rdt-label">Nachweise</span>
+    <svg class="rdt-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg>
+  </button>
+
+  <!-- ── LEFT: INPUT PANEL ── -->
+  <div class="panel panel-l" id="panel-input">
+    <nav class="nav-tabs">
+      <div class="nav-tab active" onclick="switchTab('geometrie')">Geo</div>
+      <div class="nav-tab" onclick="switchTab('baugrund')">Boden</div>
+      <div class="nav-tab" onclick="switchTab('lasten')">Lasten</div>
+      <div class="nav-tab" id="tab-nav-sicherung" onclick="switchTab('sicherung')" style="display:none">Sicherung</div>
+    </nav>
+    <div class="panel-scroll">
+      <!-- Live-Plausibilität der Kern-Eingaben (statt stillem 0-Fallback) -->
+      <div id="plaus-bar" style="display:none"></div>
+
+      <!-- GEOMETRIE (Projekt-Verwaltung liegt jetzt im Topbar-Banner) -->
+      <div id="tab-geometrie" class="tab-panel active">
 
         <div class="sec">Berechnungsmodell</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px">
@@ -978,15 +1018,15 @@ html, body {
           <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_kx_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"><input id="g_kx" type="number" value="0.6" step="0.1" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"/></div></div>
           <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_ky_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"><input id="g_ky" type="number" value="0.6" step="0.1" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"/></div></div>
           <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hkopf_r" min="0.40" max="1.00" step="0.1" value="1.0" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"><input id="g_hkopf" type="number" value="1.0" step="0.1" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>Überdeckung <em>m</em></label><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div>
+          <div class="field"><label>Überdeckung <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_r" min="0" max="1.5" step="0.05" value="0.40" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div></div>
           <div style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:6px 0 2px">
             <label class="sw"><input type="checkbox" id="kopf_in_gk" checked onchange="scheduleCalc()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
             <label for="kopf_in_gk" style="cursor:pointer;user-select:none;font-size:11px;color:var(--on2)">Kopfgewicht in G_k einschliessen</label>
           </div>
           <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:0;display:block;padding-bottom:4px">Deaktivieren für DP2a-Kompatibilität (Stütze als Mastteil)</span>
           <div class="g2">
-            <div class="field"><label>Versatz e_x <em>m</em></label><input id="g_ex" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()"/></div>
-            <div class="field"><label>Versatz e_y <em>m</em></label><input id="g_ey" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()"/></div>
+            <div class="field"><label>Versatz e_x <em>m</em></label><input id="g_ex" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()" title="Exzentrizität des Mastes/Lastangriffs gegenüber der Blockachse in x (quer). Erzeugt zusätzliches Moment N·e_x."/></div>
+            <div class="field"><label>Versatz e_y <em>m</em></label><input id="g_ey" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()" title="Exzentrizität des Mastes/Lastangriffs gegenüber der Blockachse in y (längs). Erzeugt zusätzliches Moment N·e_y."/></div>
           </div>
         </div>
 
@@ -1202,20 +1242,16 @@ html, body {
         <!-- ══════ PFAHLBOCK (Mikropfähle, geneigt) ══════ -->
         <div id="pfahlbock-section" style="display:none">
           <div class="sec">Bankett (Pfahlkopfplatte)</div>
-          <div class="lf-grid3">
-            <div class="field"><label>B Bankett <em>m</em></label><input id="pb_bx" type="number" value="2.0" step="0.1" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>L Bankett <em>m</em></label><input id="pb_by" type="number" value="2.0" step="0.1" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>Dicke <em>m</em></label><input id="pb_bank_d" type="number" value="0.8" step="0.1" oninput="renderPfahlbock()"/></div>
-          </div>
+          <div class="field"><label>B Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bx_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_bx',this.value);renderPfahlbock()"><input id="pb_bx" type="number" value="2.0" step="0.1" oninput="slSync('pb_bx',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>L Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_by_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_by',this.value);renderPfahlbock()"><input id="pb_by" type="number" value="2.0" step="0.1" oninput="slSync('pb_by',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Dicke <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bank_d_r" min="0.3" max="2.0" step="0.05" value="0.8" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"><input id="pb_bank_d" type="number" value="0.8" step="0.05" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"/></div></div>
           <div id="pb_rand_msg" style="display:none"></div>
 
           <div class="sec">Fundamentkopf</div>
-          <div class="lf-grid3">
-            <div class="field"><label>B_Kopf <em>m</em></label><input id="pb_kx" type="number" value="0.6" step="0.1" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>L_Kopf <em>m</em></label><input id="pb_ky" type="number" value="0.6" step="0.1" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>H_Kopf <em>m</em></label><input id="pb_hk" type="number" value="1.0" step="0.1" oninput="renderPfahlbock()"/></div>
-          </div>
-          <div class="field"><label>Überdeckung ü <em>m</em></label><input id="pb_ue" type="number" value="0.4" step="0.1" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_kx_r" min="0.2" max="2.0" step="0.05" value="0.6" oninput="slSync('pb_kx',this.value);renderPfahlbock()"><input id="pb_kx" type="number" value="0.6" step="0.05" oninput="slSync('pb_kx',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ky_r" min="0.2" max="2.0" step="0.05" value="0.6" oninput="slSync('pb_ky',this.value);renderPfahlbock()"><input id="pb_ky" type="number" value="0.6" step="0.05" oninput="slSync('pb_ky',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_hk_r" min="0.2" max="3.0" step="0.05" value="1.0" oninput="slSync('pb_hk',this.value);renderPfahlbock()"><input id="pb_hk" type="number" value="1.0" step="0.05" oninput="slSync('pb_hk',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Überdeckung ü <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ue_r" min="0" max="1.5" step="0.05" value="0.4" oninput="slSync('pb_ue',this.value);renderPfahlbock()"><input id="pb_ue" type="number" value="0.4" step="0.05" oninput="slSync('pb_ue',this.value);renderPfahlbock()"/></div></div>
           <div class="hint" style="margin-top:0">Hebel Lastangriff → UK Bankett = H_Kopf + Bankettdicke (automatisch). Bankett + Kopf als Eigengewicht angesetzt; ü = Überdeckung über OK Bankett.</div>
 
           <div class="sec">Pfahl-Anordnung</div>
@@ -1693,6 +1729,7 @@ html, body {
 <!-- STATUS BAR -->
 <div class="statusbar">
   <span><span class="sb-dot" id="sb-dot"></span><span id="sb-txt">Bereit</span></span>
+  <span id="sb-calc" style="color:var(--acc);opacity:0;transition:opacity .25s;font-size:9px;letter-spacing:.04em">· aktualisiert</span>
   <span id="sb-geo" style="color:var(--xdim)">–</span>
   <span id="sb-lf"  style="color:var(--xdim)">–</span>
   <span style="flex:1"></span>
@@ -2617,6 +2654,7 @@ function scheduleHistPush(){
     if(_hist.length>_HIST_MAX) _hist.shift();
     _histIdx=_hist.length-1;
     updateUndoBtn();
+    if(typeof _checkDirty==='function'){ _checkDirty(); _saveDraft(); }   // Dirty-Status + Auto-Entwurf
   }, 600);
 }
 
@@ -2652,6 +2690,29 @@ function updateUndoBtn(){
 
 // Initialen Stand in History aufnehmen (nach App-Start)
 function histInit(){ const snap=_histSnap(); _hist=[snap]; _histIdx=0; updateUndoBtn(); }
+
+// ── Dirty-State + Auto-Entwurf (Datensicherheit, Jun 2026) ──────────────────────
+// _savedSnap = Stand beim letzten Speichern/Laden bzw. Default → Referenz für „ungespeichert".
+let _savedSnap=null, _dirty=false;
+function _markSaved(){ _savedSnap=_histSnap(); _dirty=false; _updateDirtyUI(); _saveDraft(); }
+function _checkDirty(){ const d=(_savedSnap!==null && _histSnap()!==_savedSnap); if(d!==_dirty){ _dirty=d; _updateDirtyUI(); } }
+function _updateDirtyUI(){
+  const btn=document.getElementById('btn-save'); if(!btn) return;
+  btn.classList.toggle('dirty', _dirty);
+  btn.title=(_currentProjKey?'Speichern (überschreibt geladenes Fundament)':'Speichern (neues Fundament — Banner öffnet sich)')+(_dirty?' · ungespeicherte Änderungen':'');
+}
+function _saveDraft(){ try{ dbSet('bc_draft',{ st:_histSnap(), ts:Date.now(), projKey:_currentProjKey, savedSnap:_savedSnap }); }catch(_){} }
+function _restoreDraft(){
+  let d; try{ d=dbGet('bc_draft'); }catch(_){ return false; }
+  if(!d || !d.st) return false;
+  try{
+    _applyingHist=true; applyState(JSON.parse(d.st)); _applyingHist=false;
+    _currentProjKey=d.projKey||null; _savedSnap=d.savedSnap||null;
+    if(typeof updateSB==='function') updateSB();
+    _checkDirty();
+    return true;
+  }catch(_){ _applyingHist=false; return false; }
+}
 function slSync(fieldId, val){
   const num=document.getElementById(fieldId);
   const rng=document.getElementById(fieldId+'_r');
@@ -5493,6 +5554,7 @@ function _renderPfahlbockResultsRight(r, piles, n){
   if(pill){ const e=r&&isFinite(r.eta_massg)?r.eta_massg:0;
     pill.className='pill '+(e>=1.0?'pill-ok':'pill-f');
     pill.textContent = e>=1.0?'Erfüllt':'Nicht erfüllt'; }
+  if(typeof _updateDrawerStatus==='function') _updateDrawerStatus();
 }
 // Draufsicht (SVG, live) — ECHTES Bankett (proportional), Pfähle zu Ø-Massstab, Neigungs-Pfeile,
 // Bankett-Vermassung B/L und Randabstand Pfahlmitte→Bankettkante je Pfahl (Ampel: ok/orange/rot).
@@ -8371,10 +8433,32 @@ function coulombKph(phi, delta) {
   return denom > 0.001 ? c2p / denom * Math.abs(cd) : c2p;
 }
 
+let _calcFlashT=null;
+function _flashCalc(){ const el=document.getElementById('sb-calc'); if(!el) return; el.style.opacity='1'; clearTimeout(_calcFlashT); _calcFlashT=setTimeout(()=>{el.style.opacity='0';}, 650); }
 function calculate(){
+  if(typeof _flashCalc==='function') _flashCalc();                      // dezenter „aktualisiert"-Hinweis
+  if(typeof _plausCheck==='function') try{ _plausCheck(); }catch(_){}   // Live-Plausibilität der Eingaben
   // Pfahlbock hat eine eigene Pipeline — Block/Flach-Berechnung überspringen
   if(CALC_MODEL==='pfahlbock'){ try { renderPfahlbock(); } catch(e){ console.error('renderPfahlbock() Fehler:', e); } return; }
   try { _doCalculate(); } catch(e){ console.error('calculate() Fehler:', e); }
+}
+// Live-Plausibilitätsprüfung der Kern-Eingaben → kompakte Warnzeilen oben im Eingabe-Panel.
+// Ersetzt das stille ||0-Verschlucken offensichtlich falscher/leerer Werte durch sichtbare Hinweise.
+function _plausCheck(){
+  const bar=document.getElementById('plaus-bar'); if(!bar) return;
+  const w=[], num=id=>{ const el=document.getElementById(id); if(!el) return NaN; const v=parseFloat(el.value); return isFinite(v)?v:NaN; };
+  const phi=num('bg_phi'); if(isFinite(phi) && (phi<10||phi>50)) w.push(['warn',`φ′ = ${phi}° ungewöhnlich (üblich 20–45°)`]);
+  const c=num('bg_c');     if(isFinite(c) && c<0)               w.push(['fail','c′ negativ — unzulässig']);
+  const gam=num('bg_gamma');if(isFinite(gam) && (gam<14||gam>24))w.push(['warn',`γ = ${gam} kN/m³ ungewöhnlich (14–24)`]);
+  if(CALC_MODEL==='block' || CALC_MODEL==='flach'){
+    const bx=num('g_bx'),by=num('g_by'),hb=num('g_hblock');
+    if(!(bx>0)||!(by>0)||!(hb>0)) w.push(['fail','Geometrie unvollständig — B/L/H müssen > 0 sein']);
+    try{ if(typeof gwDepth==='function'){ const gw=gwDepth(), t=(hb||0)+(num('g_uberd')||0);
+      if(isFinite(gw)&&gw>=0&&gw<t-0.01) w.push(['warn','Grundwasser über Fundamentsohle — Auftrieb/Wasserdruck prüfen']); } }catch(_){}
+  }
+  if(!w.length){ bar.style.display='none'; bar.innerHTML=''; return; }
+  bar.style.display='';
+  bar.innerHTML=w.map(([s,m])=>`<div class="plaus-item plaus-${s}">${m}</div>`).join('');
 }
 function _doCalculate(){
   const B=+gi('g_bx'), L=+gi('g_by'), Hb=+gi('g_hblock');
@@ -12421,6 +12505,7 @@ function renderResults(res,worst,g){
   } else {
     pill.textContent='Knapp';
   }
+  if(typeof _updateDrawerStatus==='function') _updateDrawerStatus();
 
   // Viewer-Badge (oben mittig im 3D-Viewer)
   const badge=document.getElementById('viewer-nw-badge');
@@ -12609,25 +12694,31 @@ function renderResults(res,worst,g){
 // Ziehen = stufenlos · Tippen auf den Griff = Snap-Zyklus durch Schnellbreiten.
 // Ersetzt die früheren ⤢-Expand-Buttons (inp-wide) und die feste res-wide-Klasse.
 // ════════════════════════════════════════════
-let _wsCols = { l:350, r:320 };           // Nutzerbreiten [px] (persistiert in SETTINGS.wsCols)
+let _wsCols = { l:400, r:320 };           // Nutzerbreiten [px] (persistiert in SETTINGS.wsCols); l=Startbreite
 let _wsAutoWideR = false;                  // Diagramm expandiert → Ergebnisse temporär breiter
-const _WS_SNAP_L = [350, 680], _WS_SNAP_R = [320, 600];   // nur Standard ↔ breit (mittlere Stufe entfernt)
+const _WS_SNAP_L = [400, 680], _WS_SNAP_R = [320, 600];   // nur Standard ↔ breit (mittlere Stufe entfernt)
 const _WS_MIN = { l:280, r:260 }, _WS_MAX = { l:760, r:680 }, _WS_MID_MIN = 320;
 function _wsEl(){ return document.querySelector('.workspace'); }
 function applyWorkspaceCols(){
   const ws=_wsEl(); if(!ws) return;
   const wsW = ws.offsetWidth || 1600;
-  // Im Foldable-Bereich ist die rechte Spalte eine Schublade (kein Grid-Track) → kein Platz reservieren.
-  const foldable = window.matchMedia('(min-width:768px) and (max-width:1024px)').matches;
-  const rRes = foldable ? 0 : _WS_MIN.r;
-  // Effektive (gerenderte) Breiten gegen die AKTUELLE Fensterbreite begrenzen, damit der Viewer
-  // nie unter _WS_MID_MIN fällt — auch wenn gespeicherte Breiten von einem grösseren Monitor stammen.
-  // _wsCols bleibt unangetastet (Nutzerwunsch), nur die gesetzten Vars werden geclampt.
-  const l = Math.max(_WS_MIN.l, Math.min(_wsCols.l, Math.max(_WS_MIN.l, wsW - rRes - _WS_MID_MIN)));
-  const rUser = _wsAutoWideR ? Math.max(_wsCols.r, 540) : _wsCols.r;
-  const r = Math.max(_WS_MIN.r, Math.min(rUser, Math.max(_WS_MIN.r, wsW - l - _WS_MID_MIN)));
+  // Nur noch EINE resizebare Spalte (links). Die Ergebnisse sind eine Schublade (kein Grid-Track).
+  // Linke Breite gegen die aktuelle Fensterbreite begrenzen → Viewer nie unter _WS_MID_MIN.
+  const l = Math.max(_WS_MIN.l, Math.min(_wsCols.l, Math.max(_WS_MIN.l, wsW - _WS_MID_MIN)));
   ws.style.setProperty('--col-l', l+'px');
-  ws.style.setProperty('--col-r', r+'px');
+}
+// Globalen Nachweis-Status (#overall-pill) auf den Schubladen-Griff spiegeln (Farbe + Kurztext).
+function _updateDrawerStatus(){
+  const tab=document.getElementById('res-drawer-tab'); if(!tab) return;
+  const pill=document.getElementById('overall-pill'), lbl=document.getElementById('rdt-label');
+  let cls='', txt='Nachweise';
+  if(pill){
+    if(pill.classList.contains('pill-ok')){ cls='ok';   txt='Erfüllt'; }
+    else if(pill.classList.contains('pill-f')){ cls='fail'; txt='Nicht erfüllt'; }
+    else if(pill.classList.contains('pill-w')){ cls='warn'; txt='Prüfen'; }
+  }
+  tab.classList.remove('ok','fail','warn'); if(cls) tab.classList.add(cls);
+  if(lbl) lbl.textContent = txt;
 }
 function _clampWsCol(side, w, wsW){
   const other = side==='l' ? _wsCols.r : _wsCols.l;
@@ -12642,14 +12733,30 @@ function _cycleWsSnap(side){
   applyWorkspaceCols(); _persistWsCols();
   requestAnimationFrame(()=>requestAnimationFrame(resizeViewer));
 }
-// Foldable: Ergebnis-Schublade ein-/ausfahren (Lasche). Greift nur im Foldable-Breitenbereich,
-// in dem #panel-results per CSS zur Schublade wird; sonst hat die Klasse keine Wirkung.
-function toggleResDrawer(){ const ws=_wsEl(); if(ws) ws.classList.toggle('res-open'); requestAnimationFrame(resizeViewer); }
+// Projekt-Banner (Metadaten) vertikal aus der Topbar aus-/einklappen.
+function toggleProjBanner(force){
+  const b=document.getElementById('proj-banner'), btn=document.getElementById('proj-banner-btn');
+  if(!b) return;
+  const open=(force!==undefined) ? !!force : !b.classList.contains('open');
+  b.classList.toggle('open', open);
+  if(btn) btn.classList.toggle('open', open);
+}
+// Ergebnis-Schublade ein-/ausfahren (≥768px). Zustand wird in SETTINGS.resDrawerOpen gemerkt.
+function toggleResDrawer(force){
+  const ws=_wsEl(); if(!ws) return;
+  const open = (force!==undefined) ? !!force : !ws.classList.contains('res-open');
+  ws.classList.toggle('res-open', open);
+  if(typeof SETTINGS!=='undefined'){ SETTINGS.resDrawerOpen=open; if(typeof dbSet==='function') dbSet('bc_settings',SETTINGS); }
+  requestAnimationFrame(resizeViewer);
+}
 function _initWsResize(){
   const ws=_wsEl(); if(!ws) return;
   if(typeof SETTINGS!=='undefined' && SETTINGS.wsCols){
     _wsCols.l = +SETTINGS.wsCols.l || _wsCols.l; _wsCols.r = +SETTINGS.wsCols.r || _wsCols.r;
   }
+  // Schublade: gemerkten Zustand anwenden (Default eingeklappt → Fokus auf Modellierung)
+  ws.classList.toggle('res-open', (typeof SETTINGS!=='undefined' && SETTINGS.resDrawerOpen===true));
+  _updateDrawerStatus();
   applyWorkspaceCols();
   window.addEventListener('resize', applyWorkspaceCols);   // Fensteränderung → Spalten neu begrenzen
   [['ws-split-l','l'],['ws-split-r','r']].forEach(([id,side])=>{
@@ -12673,12 +12780,15 @@ function _initWsResize(){
 
 let _gztExpanded = false;
 
-// Zentraler State: Ergebnis-Spalte wird breiter, wenn GZT- ODER Sicherungs-Diagramme erweitert sind
-// (über die Nutzerbreite hinaus, via _wsAutoWideR → applyWorkspaceCols; kein fester Klassenwert mehr).
+// Diagramm-Expand: Schublade verbreitern (.res-wide-diag) UND sicherstellen dass sie offen ist
+// (sonst sieht man das expandierte Diagramm nicht). State via _wsAutoWideR.
 function _updateResWide(){
   const pfWide = window['_pfahl_sys_diag_wide'] || window['_pfahl_sn_diag_wide'];
   _wsAutoWideR = !!(_gztExpanded || pfWide);
-  applyWorkspaceCols();
+  const ws=_wsEl(); if(!ws) return;
+  ws.classList.toggle('res-wide-diag', _wsAutoWideR);
+  if(_wsAutoWideR && !ws.classList.contains('res-open')) toggleResDrawer(true);
+  requestAnimationFrame(resizeViewer);
 }
 
 function togglePfahlDiagWide(diagId){
@@ -12795,11 +12905,11 @@ function saveProject(){
     dbSet(_currentProjKey,st); renderProjList();
     // Dropdown auf p_name des aktuellen Projekts setzen
     const sel=document.getElementById('proj-sel'); if(sel) sel.value=st.p_name||'';
-    updateSaveBtnTitle();
+    updateSaveBtnTitle(); _markSaved();
     toast('Gespeichert: '+st.p_name+(st.p_fundname?' · '+st.p_fundname:'')); return;
   }
-  // Kein Projekt geladen → zum Projekt-Tab leiten
-  switchTab('projekt');
+  // Kein Projekt geladen → Projekt-Banner öffnen (Verwaltung liegt jetzt oben)
+  toggleProjBanner(true);
   toast('Projekt auswählen und Speichern drücken');
 }
 
@@ -12818,11 +12928,7 @@ function doSaveDlg(){
   toast('Gespeichert: '+st.p_name+(projSel?' → Projekt '+projSel:''));
 }
 
-function updateSaveBtnTitle(){
-  const btn = document.getElementById('btn-save');
-  if(!btn) return;
-  btn.title = _currentProjKey ? 'Berechnung überspeichern' : 'Projekt-Tab → Speichern';
-}
+function updateSaveBtnTitle(){ if(typeof _updateDirtyUI==='function') _updateDirtyUI(); }
 function renderProjSel(){
   const sel=document.getElementById('proj-sel'); if(!sel) return;
   const prevVal=sel.value;
@@ -12865,6 +12971,13 @@ function onProjSelChange(){
   }
   updateSB();
 }
+// Pflichtfeld markieren: Banner öffnen, Feld fokussieren + kurz rot umranden
+function _flagField(id){
+  const el=document.getElementById(id); if(!el) return;
+  toggleProjBanner(true);
+  setTimeout(()=>{ try{ el.focus(); }catch(_){ } el.classList.add('field-invalid'); el.scrollIntoView({block:'center'});
+    setTimeout(()=>el.classList.remove('field-invalid'), 2200); }, 80);
+}
 function saveNewEntry(){
   const projSelVal=document.getElementById('proj-sel').value;
   const newName=(document.getElementById('new-proj-name')?.value||'').trim();
@@ -12872,13 +12985,13 @@ function saveNewEntry(){
   let projName;
   if(projSelVal==='__new__'){
     projName=newName;
-    if(!projName){ toast('Projektname eingeben'); return; }
+    if(!projName){ toast('Projektname eingeben'); _flagField('new-proj-name'); return; }
   } else if(projSelVal){
     projName=projSelVal;
   } else {
-    toast('Projekt auswählen'); return;
+    toast('Projekt auswählen'); _flagField('proj-sel'); return;
   }
-  if(!fundname){ toast('Fundamentbezeichnung eingeben'); return; }
+  if(!fundname){ toast('Fundamentbezeichnung eingeben'); _flagField('p_fundname'); return; }
   si('p_name', projName);
   const k='proj_'+Date.now();
   const st=collectState(); st._k=k; st._d=new Date().toLocaleDateString('de-CH');
@@ -12891,7 +13004,7 @@ function saveNewEntry(){
   // Neues-Projekt-Feld ausblenden
   const nf=document.getElementById('new-proj-name-field');
   if(nf) nf.style.display='none';
-  updateSaveBtnTitle();
+  updateSaveBtnTitle(); _markSaved();
   toast('Gespeichert: '+projName+' · '+fundname);
 }
 function renderProjList(){
@@ -12978,7 +13091,7 @@ function loadProj(k){
   // Neues-Projekt-Feld ausblenden
   const nf=document.getElementById('new-proj-name-field'); if(nf) nf.style.display='none';
   updateSB(); updateSaveBtnTitle();
-  setTimeout(histInit, 200); // Neuen History-Stack für dieses Projekt
+  setTimeout(()=>{ histInit(); _markSaved(); }, 200); // Neuer History-Stack + sauberer Referenzstand
   toast('Geladen: '+p.p_name+(p.p_fundname?' · '+p.p_fundname:''));
 }
 function delProj(k){
@@ -13309,7 +13422,7 @@ function mobSwitch(view){
 function gi(id){ return document.getElementById(id)?.value ?? '0'; }
 function si(id,v){ const el = document.getElementById(id); if(el) el.value = v; }
 function switchTab(n){
-  const ns=['projekt','geometrie','baugrund','lasten','sicherung'];
+  const ns=['geometrie','baugrund','lasten','sicherung'];   // 'projekt' liegt jetzt im Topbar-Banner
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',ns[i]===n));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+n)?.classList.add('active');
@@ -13322,7 +13435,7 @@ function updateSB(){
   const pname = (gi('p_name') || '').trim();
   const pfund = (gi('p_fundname') || '').trim();
   const pnEl  = document.getElementById('tb-projname');
-  if(pnEl) pnEl.textContent = (pname && pfund) ? `${pname}  ·  ${pfund}` : (pname || pfund || '');
+  if(pnEl) pnEl.textContent = (pname && pfund) ? `${pname}  ·  ${pfund}` : (pname || pfund || 'Projektangaben');
 }
 function toast(msg){
   const el = document.createElement('div');
@@ -13371,7 +13484,10 @@ document.addEventListener('DOMContentLoaded',async()=>{
   rebuildScene(); // Initiale Szene aufbauen
   formatMeterInputs(); // Felder mit Einheit m auf 2 Dezimalstellen
   if(SETTINGS.bearbeiter) si('p_bearbeiter',SETTINGS.bearbeiter);
-  setTimeout(histInit, 800); // Nach vollständigem Render initialen Stand erfassen
+  // Auto-Entwurf: letzten Arbeitsstand wiederherstellen (Datensicherheit nach Reload/Absturz)
+  const _restored = (typeof _restoreDraft==='function') ? _restoreDraft() : false;
+  if(_restored) toast('Letzter Stand wiederhergestellt');
+  setTimeout(()=>{ histInit(); if(!_restored){ _savedSnap=_histSnap(); _dirty=false; _updateDirtyUI(); } _checkDirty(); }, 800);
 });
 </script>
 
