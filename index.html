@@ -61,13 +61,14 @@ html, body {
 .proj-banner-inner { padding:14px 18px; max-height:min(76vh, 560px); overflow-y:auto; }
 .pb-cols { display:flex; gap:20px; align-items:flex-start; }
 .pb-col { flex:1 1 0; min-width:0; }
-.pb-col.pb-col-wide { flex:1.7 1 0; }
+.pb-col.pb-col-wide { flex:1.15 1 0; }
+.pb-col.pb-col-proj { flex:1.7 1 0; }
 .pb-col-h { font-family:var(--f-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--acc); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--ol); }
 .pb-grid2 { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:7px 12px; }
 .pb-grid2 .pb-wide { grid-column:span 2; }
 .pb-projlist { max-height:240px; overflow-y:auto; }
-@media (max-width:900px){ .pb-cols { flex-wrap:wrap; } .pb-col, .pb-col.pb-col-wide { flex:1 1 100%; } }
+@media (max-width:900px){ .pb-cols { flex-wrap:wrap; } .pb-col, .pb-col.pb-col-wide, .pb-col.pb-col-proj { flex:1 1 100%; } }
 /* Topbar-Toggle (Projektname + Chevron) */
 .tb-proj-btn { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--ol); cursor:pointer;
   padding:5px 12px; border-radius:7px; color:inherit; transition:background .15s, border-color .15s; max-width:46vw; }
@@ -95,6 +96,8 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .ws-split::before { content:''; width:2px; height:100%; background:var(--ol); transition:background .15s; }
 .ws-split::after { content:''; position:absolute; width:6px; height:52px; border-radius:3px; background:var(--dim);
   box-shadow:0 1px 4px rgba(0,0,0,.35); transition:background .15s, height .15s, box-shadow .15s; }
+/* Hell-Ansicht: Griff heller/dezenter (var(--dim) wirkt dort zu dunkel) */
+[data-theme="light"] .ws-split::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
 .ws-split:hover::before, .ws-split.drag::before { background:var(--acc); }
 .ws-split:hover::after, .ws-split.drag::after { background:var(--acc); height:68px; box-shadow:0 0 0 3px var(--acc-s); }
 #ws-split-l { left:calc(var(--col-l,400px) - 8px); }
@@ -387,7 +390,8 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 #viewer-wrap { display:flex; flex-direction:column; overflow:hidden; min-height:0; }
 #viewer { flex:1; position:relative; background:var(--viewer-bg); overflow:hidden; min-height:0; }
 #viewer canvas { display:block; position:absolute; top:0; left:0; width:100%!important; height:100%!important; }
-.viewer-fab { position:absolute; top:10px; right:10px; display:flex; flex-direction:column; gap:4px; z-index:2; }
+.viewer-fab { position:absolute; top:10px; right:var(--vfab-inset,10px); display:flex; flex-direction:column; gap:4px; z-index:2; }
+.viewer-fab.viewer-fab-l { left:var(--vfab-inset,10px); right:auto; }
 .viewer-legend {
   background:var(--s1); border:1px solid var(--ol); border-radius:var(--r2);
   padding:8px 12px; font-family:var(--f-mono); font-size:9.5px; color:var(--on2); line-height:1.9;
@@ -405,6 +409,10 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .vl-frc  { color:var(--on2); background:rgba(0,0,0,0.55); font-size:9.5px; }
 [data-theme="light"] .vl-dim  { background:rgba(255,255,255,0.75); }
 [data-theme="light"] .vl-frc  { background:rgba(255,255,255,0.8); }
+/* Aktiv fokussiertes Mass (Kamerafahrt zur Eingabe) — hervorgehoben */
+.vl.vl-hl { color:#fff; background:var(--acc); box-shadow:0 0 0 2px var(--acc-s), 0 1px 6px rgba(0,0,0,.35);
+  font-weight:600; z-index:5; animation:vlPulse 1s ease-in-out infinite; }
+@keyframes vlPulse { 0%,100%{ transform:translate(-50%,-50%) scale(1); } 50%{ transform:translate(-50%,-50%) scale(1.14); } }
 
 /* ═══════════════════════════════════════════
    RESULTS PANEL
@@ -784,6 +792,10 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
    Links bleibt das Eingabe-Panel als per Splitter resizebare Spalte.
    ═══════════════════════════════════════════ */
 @media (min-width: 768px) {
+  /* Viewer-Button-Leisten (links Kamera, rechts Layer) weiter nach innen rücken,
+     damit sie sich nicht mit Splitter-Griff (links) bzw. Schubladen-Griff + Schatten
+     (rechts) der Ergebnis-Schublade überlagern. */
+  #viewer { --vfab-inset:44px; }
   #panel-results {
     position:absolute; top:0; right:0; bottom:0; width:clamp(360px, 30vw, 560px);
     transform:translateX(100%); transition:transform .26s ease; z-index:18;
@@ -914,7 +926,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
         </button>
       </div>
       <!-- Spalte 3: Gespeicherte Projekte -->
-      <div class="pb-col">
+      <div class="pb-col pb-col-proj">
         <div class="pb-col-h">Gespeicherte Projekte</div>
         <div id="proj-list" class="pb-projlist"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
@@ -1018,7 +1030,13 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_kx_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"><input id="g_kx" type="number" value="0.6" step="0.1" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"/></div></div>
           <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_ky_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"><input id="g_ky" type="number" value="0.6" step="0.1" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"/></div></div>
           <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hkopf_r" min="0.40" max="1.00" step="0.1" value="1.0" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"><input id="g_hkopf" type="number" value="1.0" step="0.1" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>Überdeckung <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_r" min="0" max="1.5" step="0.05" value="0.40" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div></div>
+          <div class="field">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <label style="margin:0">Überdeckung <em>m</em></label>
+              <label class="sw" style="margin:0;transform:scale(0.82);transform-origin:right" title="Überdeckung optional: aus = Block an GOK, keine Erdüberdeckung (Aussparung sichtbar)"><input type="checkbox" id="g_uberd_on" checked onchange="toggleUberd(this)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+            </div>
+            <div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_r" min="0" max="1.5" step="0.05" value="0.40" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div>
+          </div>
           <div style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:6px 0 2px">
             <label class="sw"><input type="checkbox" id="kopf_in_gk" checked onchange="scheduleCalc()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
             <label for="kopf_in_gk" style="cursor:pointer;user-select:none;font-size:11px;color:var(--on2)">Kopfgewicht in G_k einschliessen</label>
@@ -1621,7 +1639,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
   <div id="viewer-wrap" class="panel" style="border:none;">
     <div id="viewer">
       <!-- Ansicht-Navigation oben links -->
-      <div style="position:absolute;top:10px;left:10px;z-index:2;display:flex;flex-direction:column;gap:4px" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+      <div class="viewer-fab viewer-fab-l" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <button class="ic-btn" onclick="resetCam()" title="Reset Ansicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 10a5.5 5.5 0 1010.3-2.5M4.5 10V6.5m0 3.5H8"/></svg></button>
         <button class="ic-btn" onclick="setCamTop()" title="Draufsicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="12" height="12" rx="1"/><path d="M4 10h12M10 4v12"/></svg></button>
         <button class="ic-btn" onclick="setCamFront()" title="Vorderansicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="5.5" width="12" height="9" rx="1"/><path d="M10 5.5V3.5M7 14.5v1.5M13 14.5v1.5"/></svg></button>
@@ -2103,16 +2121,12 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <label class="sw"><input type="checkbox" id="viz-grid" checked onchange="setViz('gridShow', this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
         <div class="toggle-row">
-          <div><div class="toggle-label">Vermassung</div></div>
-          <label class="sw"><input type="checkbox" id="viz-dim" checked onchange="showDim=this.checked; var b=document.getElementById('vc-dim'); if(b) b.classList.toggle('on',showDim); rebuildScene()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
-        </div>
-        <div class="toggle-row">
           <div><div class="toggle-label">Vermassung klickbar</div><div class="toggle-sub">Mass im 3D anklicken → Eingabefeld anpassen</div></div>
           <label class="sw"><input type="checkbox" id="viz-diminter" onchange="setViz('dimInteractive', this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
         <div class="toggle-row">
-          <div><div class="toggle-label">Dynamischer Zoom</div><div class="toggle-sub">Ansicht passt sich bei Parameter-Eingabe an</div></div>
-          <label class="sw"><input type="checkbox" id="viz-autozoom" onchange="setViz('autoZoom', this.checked); if(this.checked) fitCameraToModel()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+          <div><div class="toggle-label">Kamerafahrt zur Eingabe</div><div class="toggle-sub">Beim Fokussieren eines Masses zum Bauteil fahren + hervorheben</div></div>
+          <label class="sw"><input type="checkbox" id="viz-autozoom" onchange="setViz('autoZoom', this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
         <details style="margin-top:10px">
         <summary style="cursor:pointer;font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 0;user-select:none">Farben &amp; Bodenschichten</summary>
@@ -2744,8 +2758,19 @@ document.addEventListener('change', e=>{
     if(num && _isMeterField(num)){ const v = parseFloat(num.value); if(isFinite(v)) num.value = v.toFixed(2); }
   }
 });
+// Kamerafahrt zur Eingabe: Fokussiert der Nutzer ein Geometriefeld (oder dessen Slider _r),
+// fährt die Kamera zum zugehörigen Mass im 3D (gated über SETTINGS.viz.autoZoom in focusViewerOnField).
+document.addEventListener('focusin', e=>{
+  const el=e.target; if(!el || el.tagName!=='INPUT') return;
+  let id=el.id||''; if(id.endsWith('_r')) id=id.slice(0,-2);
+  if(id && typeof focusViewerOnField==='function') focusViewerOnField(id);
+});
 let drag=false, pm={x:0,y:0};
 let sph={t:0.6,p:1.0,r:12};
+let _camTarget=new THREE.Vector3(0,0,0);   // Kamera-Blickpunkt (Default Ursprung; Kamerafahrt schwenkt ihn aufs Bauteil)
+let _camRAF=null;                          // laufende Kamerafahrt (requestAnimationFrame-Handle)
+let _focusField=null, _focusUntil=0;       // aktuell hervorgehobenes Mass + Ablaufzeit
+let _pendingFit=true;                       // Gesamtmodell EINMAL rahmen (Erststart/Modellwechsel), nicht bei jedem Rebuild
 let _vlEls=[];
 
 function _vlClear(){_vlEls.forEach(o=>o.el.remove());_vlEls=[];}
@@ -2758,8 +2783,10 @@ function _vlAdd(text,pos3d,cls,field){
     el.classList.add('vl-click');
     el.addEventListener('click',e=>{ e.stopPropagation(); vizFocusField(field); });
   }
+  // Aktiv fokussiertes Mass über Rebuilds hinweg hervorgehoben halten (Kamerafahrt-Feature)
+  if(field && field===_focusField && performance.now() < _focusUntil) el.classList.add('vl-hl');
   document.getElementById('viewer').appendChild(el);
-  _vlEls.push({el,pos:pos3d.clone()});
+  _vlEls.push({el,pos:pos3d.clone(),field});
 }
 // Eingabefeld zu einer geklickten Vermassung fokussieren (zum Anpassen)
 function vizFocusField(id){
@@ -2772,8 +2799,9 @@ function vizFocusField(id){
 }
 // Dynamischer Zoom: Distanz so wählen, dass das Modell formatfüllend ist (origin-zentriert)
 function fitCameraToModel(){
-  if(!vizStyle().autoZoom || typeof scene==='undefined' || !scene || !camera) return;
+  if(typeof scene==='undefined' || !scene || !camera) return;
   const g=scene.getObjectByName('pb3d')||scene.getObjectByName('blk'); if(!g) return;
+  if(_camTarget) _camTarget.set(0,0,0);   // Gesamtmodell wieder origin-zentriert rahmen
   const box=new THREE.Box3().setFromObject(g); if(box.isEmpty()) return;
   const cs=[[box.min.x,box.min.y,box.min.z],[box.max.x,box.max.y,box.max.z],
     [box.min.x,box.min.y,box.max.z],[box.min.x,box.max.y,box.min.z],[box.max.x,box.min.y,box.min.z],
@@ -2830,6 +2858,11 @@ function updateAxisWidget(){
   w.innerHTML=svg;
 }
 
+// Render-Pixelratio: bei niedrigem devicePixelRatio (Standard-Monitore, DPR<1.5)
+// auf 2× supersamplen → Raster-/Vermassungslinien werden scharf statt schwammig.
+// DPR≥1.5 (Surface, Mobile) unverändert min(DPR,2). Obergrenze 2 (Performance).
+function _viewerPR(){ const d = window.devicePixelRatio || 1; return d < 1.5 ? 2 : Math.min(d, 2); }
+
 function initViewer(){
   const el=document.getElementById('viewer');
   scene=new THREE.Scene();
@@ -2842,7 +2875,7 @@ function initViewer(){
   camera=new THREE.PerspectiveCamera(44, W/H, 0.1, 200);
   moveCam();
   renderer=new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance', preserveDrawingBuffer:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(_viewerPR());
   renderer.setSize(W, H);
   renderer.shadowMap.enabled=true;
   el.appendChild(renderer.domElement);
@@ -2856,7 +2889,7 @@ function initViewer(){
   // Achsanzeige wird in rebuildScene gebaut
 
   // Mouse
-  el.addEventListener('mousedown',e=>{drag=true;pm={x:e.clientX,y:e.clientY};});
+  el.addEventListener('mousedown',e=>{_cancelCamFly(false);drag=true;pm={x:e.clientX,y:e.clientY};});
   el.addEventListener('mouseup',()=>drag=false);
   el.addEventListener('mouseleave',()=>drag=false);
   el.addEventListener('mousemove',e=>{
@@ -2865,12 +2898,12 @@ function initViewer(){
     sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p+(e.clientY-pm.y)*0.01));
     pm={x:e.clientX,y:e.clientY};moveCam();
   });
-  el.addEventListener('wheel',e=>{sph.r=Math.max(3,Math.min(42,sph.r+e.deltaY*0.02));moveCam();},{passive:true});
+  el.addEventListener('wheel',e=>{_cancelCamFly(false);sph.r=Math.max(3,Math.min(42,sph.r+e.deltaY*0.02));moveCam();},{passive:true});
 
   // Touch — pinch-to-zoom + pan
   let t0=null, pinch0=null;
   el.addEventListener('touchstart',e=>{
-    e.preventDefault();
+    e.preventDefault(); _cancelCamFly(false);
     if(e.touches.length===1){t0={x:e.touches[0].clientX,y:e.touches[0].clientY}; pinch0=null;}
     if(e.touches.length===2){
       const dx=e.touches[0].clientX-e.touches[1].clientX;
@@ -2906,10 +2939,61 @@ function initViewer(){
   (function loop(){requestAnimationFrame(loop);renderer.render(scene,camera);_vlUpdate();})();
 }
 
-function moveCam(){const{t,p,r}=sph;camera.position.set(r*Math.sin(p)*Math.sin(t),r*Math.cos(p),r*Math.sin(p)*Math.cos(t));
+function moveCam(){const{t,p,r}=sph; const T=_camTarget||{x:0,y:0,z:0};
+  camera.position.set(T.x+r*Math.sin(p)*Math.sin(t), T.y+r*Math.cos(p), T.z+r*Math.sin(p)*Math.cos(t));
   if(camera.isOrthographicCamera){const dom=renderer&&renderer.domElement,asp=dom?(dom.clientWidth||1)/(dom.clientHeight||1):1.6,d=r*0.55;
     camera.left=-d*asp;camera.right=d*asp;camera.top=d;camera.bottom=-d;camera.updateProjectionMatrix();}
-  camera.lookAt(0,0,0);}
+  camera.lookAt(T.x,T.y,T.z);}
+// Kamerafahrt abbrechen (wenn der Nutzer selbst dreht/zoomt) — optional Target zurück auf Ursprung
+function _cancelCamFly(resetTarget){ if(_camRAF){ cancelAnimationFrame(_camRAF); _camRAF=null; }
+  if(resetTarget && _camTarget) _camTarget.set(0,0,0); }
+// Sanfte Kamerafahrt: Blickpunkt → toT und Zoom → toR (ease-in-out cubic)
+function _animateCamTo(toT, toR, ms){
+  if(_camRAF) cancelAnimationFrame(_camRAF);
+  const fromT=_camTarget.clone(), fromR=sph.r, t0=performance.now();
+  const ease=x=>x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+  (function step(now){
+    const k=Math.min(1,(now-t0)/(ms||520)), e=ease(k);
+    _camTarget.set(fromT.x+(toT.x-fromT.x)*e, fromT.y+(toT.y-fromT.y)*e, fromT.z+(toT.z-fromT.z)*e);
+    sph.r=fromR+(toR-fromR)*e; moveCam();
+    _camRAF = k<1 ? requestAnimationFrame(step) : null;
+  })(performance.now());
+}
+// Bauteil zu einem Bemessungsmass im 3D hervorheben: Mesh-Material kurz aufleuchten lassen
+function _highlightMeshForField(id){
+  if(!scene) return;
+  const acc=0x4a5cb8;
+  scene.traverse(o=>{
+    if(o.isMesh && o.userData && Array.isArray(o.userData.ffields) && o.userData.ffields.includes(id) && o.material && o.material.emissive){
+      const m=o.material; if(m.userData && m.userData._hlRAF) cancelAnimationFrame(m.userData._hlRAF);
+      m.userData=m.userData||{}; const t0=performance.now();
+      (function pulse(now){
+        const k=Math.min(1,(now-t0)/1400); const amp=Math.sin(Math.min(k,1)*Math.PI); // 0→1→0
+        m.emissive.setHex(acc); m.emissiveIntensity = 0.55*amp; m.needsUpdate=true;
+        m.userData._hlRAF = k<1 ? requestAnimationFrame(pulse) : (m.emissiveIntensity=0, null);
+      })(performance.now());
+    }
+  });
+}
+// Kamerafahrt + Hervorhebung zu dem 3D-Mass eines Eingabefeldes (Feature „Kamerafahrt zur Eingabe")
+function focusViewerOnField(id){
+  if(!id || !vizStyle().autoZoom) return;
+  if(typeof scene==='undefined'||!scene||!camera) return;
+  const hits=_vlEls.filter(o=>o.field===id);
+  if(!hits.length) return;
+  const P=new THREE.Vector3(); hits.forEach(o=>P.add(o.pos)); P.multiplyScalar(1/hits.length);
+  // Zoom-Distanz aus Modellgrösse (etwas näher heran, aber nie weiter raus als aktuell)
+  const g=scene.getObjectByName('pb3d')||scene.getObjectByName('blk');
+  let rr=sph.r;
+  if(g){ const box=new THREE.Box3().setFromObject(g);
+    if(!box.isEmpty()){ const sz=box.getSize(new THREE.Vector3());
+      const md=Math.max(sz.x,sz.y,sz.z); rr=Math.max(2.5, md*(camera.isOrthographicCamera?1.9:1.45)); } }
+  _animateCamTo(P, Math.min(sph.r, rr), 520);
+  // Mass-Label(s) hervorheben (auch über Rebuilds: _focusField/_focusUntil)
+  _focusField=id; _focusUntil=performance.now()+2200;
+  hits.forEach(o=>o.el.classList.add('vl-hl'));
+  _highlightMeshForField(id);
+}
 // Kamera-Modus aus VIZ: perspektivisch (Default) oder isometrisch (orthographisch)
 function applyCameraMode(){
   if(typeof scene==='undefined'||!scene||!renderer||!camera) return;
@@ -2936,13 +3020,45 @@ function loadVizUI(){ const C=vizStyle();
   sc('viz-druck',_vizHex(C.druck)); sc('viz-zug',_vizHex(C.zug));
   sc('viz-forceN',_vizHex(C.forceN)); sc('viz-forceH',_vizHex(C.forceH)); sc('viz-moment',_vizHex(C.moment));
   sc('viz-solidOp', Math.round((C.solidOp||0.85)*100)); ck('viz-grid', C.gridShow!==false);
-  ck('viz-dim', (typeof showDim==='undefined'||showDim!==false));
   ck('viz-diminter', C.dimInteractive===true); ck('viz-autozoom', C.autoZoom===true);
   sc('viz-iso-sel', C.cameraIso===true?'iso':'persp');
   (C.layer||VIZ_DEFAULTS.layer).forEach((c,i)=>sc('viz-layer'+i,_vizHex(c)));
 }
 function resetVizStyle(){ SETTINGS.viz={}; dbSet('bc_settings',SETTINGS); loadVizUI(); applyCameraMode(); applyGridStyle(); rebuildScene(); }
 function clr(n){const o=scene.getObjectByName(n);if(o)scene.remove(o);}
+// Überdeckung optional: Checkbox g_uberd_on (Default an). Aus ⇒ ü wirkt nicht (=0) in Calc+Viewer.
+function _uberdOn(){ const c=document.getElementById('g_uberd_on'); return !c || c.checked; }
+function toggleUberd(cb){
+  const on=cb.checked;
+  const f=document.getElementById('g_uberd'), r=document.getElementById('g_uberd_r');
+  if(f){ f.disabled=!on; f.style.opacity=on?'':'0.5'; }
+  if(r){ r.disabled=!on; r.style.opacity=on?'':'0.5'; }
+  if(typeof updateViewer==='function') updateViewer();
+  if(typeof scheduleCalc==='function') scheduleCalc();
+}
+
+// ── Zentrale 3D-Vermassung (einheitlich für Block / Flach / Pfahlfundament) ───────────────
+// Misst zwischen zwei Bauteilpunkten a,b; die Masslinie liegt um n·off versetzt, mit
+// Hilfslinien vom Bauteil und 45°-Endmarken. EIN Abstand (DIM3_OFF) für alle Typen.
+const DIM3_OFF=0.5, DIM3_LBL=0.20, DIM3_TICK=0.09, DIM3_OVER=0.05;
+let _DIM_GRP=null, _DIM_MAT=null;                       // aktiver Vermassungs-Container + Material
+function _dimBegin(grp, mat){ _DIM_GRP=grp; _DIM_MAT=mat; }
+function _dim3(a, b, n, opt){
+  if(!_DIM_GRP||!_DIM_MAT) return;
+  opt=opt||{};
+  const off=opt.off ?? DIM3_OFF, nn=n.clone().normalize();
+  const a2=a.clone().add(nn.clone().multiplyScalar(off));
+  const b2=b.clone().add(nn.clone().multiplyScalar(off));
+  const L=(p,q)=>_DIM_GRP.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p,q]),_DIM_MAT));
+  L(a2,b2);                                              // Masslinie
+  const ov=nn.clone().multiplyScalar(DIM3_OVER);
+  L(a, a2.clone().add(ov)); L(b, b2.clone().add(ov));    // Hilfslinien (vom Bauteil, knapp über die Masslinie)
+  const dir=b2.clone().sub(a2).normalize();
+  const slash=dir.clone().add(nn).normalize().multiplyScalar(DIM3_TICK);   // 45°-Endmarke in der Massebene
+  L(a2.clone().sub(slash), a2.clone().add(slash));
+  L(b2.clone().sub(slash), b2.clone().add(slash));
+  if(opt.label) _vlAdd(opt.label, a2.clone().lerp(b2,0.5).add(nn.clone().multiplyScalar(opt.lblGap ?? DIM3_LBL)), 'vl-dim', opt.field);
+}
 
 // Moment-Bogen-Pfeil als TubeGeometry (sichtbar als 3D-Rohr)
 function mkMomArc(grp,pos,axis,M,col,angleOffset=0){
@@ -2996,11 +3112,12 @@ function buildPfahlbockViz(){
   // ── Bankett (OK an −ü, eingebettet) + Fundamentkopf darauf (ragt durch GOK)
   const matBank=new THREE.MeshLambertMaterial({color:_dim?C.concreteDim:C.concrete,transparent:true,opacity:_dim?C.ghostOp:C.solidOp});
   const edgeMat=new THREE.LineBasicMaterial({color:_dim?C.edgeDim:C.edge,transparent:true,opacity:0.6});
-  const addBox=(w,h,d,cy)=>{ const g=new THREE.BoxGeometry(w,h,d);
-    const m=new THREE.Mesh(g,matBank); m.position.set(0,cy,0); grp.add(m);
+  const addBox=(w,h,d,cy,ffields)=>{ const g=new THREE.BoxGeometry(w,h,d);
+    const m=new THREE.Mesh(g, ffields?matBank.clone():matBank); m.position.set(0,cy,0);
+    if(ffields) m.userData.ffields=ffields; grp.add(m);
     const ed=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat); ed.position.set(0,cy,0); grp.add(ed); };
-  addBox(Bbank,dBank,Lbank, yBankTop-dBank/2);                  // Bankett (OK an −ü)
-  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2);  // Fundamentkopf auf Bankett
+  addBox(Bbank,dBank,Lbank, yBankTop-dBank/2, ['pb_bx','pb_by','pb_bank_d','pb_ue']);  // Bankett (OK an −ü)
+  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2, ['pb_hk','pb_kx','pb_ky']);  // Fundamentkopf auf Bankett
 
   // ── Pfähle (geneigt) — Zylinder, eingefärbt nach Druck/Zug
   const yAxis=new THREE.Vector3(0,1,0);
@@ -3105,41 +3222,29 @@ function buildPfahlbockViz(){
       const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s*1.4,8),m); cy.position.copy(base.clone().add(d.clone().multiplyScalar(s*0.7))); cy.applyQuaternion(q); grp.add(cy);
       const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.copy(base.clone().add(d.clone().multiplyScalar(s*1.4))); co.applyQuaternion(q); grp.add(co);
       _vlAdd('H = '+Math.hypot(glL.Hx||0,glL.Hy||0).toFixed(0)+' kN',base.clone().add(d.clone().multiplyScalar(s*1.4+0.4)),'vl-frc'); }
-    const Mx=glD.Mx||0, My=glD.My||0, Mres=Math.hypot(Mx,My);
+    // Mast-Moment am OK Kopf (MxApp/MyApp) — wie Block, OHNE H·Hebel-Transfer auf UK Bankett
+    const Mx=(glD.MxApp!==undefined?glD.MxApp:glD.Mx)||0, My=(glD.MyApp!==undefined?glD.MyApp:glD.My)||0, Mres=Math.hypot(Mx,My);
     if(Mres>0.5 && typeof mkMomArc==='function'){
       const axisRes=new THREE.Vector3(Mx,0,-My).normalize();
       const arc=mkMomArc(grp,new THREE.Vector3(0,topY+0.1,0),axisRes,Mres,C.moment,-Math.PI/2);
-      if(arc&&arc.start) _vlAdd('M'+sfx+' = '+Math.hypot(glL.Mx||0,glL.My||0).toFixed(0)+' kNm',arc.start.clone().add(new THREE.Vector3(0.45,0.55,0.25)),'vl-frc');
+      const MxL=(glL.MxApp!==undefined?glL.MxApp:glL.Mx)||0, MyL=(glL.MyApp!==undefined?glL.MyApp:glL.My)||0;
+      if(arc&&arc.start) _vlAdd('M'+sfx+' = '+Math.hypot(MxL,MyL).toFixed(0)+' kNm',arc.start.clone().add(new THREE.Vector3(0.45,0.55,0.25)),'vl-frc');
     }
   }
 
-  // ── Vermassung (wie Block): B/L Bankett, ü, Bankettdicke, H_Kopf, Pfahllänge L
+  // ── Vermassung (zentral via _dim3 — identische Abstände/Hilfslinien wie Block)
   if(showDim){
-    const dm=new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true});
-    const dl=(a,b)=>grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),dm));
-    const V=(x,y,z)=>new THREE.Vector3(x,y,z);
-    const tick=(p,ax,s=0.10)=>{ const t=ax.clone().normalize().multiplyScalar(s); dl(p.clone().add(t),p.clone().sub(t)); };
-    const off=0.6, yb=yBankTop;
-    // B (x-Mass) vorne
-    const zf=Lbank/2+off;
-    dl(V(-Bbank/2,yb,zf),V(Bbank/2,yb,zf)); tick(V(-Bbank/2,yb,zf),V(0,1,0)); tick(V(Bbank/2,yb,zf),V(0,1,0));
-    _vlAdd('B = '+Bbank.toFixed(2)+' m',V(0,yb+0.18,zf+0.1),'vl-dim','pb_bx');
-    // L (z-Mass) links-AUSSEN, klar getrennt von der H_Kopf/d-Kette
-    const xLo=-Bbank/2-off-0.6;
-    dl(V(xLo,yb,-Lbank/2),V(xLo,yb,Lbank/2)); tick(V(xLo,yb,-Lbank/2),V(0,1,0)); tick(V(xLo,yb,Lbank/2),V(0,1,0));
-    _vlAdd('L = '+Lbank.toFixed(2)+' m',V(xLo-0.12,yb+0.18,Lbank/2+0.1),'vl-dim','pb_by');
-    // LINKS-innen: vertikale Kette H_Kopf (oben) + d (unten)
-    const xl=-Bbank/2-off;
-    if(hKopf>0.01){ dl(V(xl,yBankTop,0),V(xl,yBankTop+hKopf,0)); tick(V(xl,yBankTop+hKopf,0),V(1,0,0));
-      _vlAdd('H_Kopf = '+hKopf.toFixed(2)+' m',V(xl-0.12,yBankTop+hKopf/2,0),'vl-dim','pb_hk'); }
-    dl(V(xl,yBankTop,0),V(xl,yUK,0)); tick(V(xl,yBankTop,0),V(1,0,0)); tick(V(xl,yUK,0),V(1,0,0));
-    _vlAdd('d = '+dBank.toFixed(2)+' m',V(xl-0.12,yBankTop-dBank/2,0),'vl-dim','pb_bank_d');
-    // RECHTS: ü (oben, GOK→OK Bankett) + Pfahllänge L (tief) gestapelt — gegenüber von H_Kopf/d
-    const xr=Bbank/2+off;
-    if(ue>0.01){ dl(V(xr,0,0),V(xr,yBankTop,0)); tick(V(xr,0,0),V(1,0,0)); tick(V(xr,yBankTop,0),V(1,0,0));
-      _vlAdd('ü = '+ue.toFixed(2)+' m',V(xr+0.12,-ue/2,0),'vl-dim','pb_ue'); }
-    dl(V(xr,yUK,0),V(xr,yUK-L,0)); tick(V(xr,yUK,0),V(1,0,0)); tick(V(xr,yUK-L,0),V(1,0,0));
-    _vlAdd('L = '+L.toFixed(2)+' m',V(xr+0.12,yUK-L/2,0),'vl-dim','pb_L');
+    _dimBegin(grp, new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true}));
+    const V=(x,y,z)=>new THREE.Vector3(x,y,z), yb=yBankTop;
+    // B (x) vorne · L Bankett (z) links-aussen — auf OK-Bankett-Ebene
+    _dim3(V(-Bbank/2,yb,Lbank/2), V(Bbank/2,yb,Lbank/2), V(0,0,1), {label:'B = '+Bbank.toFixed(2)+' m', field:'pb_bx'});
+    _dim3(V(-Bbank/2,yb,-Lbank/2), V(-Bbank/2,yb,Lbank/2), V(-1,0,0), {off:DIM3_OFF+0.7, label:'L = '+Lbank.toFixed(2)+' m', field:'pb_by'});
+    // Links-innen vertikale Kette (z=0): H_Kopf (oben) + Bankettdicke d (unten)
+    if(hKopf>0.01) _dim3(V(-Bbank/2,yBankTop,0), V(-Bbank/2,yBankTop+hKopf,0), V(-1,0,0), {label:'H_Kopf = '+hKopf.toFixed(2)+' m', field:'pb_hk'});
+    _dim3(V(-Bbank/2,yBankTop,0), V(-Bbank/2,yUK,0), V(-1,0,0), {label:'d = '+dBank.toFixed(2)+' m', field:'pb_bank_d'});
+    // Rechts vertikale Kette (z=0): ü (oben, GOK→OK Bankett) + Pfahllänge L (tief, aussen)
+    if(ue>0.01) _dim3(V(Bbank/2,0,0), V(Bbank/2,yBankTop,0), V(1,0,0), {label:'ü = '+ue.toFixed(2)+' m', field:'pb_ue'});
+    _dim3(V(Bbank/2,yUK,0), V(Bbank/2,yUK-L,0), V(1,0,0), {off:DIM3_OFF+0.7, label:'L = '+L.toFixed(2)+' m', field:'pb_L'});
   }
 
   scene.add(grp);
@@ -3149,7 +3254,7 @@ function rebuildScene(){
   const bx=+gi('g_bx'),by=+gi('g_by'),hb=+gi('g_hblock');
   const kx=+gi('g_kx'),ky=+gi('g_ky'),hk=+gi('g_hkopf');
   const ex=+gi('g_ex'),ey=+gi('g_ey');
-  const ue=Math.max(0,+gi('g_uberd')||0);  // Überdeckung
+  const ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung (optional, Schalter)
   ['blk','gnd','lyr','arH','arN','arM','axs','spl','vec','dim','pfahl3d','pb3d'].forEach(clr);
   // Auflasten-Pfeile aus vorherigem Frame entfernen (feste Obergrenze → kein Hängenbleiben nach Löschen)
   for(let _i=0;_i<20;_i++) clr('arAuf'+_i);
@@ -3160,7 +3265,7 @@ function rebuildScene(){
   if(_lgB) _lgB.style.display=_isPb?'none':''; if(_lgP) _lgP.style.display=_isPb?'':'none';
   applyGridStyle();   // Raster-Stil (VIZ) — beide Modi
   // Pfahlfundament: eigenes 3D-Modell statt Block/Flach (Bankett + geneigte Pfähle + σ'v + Kräfte)
-  if(_isPb){ try{ buildPfahlbockViz(); fitCameraToModel(); }catch(err){ console.error('buildPfahlbockViz:', err); } updateSB(); return; }
+  if(_isPb){ try{ buildPfahlbockViz(); if(_pendingFit){_pendingFit=false; fitCameraToModel();} if(_focusField && performance.now()<_focusUntil) _highlightMeshForField(_focusField); }catch(err){ console.error('buildPfahlbockViz:', err); } updateSB(); return; }
   const C=vizStyle();   // zentrales Darstellungs-Modul (auch Block liest jetzt hier, via SETTINGS.viz konfigurierbar)
   const bg=new THREE.Group();bg.name='blk';
   // Block: sitzt ue unterhalb GOK
@@ -3168,7 +3273,8 @@ function rebuildScene(){
   const _dimMode=showStr||showVec;
   const bCol=_dimMode?C.concreteDim:C.concrete, bOp=_dimMode?C.ghostOp:C.solidOp;
   const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:bCol,transparent:true,opacity:bOp}));
-  bMesh.position.set(0,-ue-hb/2,0);bMesh.castShadow=true;bMesh.renderOrder=1;bg.add(bMesh);
+  bMesh.position.set(0,-ue-hb/2,0);bMesh.castShadow=true;bMesh.renderOrder=1;
+  bMesh.userData.ffields=['g_bx','g_by','g_hblock','g_uberd'];bg.add(bMesh);
   const bEdgeCol=_dimMode?C.edgeDim:C.edge;
   const bEdge=new THREE.LineSegments(new THREE.EdgesGeometry(bGeo),new THREE.LineBasicMaterial({color:bEdgeCol,opacity:_dimMode?0.5:0.7,transparent:true}));
   bEdge.position.copy(bMesh.position);bg.add(bEdge);
@@ -3178,7 +3284,8 @@ function rebuildScene(){
     const kGeo=new THREE.BoxGeometry(kx,hk,ky);
     const kCol=_dimMode?C.concreteDim:C.concrete, kOp=_dimMode?C.ghostOp:C.solidOp;
     const kMesh=new THREE.Mesh(kGeo,new THREE.MeshLambertMaterial({color:kCol,transparent:true,opacity:kOp}));
-    kMesh.position.set(ex,-ue+hk/2,ey);kMesh.castShadow=true;kMesh.renderOrder=1;bg.add(kMesh);
+    kMesh.position.set(ex,-ue+hk/2,ey);kMesh.castShadow=true;kMesh.renderOrder=1;
+    kMesh.userData.ffields=['g_hkopf','g_kx','g_ky'];bg.add(kMesh);
     const kEdge=new THREE.LineSegments(new THREE.EdgesGeometry(kGeo),new THREE.LineBasicMaterial({color:C.edge,opacity:0.7,transparent:true}));
     kEdge.position.copy(kMesh.position);bg.add(kEdge);
   }
@@ -3249,15 +3356,18 @@ function rebuildScene(){
     // Hilfsfunktion: ShapeGeometry mit Aussparung — ein einziger Mesh, keine Nahtprobleme
     // Bei Flachfundament: Loch = Plattenfootprint (bx×by); bei Block: Loch = Kopf (kx×ky)
     const _isFlach = CALC_MODEL === 'flach';
+    // Überdeckung aktiv (Block deckt unter Erde) → keine Aussparung in der Geländefläche
+    const _uberdActive = _uberdOn() && ue > 0.001;
+    const _holeOn = _isFlach ? true : !_uberdActive;
     const holeW = _isFlach ? bx : kx;
     const holeD = _isFlach ? by : ky;
 
     const makeFlatMesh=(x0,x1,z0,z1,cy)=>{
       const sh=new THREE.Shape();
       sh.moveTo(x0,z0); sh.lineTo(x1,z0); sh.lineTo(x1,z1); sh.lineTo(x0,z1); sh.closePath();
-      // Loch 1: Fundamentkopf / Platte
+      // Loch 1: Fundamentkopf / Platte (beim Block nur ohne aktive Überdeckung)
       const hx0=ex-holeW/2, hx1=ex+holeW/2, hz0=-ey-holeD/2, hz1=-ey+holeD/2;
-      if(hx0>x0&&hx1<x1&&hz0>z0&&hz1<z1){
+      if(_holeOn && hx0>x0&&hx1<x1&&hz0>z0&&hz1<z1){
         const hole=new THREE.Path();
         hole.moveTo(hx0,hz0); hole.lineTo(hx0,hz1); hole.lineTo(hx1,hz1); hole.lineTo(hx1,hz0); hole.closePath();
         sh.holes.push(hole);
@@ -3329,55 +3439,10 @@ function rebuildScene(){
     }
 
     // ── Baugrundausschnitt (Grube) für Flachfundament ──────────────────
-    // Zeigt den ausgehobenen Bereich von GOK bis UK Platte als geschlossenen Kasten
+    // Nur Umriss an GOK (Plattenfootprint) — keine braunen Erdflächen mehr (Nutzerwunsch).
     if(_isFlach && (ue + hb) > 0.02){
-      const pitDepth = ue + hb;          // Grubenthiefe = Planumtiefe + Plattendicke
-      const pitMat = new THREE.MeshBasicMaterial({
-        color: 0x8b7355,                 // Erdfarbe (braun)
-        transparent: true, opacity: 0.55,
-        side: THREE.DoubleSide, depthWrite: false
-      });
-      // Grube-Footprint: zentriert auf ex/ey (Plattenversatz)
       const px0 = ex - bx/2, px1 = ex + bx/2;
-      const pz0 = ey - by/2, pz1 = ey + by/2;  // World-Z (nicht negiert, da direkt als Y-Pos)
-
-      // 4 Seitenwände der Grube (von y=0 bis y=-pitDepth)
-      const wallVerts = [
-        // Nord-Wand (z = pz1): x0→x1, y0→-pitDepth
-        [new THREE.Vector3(px0, 0, -pz1), new THREE.Vector3(px1, 0, -pz1),
-         new THREE.Vector3(px1, -pitDepth, -pz1), new THREE.Vector3(px0, -pitDepth, -pz1)],
-        // Süd-Wand (z = pz0)
-        [new THREE.Vector3(px0, 0, -pz0), new THREE.Vector3(px0, -pitDepth, -pz0),
-         new THREE.Vector3(px1, -pitDepth, -pz0), new THREE.Vector3(px1, 0, -pz0)],
-        // West-Wand (x = px0)
-        [new THREE.Vector3(px0, 0, -pz0), new THREE.Vector3(px0, 0, -pz1),
-         new THREE.Vector3(px0, -pitDepth, -pz1), new THREE.Vector3(px0, -pitDepth, -pz0)],
-        // Ost-Wand (x = px1)
-        [new THREE.Vector3(px1, 0, -pz0), new THREE.Vector3(px1, -pitDepth, -pz0),
-         new THREE.Vector3(px1, -pitDepth, -pz1), new THREE.Vector3(px1, 0, -pz1)],
-      ];
-      wallVerts.forEach(pts => {
-        const geo = new THREE.BufferGeometry();
-        const v = new Float32Array([
-          pts[0].x,pts[0].y,pts[0].z, pts[1].x,pts[1].y,pts[1].z,
-          pts[2].x,pts[2].y,pts[2].z, pts[3].x,pts[3].y,pts[3].z
-        ]);
-        geo.setAttribute('position', new THREE.BufferAttribute(v, 3));
-        geo.setIndex([0,1,2, 0,2,3]);
-        geo.computeVertexNormals();
-        gndGrp.add(new THREE.Mesh(geo, pitMat));
-      });
-
-      // Grubensohle (Planum) bei y = -pitDepth
-      const floorGeo = new THREE.PlaneGeometry(bx, by);
-      const floorMesh = new THREE.Mesh(floorGeo, new THREE.MeshBasicMaterial({
-        color: 0x6e5c3a, transparent: true, opacity: 0.65,
-        side: THREE.DoubleSide, depthWrite: false
-      }));
-      floorMesh.rotation.x = -Math.PI/2;
-      floorMesh.position.set(ex, -pitDepth, -ey);
-      gndGrp.add(floorMesh);
-
+      const pz0 = ey - by/2, pz1 = ey + by/2;
       // Grubenkanten (Umriss an GOK)
       const edgeMat = new THREE.LineBasicMaterial({color: 0x7888a0, opacity: 0.8, transparent: true});
       const edgePts = [
@@ -3404,30 +3469,32 @@ function rebuildScene(){
     const gG=lf_.gG??1.35, gW=lf_.gW??1.5;
     const Hxd=gG*HGx+gW*HWx, Hyd=gG*HGy+gW*HWy;
     const Ht=Math.sqrt(Hxd**2+Hyd**2);
-    const _gb=+gi('g_gbeton'),_ga=+gi('g_gauf'),_ue=Math.max(0,+gi('g_uberd')||0);
+    const _gb=+gi('g_gbeton'),_ga=+gi('g_gauf'),_ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;
     const _kpf=document.getElementById('kopf_in_gk')?.checked!==false;
     const _kx=+gi('g_kx'),_ky=+gi('g_ky');
     const _Gk=(_gb*(bx*by*hb+(_kpf?_kx*_ky*(hk+_ue):0))+(_ue>0?((_kpf?_kx*_ky:0)*_ue*_gb+(bx*by-_kx*_ky)*_ue*_ga):0));
     const _gGe=+gi('lw_G_eig')||1.00;
     const Nd=gG*NG+_gGe*_Gk;
     const S_MIN=0.55, S_MAX=2.5; // Mindest- / Maximallänge Vektoren [m]
+    const okKopf = -_ue + hk;    // OK Fundamentkopf (Lastangriff) in Welt-y — Pfeile setzen hier an (wie Pfahlfundament)
     if(Ht>0.001){
       const s=Math.max(S_MIN,Math.min(S_MAX,Ht/20));
       const d=new THREE.Vector3(Hxd,0,Hyd).normalize();
       const g=new THREE.Group();g.name='arH';
       const m=new THREE.MeshLambertMaterial({color:C.forceH});
       const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),d);
+      const base=new THREE.Vector3(ex,okKopf,ey);
       const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s*1.4,8),m);
-      cy.position.copy(new THREE.Vector3(ex,hk,ey).add(d.clone().multiplyScalar(s*0.7)));cy.applyQuaternion(q);g.add(cy);
+      cy.position.copy(base.clone().add(d.clone().multiplyScalar(s*0.7)));cy.applyQuaternion(q);g.add(cy);
       const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m);
-      co.position.copy(new THREE.Vector3(ex,hk,ey).add(d.clone().multiplyScalar(s*1.4)));co.applyQuaternion(q);g.add(co);scene.add(g);
+      co.position.copy(base.clone().add(d.clone().multiplyScalar(s*1.4)));co.applyQuaternion(q);g.add(co);scene.add(g);
     }
     if(NG_>0.001){
       const s=Math.max(S_MIN,Math.min(S_MAX,NG_/50));
       const g=new THREE.Group();g.name='arN';
       const m=new THREE.MeshLambertMaterial({color:C.forceN});
-      const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s,8),m);cy.position.set(ex,hk+s/2+0.15,ey);g.add(cy);
-      const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m);co.position.set(ex,hk+0.07,ey);co.rotation.z=Math.PI;g.add(co);scene.add(g);
+      const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s,8),m);cy.position.set(ex,okKopf+s/2+0.15,ey);g.add(cy);
+      const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m);co.position.set(ex,okKopf+0.07,ey);co.rotation.z=Math.PI;g.add(co);scene.add(g);
     }
     // Auflasten: separate Pfeile pro Auflast (nur Stahl-Flachfundament)
     if(CALC_MODEL==='flach' && FLACH_MAT==='stahl' && AUFLASTEN.length){
@@ -3459,13 +3526,13 @@ function rebuildScene(){
         const Htk=Math.sqrt(Hxk**2+Hyk**2);
         const Hlbl = isChar ? Htk : Ht;
         _vlAdd(`H = ${Hlbl.toFixed(0)} kN`,
-          new THREE.Vector3(ex,hk,ey).add(d.clone().multiplyScalar(s*1.4+0.4)),'vl-frc');
+          new THREE.Vector3(ex,okKopf,ey).add(d.clone().multiplyScalar(s*1.4+0.4)),'vl-frc');
       }
       if(NG_>0.001){
         const s=Math.max(S_MIN,Math.min(S_MAX,NG_/50));
-        const Gk_=(_gb*(bx*by*hb+(+gi('g_kx'))*(+gi('g_ky'))*(hk+_ue))+(_ue>0?(bx*by-(+gi('g_kx'))*(+gi('g_ky')))*_ue*_ga:0));
-        const Nlbl = isChar ? (NG_+Gk_) : Nd;
-        _vlAdd(`N${sfx} = ${Nlbl.toFixed(0)} kN`,new THREE.Vector3(ex+0.4,hk+s/2+0.15,ey),'vl-frc');
+        // Vertikal-Vektor = reine MASTLAST (ohne Eigengewicht), wie Pfahlfundament: k=NG, d=γ_G·NG
+        const Nlbl = isChar ? NG_ : (gG*NG);
+        _vlAdd(`N${sfx} = ${Nlbl.toFixed(0)} kN`,new THREE.Vector3(ex+0.4,okKopf+s/2+0.15,ey),'vl-frc');
       }
       // Labels für Auflasten
       if(CALC_MODEL==='flach' && FLACH_MAT==='stahl'){
@@ -3492,74 +3559,20 @@ function rebuildScene(){
     if(lgPfahl) lgPfahl.style.display = 'none';
   }
 
-  // ── Vermassung
+  // ── Vermassung (zentral via _dim3 — einheitliche Abstände/Hilfslinien wie Pfahlfundament)
   if(showDim){
     const dg=new THREE.Group();dg.name='dim';
-    const dm=new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true});
-    const ln=(a,b)=>{const g=new THREE.BufferGeometry().setFromPoints([a,b]);dg.add(new THREE.Line(g,dm));};
-    const tick=(p,axis,s=0.13)=>{const t=axis.clone().normalize().multiplyScalar(s);ln(p.clone().add(t),p.clone().sub(t));};
-    const off=0.45;
-
-    // Mittelachse — strichpunktiert durch Blockschwerpunkt (x=ex, z=ey)
-    const axExt=0.55; // Überstand über/unter Block
-    const axMat=new THREE.LineDashedMaterial({color:0xffffff,opacity:0.45,transparent:true,dashSize:0.12,gapSize:0.06,linewidth:1});
-    const axPts=[new THREE.Vector3(ex,hk+axExt,ey),new THREE.Vector3(ex,-(ue+hb+axExt),ey)];
-    const axGeo=new THREE.BufferGeometry().setFromPoints(axPts);
-    const axLine=new THREE.Line(axGeo,axMat); axLine.computeLineDistances(); dg.add(axLine);
-    // Kurze Quermarken in X und Z auf OK-Block-Ebene
-    const mkMat=new THREE.LineDashedMaterial({color:0xffffff,opacity:0.38,transparent:true,dashSize:0.08,gapSize:0.05});
-    const mHalf=Math.max(bx,by)*0.22;
-    [[new THREE.Vector3(ex-mHalf,-ue,ey),new THREE.Vector3(ex+mHalf,-ue,ey)],
-     [new THREE.Vector3(ex,-ue,ey-mHalf),new THREE.Vector3(ex,-ue,ey+mHalf)]].forEach(pts=>{
-      const g2=new THREE.BufferGeometry().setFromPoints(pts);
-      const l2=new THREE.Line(g2,mkMat); l2.computeLineDistances(); dg.add(l2);
-    });
-
-    // B (x-Richtung), vorne — auf OK-Block (y = -ue)
-    const dimY=-ue, dimY2=dimY+0.02;
-    const bz=by/2+off;
-    ln(new THREE.Vector3(-bx/2,dimY2,bz),new THREE.Vector3(bx/2,dimY2,bz));
-    tick(new THREE.Vector3(-bx/2,dimY2,bz),new THREE.Vector3(0,0,1));
-    tick(new THREE.Vector3( bx/2,dimY2,bz),new THREE.Vector3(0,0,1));
-    ln(new THREE.Vector3(-bx/2,dimY,by/2),new THREE.Vector3(-bx/2,dimY2,bz));
-    ln(new THREE.Vector3( bx/2,dimY,by/2),new THREE.Vector3( bx/2,dimY2,bz));
-    _vlAdd(`B = ${bx.toFixed(2)} m`,new THREE.Vector3(0,dimY+0.15,bz+0.25),'vl-dim','g_bx');
-
-    // L (z-Richtung), rechts — auf OK-Block (y = -ue)
-    const lx=bx/2+off;
-    ln(new THREE.Vector3(lx,dimY2,-by/2),new THREE.Vector3(lx,dimY2,by/2));
-    tick(new THREE.Vector3(lx,dimY2,-by/2),new THREE.Vector3(1,0,0));
-    tick(new THREE.Vector3(lx,dimY2, by/2),new THREE.Vector3(1,0,0));
-    ln(new THREE.Vector3(bx/2,dimY,-by/2),new THREE.Vector3(lx,dimY2,-by/2));
-    ln(new THREE.Vector3(bx/2,dimY, by/2),new THREE.Vector3(lx,dimY2, by/2));
-    _vlAdd(`L = ${by.toFixed(2)} m`,new THREE.Vector3(lx+0.25,dimY+0.15,0),'vl-dim','g_by');
-
-    // t_eff / Einbindetiefe (y-Richtung), rechts — inkl. Überdeckung
-    const tx=bx/2+off+0.5;
-    const t_eff=hb+ue;
-    ln(new THREE.Vector3(tx,-t_eff,0),new THREE.Vector3(tx,0,0));
-    tick(new THREE.Vector3(tx,-t_eff,0),new THREE.Vector3(1,0,0));
-    tick(new THREE.Vector3(tx,     0,0),new THREE.Vector3(1,0,0));
-    ln(new THREE.Vector3(bx/2,-t_eff,0),new THREE.Vector3(tx,-t_eff,0));
-    ln(new THREE.Vector3(bx/2,      0,0),new THREE.Vector3(tx,      0,0));
-    _vlAdd(`t = ${t_eff.toFixed(2)} m`,new THREE.Vector3(tx+0.25,-t_eff/2,0),'vl-dim','g_hblock');
-    // Überdeckung-Markierung
-    if(ue>0.01){
-      tick(new THREE.Vector3(tx,-ue,0),new THREE.Vector3(1,0,0));
-      _vlAdd(`ü = ${ue.toFixed(2)} m`,new THREE.Vector3(tx+0.25,-ue/2,0),'vl-dim','g_uberd');
-    }
-
-    // H_Kopf (OK-Block → OK-Kopf), links
-    if(hk>0.05){
-      const kx2=-(bx/2+0.3);
-      const okBlk=-ue, okKopf=-ue+hk;
-      ln(new THREE.Vector3(kx2,okBlk,0),new THREE.Vector3(kx2,okKopf,0));
-      tick(new THREE.Vector3(kx2,okBlk, 0),new THREE.Vector3(1,0,0));
-      tick(new THREE.Vector3(kx2,okKopf,0),new THREE.Vector3(1,0,0));
-      _vlAdd(`h = ${hk.toFixed(2)} m`,new THREE.Vector3(kx2-0.3,okBlk+hk/2,0),'vl-dim','g_hkopf');
-      _vlAdd(`OK-Block`,new THREE.Vector3(kx2-0.25,okBlk-0.08,0),'vl-dim');
-    }
-
+    _dimBegin(dg, new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true}));
+    const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+    const dimY=-ue, t_eff=hb+ue, okKopf=-ue+hk;
+    // B (x) vorne · L (z) rechts — beide auf OK-Block-Ebene
+    _dim3(V(-bx/2,dimY,by/2), V(bx/2,dimY,by/2), V(0,0,1), {label:`B = ${bx.toFixed(2)} m`, field:'g_bx'});
+    _dim3(V(bx/2,dimY,-by/2), V(bx/2,dimY,by/2), V(1,0,0), {label:`L = ${by.toFixed(2)} m`, field:'g_by'});
+    // Vertikale Kette rechts (z=0): ü innen, t aussen
+    if(ue>0.01) _dim3(V(bx/2,0,0), V(bx/2,-ue,0), V(1,0,0), {label:`ü = ${ue.toFixed(2)} m`, field:'g_uberd'});
+    _dim3(V(bx/2,0,0), V(bx/2,-t_eff,0), V(1,0,0), {off:DIM3_OFF+0.7, label:`t = ${t_eff.toFixed(2)} m`, field:'g_hblock'});
+    // H_Kopf links (OK Block → OK Kopf)
+    if(hk>0.05) _dim3(V(-bx/2,-ue,0), V(-bx/2,okKopf,0), V(-1,0,0), {label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
     scene.add(dg);
   }
 
@@ -3575,7 +3588,7 @@ function rebuildScene(){
     const My=(c_.MGy?gG*MGy_:0)+(c_.MWy?gW*MWy_:0);
     const Mres=Math.sqrt(Mx*Mx+My*My);
     const gM=new THREE.Group();gM.name='arM';
-    const pos=new THREE.Vector3(ex,hk,ey);
+    const pos=new THREE.Vector3(ex,-ue+hk,ey);   // OK Kopf (= okKopf) — ue ist rebuildScene-weit
     // Resultierendes Moment: Drehachse = normierter Vektor aus Mx*(1,0,0) + My*(0,0,-1)
     let arcMres=null;
     if(Mres>0.5){
@@ -3594,7 +3607,9 @@ function rebuildScene(){
       arcMres.start.clone().add(new THREE.Vector3(0,0.15,0.15)),'vl-frc');}
   }
 
-  fitCameraToModel();
+  if(_pendingFit){ _pendingFit=false; fitCameraToModel(); }
+  // Bauteil-Highlight bei aktivem Eingabe-Fokus über den Rebuild hinweg neu aufleuchten lassen
+  if(_focusField && performance.now()<_focusUntil) _highlightMeshForField(_focusField);
   updateSB();
 }
 const updateViewer=rebuildScene;
@@ -3842,7 +3857,7 @@ function buildStress(){
     `<div class="lg-row"><div class="lg-sq" style="background:${cNL}"></div>Nulllinie y_NL</div>`;
   document.getElementById('lg-str').style.display='block';
 }
-function resetCam(){sph={t:0.6,p:1.0,r:12};moveCam();}
+function resetCam(){_cancelCamFly(true);sph={t:0.6,p:1.0,r:12};moveCam();}
 function setCamTop(){sph={t:0,p:0.08,r:14};moveCam();}
 function setCamFront(){sph={t:0,p:Math.PI/2-0.08,r:14};moveCam();}
 function setCamSide(){sph={t:Math.PI/2,p:Math.PI/2-0.08,r:14};moveCam();}
@@ -5488,7 +5503,9 @@ function renderPfahlbock(){
     const Ng=a(c.NG,NG), HxG=a(c.HGx,HGx),HyG=a(c.HGy,HGy),MxG=a(c.MGx,MGx),MyG=a(c.MGy,MGy);
     const HxW=a(c.HWx,HQx),HyW=a(c.HWy,HQy),MxW=a(c.MWx,MQx),MyW=a(c.MWy,MQy);
     return { N:fGv*(Ng+G_eig), Hx:fGo*HxG+fW*HxW, Hy:fGo*HyG+fW*HyW,
-      Mx:fGo*(MxG+HyG*hl)+fW*(MxW+HyW*hl), My:fGo*(MyG+HxG*hl)+fW*(MyW+HxW*hl) }; };
+      Mx:fGo*(MxG+HyG*hl)+fW*(MxW+HyW*hl), My:fGo*(MyG+HxG*hl)+fW*(MyW+HxW*hl),
+      // Mast-Moment am OK Kopf (ohne H·Hebel) — für die 3D-Einwirkung, konsistent zum Block
+      MxApp:fGo*MxG+fW*MxW, MyApp:fGo*MyG+fW*MyW }; };
   const ulsLF=LF.filter(lf=>lf.nw!=='gzg'), gzgLF=LF.filter(lf=>lf.nw!=='gzt');
   const ulsCombos=[];
   (ulsLF.length?ulsLF:LF).forEach(lf=>{ const gGs=lf.gG??1.35, gW=lf.gW??1.5;
@@ -5975,8 +5992,26 @@ function _pbResultHTML(r, piles, n){
   </div>`;
 }
 
+// ── Geometrie pro Modell entkoppeln (Block ↔ Flach) — Boden + Lasten bleiben GLOBAL
+// (Standort + zul. Lasten sind vorgegeben). Beim Modellwechsel wird die Geometrie ins
+// ausgehende Modell gesichert und die des eingehenden geladen; persistiert via _geom.
+const _GEOM_FIELDS=['g_bx','g_by','g_hblock','g_kx','g_ky','g_hkopf','g_uberd','g_uberd_flach','g_ex','g_ey'];
+let _geom={};            // {block:{feld:wert,…}, flach:{…}}
+let _applyingState=false; // während applyState: keinen Geometrie-Tausch auslösen
+function _readGeom(){ const o={}; _GEOM_FIELDS.forEach(f=>{const e=document.getElementById(f); if(e) o[f]=e.value;}); return o; }
+function _writeGeom(o){ if(!o) return; _GEOM_FIELDS.forEach(f=>{ if(o[f]!==undefined){ const e=document.getElementById(f); if(e){ e.value=o[f]; const r=document.getElementById(f+'_r'); if(r) r.value=o[f]; } } });
+  if(typeof formatMeterInputs==='function') formatMeterInputs(); }
+
 function setModel(m, silent){
+  const _prevModel = CALC_MODEL;
   CALC_MODEL = m;
+  // Geometrie pro Modell tauschen — nur echte Block↔Flach-Wechsel (Pfahlbock hat eigene Felder;
+  // beim State-Laden übernimmt applyState die Slots).
+  if(!_applyingState && (_prevModel==='block'||_prevModel==='flach') && (m==='block'||m==='flach') && _prevModel!==m){
+    _geom[_prevModel]=_readGeom();
+    if(_geom[m]) _writeGeom(_geom[m]);
+  }
+  _pendingFit = true;   // Modellwechsel → Gesamtmodell einmal neu rahmen
   // Buttons
   document.getElementById('model-btn-block').classList.toggle('active', m==='block');
   document.getElementById('model-btn-flach').classList.toggle('active', m==='flach');
@@ -8462,7 +8497,7 @@ function _plausCheck(){
 }
 function _doCalculate(){
   const B=+gi('g_bx'), L=+gi('g_by'), Hb=+gi('g_hblock');
-  const ue=Math.max(0,+gi('g_uberd')||0);          // Überdeckung ab OK Block
+  const ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung ab OK Block (optional, Schalter)
   const t=Hb+ue;                                    // effektive Einbindetiefe
   const Bk=+gi('g_kx'), Lk=+gi('g_ky'), Hk=+gi('g_hkopf');
   const exk=+gi('g_ex'), eyk=+gi('g_ey'), gb=+gi('g_gbeton');
@@ -8730,7 +8765,7 @@ function _doCalculate(){
     let etaGZG = Infinity, alpha_GZG_calc = 0;
     let tan_a1_GZG=0, tan_a2_GZG=0, M1_GZG_val=0, M2_GZG_val=0;
     let Malpha_GZG_val=0, Mu_char_GZG=0, M_ok_char_GZG=0;
-    let H_k_GZG=0, N_k_GZG=0;
+    let H_k_GZG=0, N_k_GZG=0, gzgBettungKollaps=false;
 
     // ── 7. GZT STANDSICHERHEIT STECKNER (Nulllinie + Grenzmoment)
     // Modell nach Steckner (Bautechnik 2/1989), §5, ST-Fundament-verifiziert:
@@ -9012,8 +9047,12 @@ function _doCalculate(){
         };
 
         // Factory: Stirnseiten-Terme (Gl.11/13-15/18-20) als Funktion der wirksamen
-        // Einspanntiefe D_g — Zustand A nutzt D_eff = t − d_ex (Näherung: Frontbettung
-        // über die Aushubhöhe entfällt, C₁ unverändert)
+        // Stirnbettungs-Höhe D_g. Steckner kennt KEIN ü (D = volle Blockhöhe ab GOK);
+        // diese App modelliert einen vergrabenen Block, und der GZT zieht ü konsistent ab
+        // (Erddruck ü→t, Hebel v=(h−ü)…, R_u·(t−ü)). Die Stirnbettung muss daher ebenso über
+        // die ECHTE Blockfläche H_Block = t−ü wirken (Bestand: D_g = t−ü). Zustand A reduziert
+        // zusätzlich um den Aushub. C₁ bleibt über die wahre Tiefe (t/2) unverändert —
+        // nur die Bettungs-HÖHE ändert sich. ü=0 (reiner Steckner, Tab. 2) ⇒ D_g = t ⇒ identisch.
         const mkGZG = D_g => {
           const ta1 = (B*D_g*D_g*C1_g > 0.001)
             ? 6*(N_al*tan_p2 + H_kg) / (B*D_g*D_g*C1_g) : 0;        // Gl.11
@@ -9038,8 +9077,9 @@ function _doCalculate(){
           return (alo+ahi)/2;
         };
 
-        // ── Bestand (D = t) — identisch zur bisherigen Berechnung
-        const gzgB = mkGZG(t);
+        // ── Bestand: Stirnbettung über die echte Blockfläche D = t − ü (H_Block)
+        const D_bed = Math.max(0.1, t - ue);
+        const gzgB = mkGZG(D_bed);
         tan_a1_GZG = gzgB.ta1;
 
         // Gl.21 — M_u,char: GZT Grenzmoment unter charakteristischen Lasten
@@ -9056,7 +9096,11 @@ function _doCalculate(){
         M1_GZG_val    = gzgB.M1fn(tan_zul);
         M2_GZG_val    = M2fn(tan_zul);
         const Mraw    = gzgB.Mafn(tan_zul);
-        Malpha_GZG_val= Mu_c > 0 ? Math.min(Mraw, Mu_c) : Math.max(0.001, Mraw);
+        // Floor bei 0: Mraw < 0 (z. B. steile Böschung → C₁ kollabiert, M₁ < H·D) heisst
+        // „Bettung kann H·D bei tan_zul nicht aufnehmen" = Nachweis nicht erfüllt (η→0),
+        // KEIN negatives η (sinnlos). gzgBettungKollaps flaggt den Modellgrenzfall fürs UI.
+        gzgBettungKollaps = Mraw < 0;
+        Malpha_GZG_val= Math.max(0, Mu_c > 0 ? Math.min(Mraw, Mu_c) : Mraw);
         alpha_GZG_calc= solveAlpha(gzgB.Mafn);
         // η_GZG = M_α_limited / M_ok (Nachweis erfüllt wenn η ≥ 1)
         etaGZG = M_ok_g > 0.001 ? Malpha_GZG_val / M_ok_g : Infinity;
@@ -9071,8 +9115,10 @@ function _doCalculate(){
             const Mxk_s_g  = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk;
             const dirX_g   = (Hxk_g !== 0 ? Hxk_g : Mxk_s_g) >= 0 ? 1 : -1;
             const exPas    = dirX_g === exSign_g;   // Aushub auf Stirnseite (passiv)?
-            // Stirnbettung nur bei Aushub auf der Stirnseite reduziert; aktivseitig intakt
-            const gzgE = exPas ? mkGZG(Math.max(0.1, t - d_ex_sich)) : gzgB;
+            // Stirnbettung nur bei Aushub auf der Stirnseite reduziert; aktivseitig intakt.
+            // Wirksame Bettungshöhe ab UK Aushub: Aushub frisst von GOK her, Blockoberkante
+            // liegt bei ü ⇒ wirksame Höhe = t − max(ü, d_ex).
+            const gzgE = exPas ? mkGZG(Math.max(0.1, t - Math.max(ue, d_ex_sich))) : gzgB;
             // Mu_char-Deckel: Minimum über den Aushubpfad (Bauzustand, 0.25-m-Raster wie GZT)
             let Mu_ce = 0;
             if(H_kg > 0.01){
@@ -9089,7 +9135,7 @@ function _doCalculate(){
             }
             Mu_char_GZG_ex_ = Mu_ce;
             const Mraw_e    = gzgE.Mafn(tan_zul);
-            const Malpha_e  = Mu_ce > 0 ? Math.min(Mraw_e, Mu_ce) : Math.max(0.001, Mraw_e);
+            const Malpha_e  = Math.max(0, Mu_ce > 0 ? Math.min(Mraw_e, Mu_ce) : Mraw_e);
             alpha_GZG_ex_   = solveAlpha(gzgE.Mafn);
             etaGZG_ex_      = M_ok_g > 0.001 ? Malpha_e / M_ok_g : Infinity;
           }
@@ -9118,7 +9164,7 @@ function _doCalculate(){
       ex_kipp, ey_kipp,
       etaGB, etaGL, etaKx, etaKy, eta_klaf, klaf_val, ea_a, eb_b, etaSIG, etaGZG, etaGZT,
       tan_a1_GZG, tan_a2_GZG, M1_GZG_val, M2_GZG_val,
-      Malpha_GZG_val, Mu_char_GZG, M_ok_char_GZG, alpha_GZG_calc,
+      Malpha_GZG_val, Mu_char_GZG, M_ok_char_GZG, alpha_GZG_calc, gzgBettungKollaps,
       H_k_GZG, N_k_GZG, C1_GZG: C1_kN,
       Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d,
       gb_q, gb_g, q0, soilName:soil.name, govSoilName:govHB.phi+'°',
@@ -9401,7 +9447,16 @@ function buildGZGRows(R, G){
     ['gzgTanZul','tan(α)_zul',               tanZul.toFixed(5)],
     ['gzgEta',   'η = M_α / M_ok',           R.etaGZG===Infinity?'—':R.etaGZG.toFixed(3)],
   ];
-  return rows.map(([id,k,v])=>{
+  const warn = R.gzgBettungKollaps
+    ? `<div class="nw-row" style="background:var(--fail-bg,rgba(200,60,60,.12));color:var(--fail);
+        font-size:10px;line-height:1.35;padding:6px 8px;border-radius:var(--r1)">
+        Stirnbettung rechnerisch erschöpft: M₁ &lt; H·D bei zul. Schiefstellung (C₁ durch
+        steile Böschung stark reduziert, Steckner-Faktor 1+β/40). η auf 0 gesetzt = Nachweis
+        nicht erfüllt. Steckner Gl.4 gilt nur für milde Geländeneigung — bei β ≲ −30° das
+        Schiefstellungsmodell nicht mehr anwenden (globale Böschungs-/Gleitkreis­standsicherheit
+        massgebend).</div>`
+    : '';
+  return warn + rows.map(([id,k,v])=>{
     const fDef = NW_FORMULAS[id];
     const fHtml = fDef ? `<div class="nw-row-formula" id="fml-${id}">
       <div class="f-sym">${fDef.sym}</div>
@@ -12847,6 +12902,10 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
 function collectState(){
   const st={};FDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
   st.kopf_in_gk = document.getElementById('kopf_in_gk')?.checked ?? true;
+  st.g_uberd_on = document.getElementById('g_uberd_on')?.checked ?? true;
+  // Geometrie-Slots pro Modell (Block/Flach entkoppelt) — aktiven Slot mit den aktuellen Feldern sichern
+  { const g=Object.assign({}, _geom); if(CALC_MODEL==='block'||CALC_MODEL==='flach') g[CALC_MODEL]=_readGeom();
+    st._geom=JSON.stringify(g); }
   st.LF=JSON.stringify(LF);
   st.SCHICHTEN=JSON.stringify(SCHICHTEN);
   st.MODEL=CALC_MODEL;
@@ -12864,6 +12923,7 @@ function applyState(st){
     }
   });
   if(st.kopf_in_gk !== undefined){ const cb=document.getElementById('kopf_in_gk'); if(cb) cb.checked = !!st.kopf_in_gk; }
+  { const cb=document.getElementById('g_uberd_on'); if(cb){ cb.checked = st.g_uberd_on===undefined?true:!!st.g_uberd_on; if(typeof toggleUberd==='function') toggleUberd(cb); } }
   // Migration Altprojekte: γ_G/γ_Q lagen vor Jun 2026 in tw_G/tw_Q (Felder entfernt)
   if(st.lw_G === undefined && st.tw_G !== undefined) si('lw_G', st.tw_G);
   if(st.lw_Q === undefined && st.tw_Q !== undefined) si('lw_Q', st.tw_Q);
@@ -12882,7 +12942,11 @@ function applyState(st){
   // bg_qu_flach synchronisieren
   const quFlEl = document.getElementById('bg_qu_flach');
   if(quFlEl && st.bg_qu) quFlEl.value = st.bg_qu;
-  if(st.MODEL){setModel(st.MODEL,true);}
+  // Geometrie-Slots pro Modell wiederherstellen (Block/Flach entkoppelt); leer = Altprojekt
+  try{ _geom = st._geom ? JSON.parse(st._geom) : {}; }catch(_){ _geom={}; }
+  if(st.MODEL){ _applyingState=true; try{ setModel(st.MODEL,true); } finally { _applyingState=false; } }
+  // aktiven Modell-Slot mit den gerade geladenen Feldern synchron halten
+  if(st.MODEL==='block'||st.MODEL==='flach') _geom[st.MODEL]=_readGeom();
   // Pfahlbock-Selects nach setModel (Optionen sind erst dann populiert) nachsetzen
   if(st.MODEL==='pfahlbock'){
     const ss=document.getElementById('pb_sys');
@@ -13372,6 +13436,8 @@ function resizeViewer(){
   const el = document.getElementById('viewer');
   const w = el.offsetWidth, h = el.offsetHeight;
   if(w < 10 || h < 10) return; // not visible yet
+  const _pr = _viewerPR();                                   // DPR kann sich (Monitorwechsel) ändern
+  if(Math.abs(renderer.getPixelRatio() - _pr) > 0.01) renderer.setPixelRatio(_pr);
   renderer.setSize(w, h);
   if(camera.isOrthographicCamera){ const d=(typeof sph!=='undefined'?sph.r:12)*0.55, asp=w/h;
     camera.left=-d*asp; camera.right=d*asp; camera.top=d; camera.bottom=-d; }
