@@ -390,8 +390,11 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 #viewer-wrap { display:flex; flex-direction:column; overflow:hidden; min-height:0; }
 #viewer { flex:1; position:relative; background:var(--viewer-bg); overflow:hidden; min-height:0; }
 #viewer canvas { display:block; position:absolute; top:0; left:0; width:100%!important; height:100%!important; }
-.viewer-fab { position:absolute; top:10px; right:var(--vfab-inset,10px); display:flex; flex-direction:column; gap:4px; z-index:2; }
+.viewer-fab { position:absolute; top:10px; right:calc(var(--vfab-inset,10px) + var(--drawer-w,0px)); display:flex; flex-direction:column; gap:4px; z-index:2; transition:right .26s ease; }
 .viewer-fab.viewer-fab-l { left:var(--vfab-inset,10px); right:auto; }
+/* Bei offener Nachweis-Schublade die rechtsseitigen/mittigen Viewer-Controls mitschieben (klickbar halten) */
+#viewer-legend-wrap { right:calc(10px + var(--drawer-w,0px)) !important; transition:right .26s ease; }
+#viewer-lf { transform:translateX(calc(-50% - var(--drawer-w,0px) / 2)) !important; transition:transform .26s ease; }
 .viewer-legend {
   background:var(--s1); border:1px solid var(--ol); border-radius:var(--r2);
   padding:8px 12px; font-family:var(--f-mono); font-size:9.5px; color:var(--on2); line-height:1.9;
@@ -409,10 +412,9 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .vl-frc  { color:var(--on2); background:rgba(0,0,0,0.55); font-size:9.5px; }
 [data-theme="light"] .vl-dim  { background:rgba(255,255,255,0.75); }
 [data-theme="light"] .vl-frc  { background:rgba(255,255,255,0.8); }
-/* Aktiv fokussiertes Mass (Kamerafahrt zur Eingabe) — hervorgehoben */
-.vl.vl-hl { color:#fff; background:var(--acc); box-shadow:0 0 0 2px var(--acc-s), 0 1px 6px rgba(0,0,0,.35);
-  font-weight:600; z-index:5; animation:vlPulse 1s ease-in-out infinite; }
-@keyframes vlPulse { 0%,100%{ transform:translate(-50%,-50%) scale(1); } 50%{ transform:translate(-50%,-50%) scale(1.14); } }
+/* Dezenter Highlight: aktive Vermassung (bei Klick / Eingabe-Fokus) + Spiegelung am Eingabefeld */
+.vl.vl-active { color:var(--acc); box-shadow:0 0 0 1px var(--acc); z-index:4; }
+input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 
 /* ═══════════════════════════════════════════
    RESULTS PANEL
@@ -1027,9 +1029,9 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 
         <div id="kopf-section">
           <div class="sec">Fundamentkopf</div>
-          <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_kx_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"><input id="g_kx" type="number" value="0.6" step="0.1" oninput="slSync('g_kx',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_ky_r" min="0.40" max="0.80" step="0.1" value="0.6" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"><input id="g_ky" type="number" value="0.6" step="0.1" oninput="slSync('g_ky',this.value);updateViewer();scheduleCalc()"/></div></div>
-          <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="g_hkopf_r" min="0.40" max="1.00" step="0.1" value="1.0" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"><input id="g_hkopf" type="number" value="1.0" step="0.1" oninput="slSync('g_hkopf',this.value);updateViewer();scheduleCalc()"/></div></div>
+          <div class="field"><label>B_Kopf <em>m</em></label><input id="g_kx" type="number" value="0.6" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
+          <div class="field"><label>L_Kopf <em>m</em></label><input id="g_ky" type="number" value="0.6" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
+          <div class="field"><label>H_Kopf <em>m</em></label><input id="g_hkopf" type="number" value="1.0" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
           <div class="field">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
               <label style="margin:0">Überdeckung <em>m</em></label>
@@ -1266,10 +1268,10 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <div id="pb_rand_msg" style="display:none"></div>
 
           <div class="sec">Fundamentkopf</div>
-          <div class="field"><label>B_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_kx_r" min="0.2" max="2.0" step="0.05" value="0.6" oninput="slSync('pb_kx',this.value);renderPfahlbock()"><input id="pb_kx" type="number" value="0.6" step="0.05" oninput="slSync('pb_kx',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>L_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ky_r" min="0.2" max="2.0" step="0.05" value="0.6" oninput="slSync('pb_ky',this.value);renderPfahlbock()"><input id="pb_ky" type="number" value="0.6" step="0.05" oninput="slSync('pb_ky',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>H_Kopf <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_hk_r" min="0.2" max="3.0" step="0.05" value="1.0" oninput="slSync('pb_hk',this.value);renderPfahlbock()"><input id="pb_hk" type="number" value="1.0" step="0.05" oninput="slSync('pb_hk',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>Überdeckung ü <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ue_r" min="0" max="1.5" step="0.05" value="0.4" oninput="slSync('pb_ue',this.value);renderPfahlbock()"><input id="pb_ue" type="number" value="0.4" step="0.05" oninput="slSync('pb_ue',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>B_Kopf <em>m</em></label><input id="pb_kx" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>L_Kopf <em>m</em></label><input id="pb_ky" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>H_Kopf <em>m</em></label><input id="pb_hk" type="number" value="1.0" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>Überdeckung ü <em>m</em></label><input id="pb_ue" type="number" value="0.4" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
           <div class="hint" style="margin-top:0">Hebel Lastangriff → UK Bankett = H_Kopf + Bankettdicke (automatisch). Bankett + Kopf als Eigengewicht angesetzt; ü = Überdeckung über OK Bankett.</div>
 
           <div class="sec">Pfahl-Anordnung</div>
@@ -1286,8 +1288,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <div class="field"><label>Neigung quer α_x <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ax_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ax',this.value);renderPfahlbock()"><input id="pb_ax" type="number" value="12" step="1" oninput="slSync('pb_ax',this.value);renderPfahlbock()"/></div></div>
           <div class="field"><label>Neigung längs α_y <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ay_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ay',this.value);renderPfahlbock()"><input id="pb_ay" type="number" value="12" step="1" oninput="slSync('pb_ay',this.value);renderPfahlbock()"/></div></div>
           <div class="hint" style="margin-top:0">übliche Neigung 10–15°. α &gt; 0 = Pfahlfuss nach aussen.</div>
-          <div class="field"><label>Pfahllänge L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_L_r" min="3.0" max="20.0" step="0.5" value="10" oninput="slSync('pb_L',this.value);renderPfahlbock()"><input id="pb_L" type="number" value="10.00" step="0.5" oninput="slSync('pb_L',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>freie Länge e <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_e_r" min="0" max="3.0" step="0.1" value="0" oninput="slSync('pb_e',this.value);renderPfahlbock()"><input id="pb_e" type="number" value="0.00" step="0.1" oninput="slSync('pb_e',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Pfahllänge L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_L_r" min="0.5" max="20.0" step="0.5" value="10" oninput="slSync('pb_L',this.value);renderPfahlbock()"><input id="pb_L" type="number" value="10.00" step="0.5" oninput="slSync('pb_L',this.value);renderPfahlbock()"/></div></div>
           <div class="field"><label>Verpresskörper-Ø <em>mm</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_dG_r" min="80" max="300" step="10" value="150" oninput="slSync('pb_dG',this.value);renderPfahlbock()"><input id="pb_dG" type="number" value="150" step="10" oninput="slSync('pb_dG',this.value);renderPfahlbock()"/></div></div>
 
           <div class="sec">Tragglied (Mikropfahl-System)</div>
@@ -1474,12 +1475,21 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <div class="field">
             <label>Profil</label>
             <select id="pfahl_typ" onchange="onPfahlTyp(this.value);calcPfahlsicherung();rebuildScene()">
-              <option value="HEB160">HEB 160</option>
-              <option value="HEB200" selected>HEB 200</option>
-              <option value="HEB220">HEB 220</option>
-              <option value="HEB240">HEB 240</option>
-              <option value="HEB260">HEB 260</option>
-              <option value="HEB300">HEB 300</option>
+              <optgroup label="HEB-Profil">
+                <option value="HEB160">HEB 160</option>
+                <option value="HEB200" selected>HEB 200</option>
+                <option value="HEB220">HEB 220</option>
+                <option value="HEB240">HEB 240</option>
+                <option value="HEB260">HEB 260</option>
+                <option value="HEB300">HEB 300</option>
+              </optgroup>
+              <optgroup label="Krinner V-Serie (Rohr S355, t=5mm)">
+                <option value="KRV76">Krinner V 76</option>
+                <option value="KRV89">Krinner V 89</option>
+                <option value="KRV114">Krinner V 114</option>
+                <option value="KRV140">Krinner V 140</option>
+                <option value="KRV168">Krinner V 168</option>
+              </optgroup>
             </select>
           </div>
           <div class="field">
@@ -1639,7 +1649,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
   <div id="viewer-wrap" class="panel" style="border:none;">
     <div id="viewer">
       <!-- Ansicht-Navigation oben links -->
-      <div class="viewer-fab viewer-fab-l" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+      <div class="viewer-fab viewer-fab-l" onmousedown="event.preventDefault()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <button class="ic-btn" onclick="resetCam()" title="Reset Ansicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 10a5.5 5.5 0 1010.3-2.5M4.5 10V6.5m0 3.5H8"/></svg></button>
         <button class="ic-btn" onclick="setCamTop()" title="Draufsicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="12" height="12" rx="1"/><path d="M4 10h12M10 4v12"/></svg></button>
         <button class="ic-btn" onclick="setCamFront()" title="Vorderansicht"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="5.5" width="12" height="9" rx="1"/><path d="M10 5.5V3.5M7 14.5v1.5M13 14.5v1.5"/></svg></button>
@@ -1649,7 +1659,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
         <button class="ic-btn" id="vc-pfahl-keil" onclick="togglePfahlKeil()" title="Bodenpressung-Keile ein-/ausblenden (Block-/Pfahlkeil + Schattenband)" style="display:none"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L3 16h14L10 3z"/><path d="M10 8l-3.5 6.5h7L10 8z" opacity="0.5"/></svg></button>
       </div>
       <!-- Layer-Steuerung oben rechts -->
-      <div class="viewer-fab" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+      <div class="viewer-fab" onmousedown="event.preventDefault()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <!-- Gruppe 1: Einwirkungen -->
         <button class="ic-btn on" id="vc-lbl" onclick="toggleLabels()" title="Einwirkungen"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 10h10M15 10l-3-3M15 10l-3 3M10 5V4M10 16v-1"/></svg></button>
         <div style="height:1px;background:var(--ol);margin:2px 4px;opacity:0.5"></div>
@@ -1670,7 +1680,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
       <!-- Nachweis-Badge oben mittig -->
       <div id="viewer-nw-badge" style="position:absolute;top:48px;left:50%;transform:translateX(-50%);z-index:2;display:none;pointer-events:none"></div>
       <!-- LF-Auswahl unten mittig -->
-      <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:2" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+      <div id="viewer-lf" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:2" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r2);padding:5px 8px;display:flex;align-items:center;gap:6px">
           <span style="font-family:var(--f-mono);font-size:8.5px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase">LF</span>
           <div id="vc-lf-btns" style="display:flex;gap:4px"></div>
@@ -1679,7 +1689,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
         </div>
       </div>
       <!-- Legende unten rechts -->
-      <div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+      <div id="viewer-legend-wrap" style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <div class="viewer-legend" id="vleg" style="cursor:pointer;user-select:none" onclick="toggleLegend()">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
             <span style="font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)">Legende</span>
@@ -1995,6 +2005,10 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
           <input id="set-pfahl-randmin" type="number" value="0.30" step="0.05" min="0.05"/>
           <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Pfahlmitte → nächste Bankettkante. Steuert die automatische Maximal-Vorgabe der Pfahlabstände sowie Ampel/Warnung in der Draufsicht.</span>
         </div>
+        <div class="toggle-row" style="margin-top:6px">
+          <div><div class="toggle-label">GZG-Verdrehung entkoppeln</div><div class="toggle-sub">Verformung ohne Schrägstellungs-Kopplung: Moment → reine Verdrehung, Horizontalkraft → reine Verschiebung. Vereinfachung; Kraftberechnung bleibt gekoppelt. Standard: aus (gekoppelt).</div></div>
+          <label class="sw"><input type="checkbox" id="set-pfahl-decouple"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        </div>
       </div>
     </div>
 
@@ -2123,10 +2137,6 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
         <div class="toggle-row">
           <div><div class="toggle-label">Vermassung klickbar</div><div class="toggle-sub">Mass im 3D anklicken → Eingabefeld anpassen</div></div>
           <label class="sw"><input type="checkbox" id="viz-diminter" onchange="setViz('dimInteractive', this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
-        </div>
-        <div class="toggle-row">
-          <div><div class="toggle-label">Kamerafahrt zur Eingabe</div><div class="toggle-sub">Beim Fokussieren eines Masses zum Bauteil fahren + hervorheben</div></div>
-          <label class="sw"><input type="checkbox" id="viz-autozoom" onchange="setViz('autoZoom', this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
         <details style="margin-top:10px">
         <summary style="cursor:pointer;font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 0;user-select:none">Farben &amp; Bodenschichten</summary>
@@ -2290,6 +2300,7 @@ function loadSettings(){
   set('set-mob',     SETTINGS.mob??0.25);
   set('set-alpha-zul', SETTINGS.alphaZul??0.005);
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
+  chk('set-pfahl-decouple', SETTINGS.pfahlGzgDecouple);
   _bgKoernig = SETTINGS.bg_koernig || 'grob';
   const kSel = document.getElementById('bg_koernig');
   if(kSel) kSel.value = _bgKoernig;
@@ -2404,6 +2415,7 @@ function applySettings(){
   SETTINGS.mob     = gv('set-mob');
   SETTINGS.alphaZul= gv('set-alpha-zul');
   SETTINGS.pfahlRandMin = gv('set-pfahl-randmin');
+  SETTINGS.pfahlGzgDecouple = gc('set-pfahl-decouple');
   SETTINGS.bg_koernig = _bgKoernig;
   SETTINGS.c1_methode = _c1Methode;
   SETTINGS.nw = {
@@ -2626,12 +2638,11 @@ const VIZ_DEFAULTS = {
   layer:[0x8a7550,0x6a5838,0x4a3e26,0x2e2818],       // Bodenschichten
   sigma:0xc98b5a,                                    // σ'v-Profil
   forceN:0x555555, forceH:0x888888, moment:0x8899bb, // Einwirkungen (wie Block)
-  dim:0xffffff, dimOp:0.85,                          // Vermassung (Linienfarbe/-opazität)
+  dim:0xffffff, dimOp:0.55,                          // Vermassung (Linienfarbe/-opazität — dezent)
   solidOp:0.85, ghostOp:0.28,                        // Fundament-Transparenz (normal / ausgegraut)
   gridShow:true, gridCol:null,                       // Raster: an/aus · Farbe (null = Theme-Default)
   cameraIso:false,                                   // Kamera: false=perspektivisch · true=isometrisch
-  dimInteractive:false,                              // Vermassung klickbar (→ Eingabefeld fokussieren)
-  autoZoom:false                                     // dynamischer Zoom bei Modellparameter-Eingabe
+  dimInteractive:false                               // Vermassung klickbar (→ Eingabefeld fokussieren)
 };
 function vizStyle(){ return Object.assign({}, VIZ_DEFAULTS, (typeof SETTINGS!=='undefined' && SETTINGS.viz) || {}); }
 // Raster-Stil aus VIZ anwenden (Sichtbarkeit + Farbe) — auf das persistente 'grid'-Objekt
@@ -2758,39 +2769,67 @@ document.addEventListener('change', e=>{
     if(num && _isMeterField(num)){ const v = parseFloat(num.value); if(isFinite(v)) num.value = v.toFixed(2); }
   }
 });
-// Kamerafahrt zur Eingabe: Fokussiert der Nutzer ein Geometriefeld (oder dessen Slider _r),
-// fährt die Kamera zum zugehörigen Mass im 3D (gated über SETTINGS.viz.autoZoom in focusViewerOnField).
+// Dezenter Highlight Vermassung ↔ Eingabe: Fokus eines Geometriefeldes (oder Slider _r) markiert das
+// zugehörige Mass-Label im 3D (und das Feld selbst). KEINE Kamerafahrt/Ausgrauen.
 document.addEventListener('focusin', e=>{
-  const el=e.target; if(!el || el.tagName!=='INPUT') return;
+  const el=e.target; if(!el || el.tagName!=='INPUT'){ return; }
   let id=el.id||''; if(id.endsWith('_r')) id=id.slice(0,-2);
-  if(id && typeof focusViewerOnField==='function') focusViewerOnField(id);
+  if(typeof _setActiveDim==='function') _setActiveDim(id);
 });
-let drag=false, pm={x:0,y:0};
+document.addEventListener('focusout', e=>{
+  const el=e.target; if(!el || el.tagName!=='INPUT') return;
+  setTimeout(()=>{ const a=document.activeElement;
+    let aid=(a && a.tagName==='INPUT' && a.id)?(a.id.endsWith('_r')?a.id.slice(0,-2):a.id):'';
+    if(typeof _setActiveDim==='function' && (!aid || !_vlEls.some(o=>o.field===aid))) _setActiveDim(null);
+  }, 60);
+});
+let drag=false, panning=false, pm={x:0,y:0}, _downXY=null, _moved=false;
 let sph={t:0.6,p:1.0,r:12};
 let _camTarget=new THREE.Vector3(0,0,0);   // Kamera-Blickpunkt (Default Ursprung; Kamerafahrt schwenkt ihn aufs Bauteil)
+let _panOff=new THREE.Vector3(0,0,0);      // manueller Pan-Versatz (Mittlere Maustaste / Zwei-Finger) — Welt-Koord.
+let _drawerShiftCur=0, _drawerShiftTarget=0, _drawerRAF=null;  // Modell-Verschiebung (px) wenn Nachweis-Schublade offen
+// Weltdistanz pro Bildschirm-Pixel auf Höhe des Blickpunkts (für Pan + Schublade-Shift)
+function _worldPerPixel(r){ const dom=renderer&&renderer.domElement, H=Math.max(1,(dom&&dom.clientHeight)||1);
+  return camera&&camera.isOrthographicCamera ? (1.1*r)/H : (2*r*Math.tan(22*Math.PI/180))/H; }
+// Kamera-Rechts-Vektor (Bildschirm-x) aus Blickrichtung
+function _camRight(camPos,T){ const f=T.clone().sub(camPos).normalize();
+  return new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).normalize(); }
 let _camRAF=null;                          // laufende Kamerafahrt (requestAnimationFrame-Handle)
-let _focusField=null, _focusUntil=0;       // aktuell hervorgehobenes Mass + Ablaufzeit
 let _pendingFit=true;                       // Gesamtmodell EINMAL rahmen (Erststart/Modellwechsel), nicht bei jedem Rebuild
 let _vlEls=[];
-
+let _activeDimField=null;   // aktuell dezent hervorgehobenes Mass (Feld-id) — Vermassung ↔ Eingabe
+// Dezenter Highlight: Mass-Label(s) zum Feld id markieren (und Spiegelung am Eingabefeld via Klasse).
+function _setActiveDim(id){
+  const has = id && _vlEls.some(o=>o.field===id);
+  _activeDimField = has ? id : null;
+  document.querySelectorAll('.vl.vl-active').forEach(e=>e.classList.remove('vl-active'));
+  document.querySelectorAll('input.dim-active').forEach(e=>e.classList.remove('dim-active'));
+  if(has){
+    _vlEls.forEach(o=>{ if(o.field===id) o.el.classList.add('vl-active'); });
+    const f=document.getElementById(id); if(f) f.classList.add('dim-active');
+  }
+}
 function _vlClear(){_vlEls.forEach(o=>o.el.remove());_vlEls=[];}
 function _vlAdd(text,pos3d,cls,field){
   const el=document.createElement('div');
   el.className='vl '+cls; el.textContent=text;
-  // Klickbare Vermassung (Option dimInteractive): Label fokussiert das zugehörige Eingabefeld
-  if(field && typeof SETTINGS!=='undefined' && SETTINGS.viz && SETTINGS.viz.dimInteractive){
-    el.style.cursor='pointer'; el.style.pointerEvents='auto'; el.title='Klicken zum Anpassen';
+  if(field && field===_activeDimField) el.classList.add('vl-active');   // Highlight über Rebuilds halten
+  // Klickbare Vermassung: Label blendet das zugehörige Eingabefeld ein (dimInteractive ODER Kamerafahrt)
+  const _vz=(typeof vizStyle==='function')?vizStyle():{};
+  if(field && _vz.dimInteractive){
+    el.style.cursor='pointer'; el.style.pointerEvents='auto'; el.title='Klicken: Eingabefeld anpassen';
     el.classList.add('vl-click');
     el.addEventListener('click',e=>{ e.stopPropagation(); vizFocusField(field); });
   }
-  // Aktiv fokussiertes Mass über Rebuilds hinweg hervorgehoben halten (Kamerafahrt-Feature)
-  if(field && field===_focusField && performance.now() < _focusUntil) el.classList.add('vl-hl');
   document.getElementById('viewer').appendChild(el);
   _vlEls.push({el,pos:pos3d.clone(),field});
 }
-// Eingabefeld zu einer geklickten Vermassung fokussieren (zum Anpassen)
+// Eingabefeld zu einer geklickten Vermassung/Bauteil einblenden + fokussieren (Sidebar/Tab/Feld)
 function vizFocusField(id){
   const el=document.getElementById(id); if(!el) return;
+  if(typeof _setActiveDim==='function') _setActiveDim(id);   // dezenter Highlight sofort (unabhängig vom focusin)
+  // Geometrie-Tab aktivieren (Felder liegen alle im Geometrie-Tab) + auf Mobil Eingabe-Pane zeigen
+  if(typeof switchTab==='function' && _FIELD_COMP && _FIELD_COMP[id]) try{ switchTab('geometrie'); }catch(_){ }
   if(window.innerWidth<768 && typeof mobSwitch==='function') mobSwitch('input');
   try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){ }
   setTimeout(()=>{ el.focus(); if(el.select) try{el.select();}catch(_){ }
@@ -2889,31 +2928,38 @@ function initViewer(){
   // Achsanzeige wird in rebuildScene gebaut
 
   // Mouse
-  el.addEventListener('mousedown',e=>{_cancelCamFly(false);drag=true;pm={x:e.clientX,y:e.clientY};});
-  el.addEventListener('mouseup',()=>drag=false);
-  el.addEventListener('mouseleave',()=>drag=false);
+  el.addEventListener('mousedown',e=>{_cancelCamFly(false);
+    if(e.button===1){ e.preventDefault(); panning=true; pm={x:e.clientX,y:e.clientY}; return; }  // Mittlere Taste = Ausschnitt schieben
+    drag=true;pm={x:e.clientX,y:e.clientY};_downXY={x:e.clientX,y:e.clientY};_moved=false;});
+  el.addEventListener('mouseup',e=>{ if(panning){panning=false;return;} drag=false; if(_downXY && !_moved) _viewerClick(e.clientX,e.clientY); _downXY=null; });
+  el.addEventListener('mouseleave',()=>{drag=false;panning=false;_downXY=null;});
   el.addEventListener('mousemove',e=>{
+    if(panning){ _panCamera(e.clientX-pm.x, e.clientY-pm.y); pm={x:e.clientX,y:e.clientY}; return; }
     if(!drag)return;
+    if(_downXY && Math.hypot(e.clientX-_downXY.x,e.clientY-_downXY.y)>4) _moved=true;
     sph.t-=(e.clientX-pm.x)*0.01;
     sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p+(e.clientY-pm.y)*0.01));
     pm={x:e.clientX,y:e.clientY};moveCam();
   });
+  el.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });   // Mittelklick-Autoscroll unterdrücken
   el.addEventListener('wheel',e=>{_cancelCamFly(false);sph.r=Math.max(3,Math.min(42,sph.r+e.deltaY*0.02));moveCam();},{passive:true});
 
   // Touch — pinch-to-zoom + pan
-  let t0=null, pinch0=null;
+  let t0=null, pinch0=null, mid0=null;
+  const _mid=tt=>({x:(tt[0].clientX+tt[1].clientX)/2, y:(tt[0].clientY+tt[1].clientY)/2});
   el.addEventListener('touchstart',e=>{
     e.preventDefault(); _cancelCamFly(false);
-    if(e.touches.length===1){t0={x:e.touches[0].clientX,y:e.touches[0].clientY}; pinch0=null;}
+    if(e.touches.length===1){t0={x:e.touches[0].clientX,y:e.touches[0].clientY}; pinch0=null; mid0=null; _downXY={x:e.touches[0].clientX,y:e.touches[0].clientY}; _moved=false;}
     if(e.touches.length===2){
       const dx=e.touches[0].clientX-e.touches[1].clientX;
       const dy=e.touches[0].clientY-e.touches[1].clientY;
-      pinch0=Math.sqrt(dx*dx+dy*dy); t0=null;
+      pinch0=Math.sqrt(dx*dx+dy*dy); mid0=_mid(e.touches); t0=null;
     }
   },{passive:false});
   el.addEventListener('touchmove',e=>{
     e.preventDefault();
     if(e.touches.length===1&&t0){
+      if(_downXY && Math.hypot(e.touches[0].clientX-_downXY.x,e.touches[0].clientY-_downXY.y)>6) _moved=true;
       sph.t-=(e.touches[0].clientX-t0.x)*0.012;
       sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p+(e.touches[0].clientY-t0.y)*0.012));
       t0={x:e.touches[0].clientX,y:e.touches[0].clientY};moveCam();
@@ -2923,10 +2969,13 @@ function initViewer(){
       const dy=e.touches[0].clientY-e.touches[1].clientY;
       const dist=Math.sqrt(dx*dx+dy*dy);
       sph.r=Math.max(3,Math.min(42,sph.r-(dist-pinch0)*0.04));
-      pinch0=dist; moveCam();
+      pinch0=dist;
+      const m=_mid(e.touches);                          // Zwei-Finger-Mittelpunkt verschieben = Ausschnitt schieben
+      if(mid0){ _panCamera(m.x-mid0.x, m.y-mid0.y); } mid0=m;
+      moveCam();
     }
   },{passive:false});
-  el.addEventListener('touchend',()=>{t0=null;pinch0=null;});
+  el.addEventListener('touchend',e=>{ if(_downXY && !_moved && t0) _viewerClick(_downXY.x,_downXY.y); t0=null;pinch0=null;mid0=null;_downXY=null; });
 
   // ResizeObserver — most reliable way on mobile
   if(window.ResizeObserver){
@@ -2939,61 +2988,88 @@ function initViewer(){
   (function loop(){requestAnimationFrame(loop);renderer.render(scene,camera);_vlUpdate();})();
 }
 
-function moveCam(){const{t,p,r}=sph; const T=_camTarget||{x:0,y:0,z:0};
-  camera.position.set(T.x+r*Math.sin(p)*Math.sin(t), T.y+r*Math.cos(p), T.z+r*Math.sin(p)*Math.cos(t));
-  if(camera.isOrthographicCamera){const dom=renderer&&renderer.domElement,asp=dom?(dom.clientWidth||1)/(dom.clientHeight||1):1.6,d=r*0.55;
-    camera.left=-d*asp;camera.right=d*asp;camera.top=d;camera.bottom=-d;camera.updateProjectionMatrix();}
+function moveCam(){const{t,p,r}=sph; const b=_camTarget||{x:0,y:0,z:0};
+  // Blickpunkt inkl. manuellem Pan-Versatz — Kamera + Blickpunkt bleiben am Modell (Orbit-Drehpunkt zentral)
+  const T=new THREE.Vector3(b.x+_panOff.x, b.y+_panOff.y, b.z+_panOff.z);
+  const camPos=new THREE.Vector3(T.x+r*Math.sin(p)*Math.sin(t), T.y+r*Math.cos(p), T.z+r*Math.sin(p)*Math.cos(t));
+  camera.position.copy(camPos);
+  const dom=renderer&&renderer.domElement, W=(dom&&dom.clientWidth)||0, H=(dom&&dom.clientHeight)||0;
+  if(camera.isOrthographicCamera){const asp=W?W/H:1.6,d=r*0.55;
+    camera.left=-d*asp;camera.right=d*asp;camera.top=d;camera.bottom=-d;}
+  // Nachweis-Schublade offen → Bild um _drawerShiftCur px nach links schieben als LINSEN-/View-Offset
+  // (nicht die Kamera verschieben!) → Modell wandert in den sichtbaren Bereich, der Orbit-Drehpunkt
+  // bleibt aber auf dem Modell (zentral), statt in den leeren, verdeckten Raum zu wandern.
+  if(Math.abs(_drawerShiftCur)>0.5 && W>0){ camera.setViewOffset(W,H,_drawerShiftCur,0,W,H); }
+  else if(camera.view && camera.view.enabled){ camera.clearViewOffset(); }
+  else { camera.updateProjectionMatrix(); }
   camera.lookAt(T.x,T.y,T.z);}
+// Manueller Pan (Mittlere Maustaste / Zwei-Finger): Blickpunkt entlang Bildschirm-x/-y verschieben
+function _panCamera(dx,dy){
+  const{t,p,r}=sph, b=_camTarget||{x:0,y:0,z:0};
+  const T=new THREE.Vector3(b.x+_panOff.x,b.y+_panOff.y,b.z+_panOff.z);
+  const camPos=new THREE.Vector3(T.x+r*Math.sin(p)*Math.sin(t),T.y+r*Math.cos(p),T.z+r*Math.sin(p)*Math.cos(t));
+  const right=_camRight(camPos,T), up=new THREE.Vector3().crossVectors(right,T.clone().sub(camPos).normalize()).normalize();
+  const wpp=_worldPerPixel(r);
+  _panOff.add(right.multiplyScalar(-dx*wpp)).add(up.multiplyScalar(dy*wpp));   // Inhalt folgt der Maus
+  moveCam();
+}
+// Schublade-Shift sanft animieren (Modell aus dem von der Schublade verdeckten Bereich schieben)
+function _animateDrawerShift(){
+  if(_drawerRAF) cancelAnimationFrame(_drawerRAF);
+  (function step(){
+    _drawerShiftCur += (_drawerShiftTarget-_drawerShiftCur)*0.2;
+    if(Math.abs(_drawerShiftTarget-_drawerShiftCur)<0.5) _drawerShiftCur=_drawerShiftTarget;
+    moveCam();
+    _drawerRAF = Math.abs(_drawerShiftTarget-_drawerShiftCur)>0.4 ? requestAnimationFrame(step) : null;
+  })();
+}
+// Schublade auf/zu → Modell-Verschiebung setzen (halbe Schubladenbreite, damit es mittig im Sichtbereich bleibt)
+function setViewerDrawerShift(open){
+  // Nur wenn die Schublade den Viewer ÜBERLAGERT (≥768px → position:absolute); mobil ist sie ein eigener Tab.
+  const pr=document.getElementById('panel-results');
+  const overlay = pr && getComputedStyle(pr).position==='absolute';
+  const w=pr?pr.offsetWidth:0;
+  _drawerShiftTarget = (open && overlay) ? Math.max(0, w*0.5) : 0;
+  // Viewer-Overlay-Controls (Layer-Leiste rechts, Legende, LF) mitschieben → bleiben bei offener Schublade klickbar
+  const viewer=document.getElementById('viewer');
+  if(viewer) viewer.style.setProperty('--drawer-w', ((open && overlay) ? w : 0)+'px');
+  _animateDrawerShift();
+}
 // Kamerafahrt abbrechen (wenn der Nutzer selbst dreht/zoomt) — optional Target zurück auf Ursprung
 function _cancelCamFly(resetTarget){ if(_camRAF){ cancelAnimationFrame(_camRAF); _camRAF=null; }
   if(resetTarget && _camTarget) _camTarget.set(0,0,0); }
 // Sanfte Kamerafahrt: Blickpunkt → toT und Zoom → toR (ease-in-out cubic)
 function _animateCamTo(toT, toR, ms){
   if(_camRAF) cancelAnimationFrame(_camRAF);
-  const fromT=_camTarget.clone(), fromR=sph.r, t0=performance.now();
+  const fromT=_camTarget.clone(), fromR=sph.r, t0=performance.now(), dur=ms||520;
   const ease=x=>x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
-  (function step(now){
-    const k=Math.min(1,(now-t0)/(ms||520)), e=ease(k);
+  (function step(){
+    const k=Math.min(1,(performance.now()-t0)/dur), e=ease(k);   // eigene Zeitbasis (RAF-Timestamp unzuverlässig headless)
     _camTarget.set(fromT.x+(toT.x-fromT.x)*e, fromT.y+(toT.y-fromT.y)*e, fromT.z+(toT.z-fromT.z)*e);
     sph.r=fromR+(toR-fromR)*e; moveCam();
     _camRAF = k<1 ? requestAnimationFrame(step) : null;
-  })(performance.now());
+  })();
 }
-// Bauteil zu einem Bemessungsmass im 3D hervorheben: Mesh-Material kurz aufleuchten lassen
-function _highlightMeshForField(id){
-  if(!scene) return;
-  const acc=0x4a5cb8;
-  scene.traverse(o=>{
-    if(o.isMesh && o.userData && Array.isArray(o.userData.ffields) && o.userData.ffields.includes(id) && o.material && o.material.emissive){
-      const m=o.material; if(m.userData && m.userData._hlRAF) cancelAnimationFrame(m.userData._hlRAF);
-      m.userData=m.userData||{}; const t0=performance.now();
-      (function pulse(now){
-        const k=Math.min(1,(now-t0)/1400); const amp=Math.sin(Math.min(k,1)*Math.PI); // 0→1→0
-        m.emissive.setHex(acc); m.emissiveIntensity = 0.55*amp; m.needsUpdate=true;
-        m.userData._hlRAF = k<1 ? requestAnimationFrame(pulse) : (m.emissiveIntensity=0, null);
-      })(performance.now());
-    }
-  });
-}
-// Kamerafahrt + Hervorhebung zu dem 3D-Mass eines Eingabefeldes (Feature „Kamerafahrt zur Eingabe")
-function focusViewerOnField(id){
-  if(!id || !vizStyle().autoZoom) return;
-  if(typeof scene==='undefined'||!scene||!camera) return;
-  const hits=_vlEls.filter(o=>o.field===id);
-  if(!hits.length) return;
-  const P=new THREE.Vector3(); hits.forEach(o=>P.add(o.pos)); P.multiplyScalar(1/hits.length);
-  // Zoom-Distanz aus Modellgrösse (etwas näher heran, aber nie weiter raus als aktuell)
-  const g=scene.getObjectByName('pb3d')||scene.getObjectByName('blk');
-  let rr=sph.r;
-  if(g){ const box=new THREE.Box3().setFromObject(g);
-    if(!box.isEmpty()){ const sz=box.getSize(new THREE.Vector3());
-      const md=Math.max(sz.x,sz.y,sz.z); rr=Math.max(2.5, md*(camera.isOrthographicCamera?1.9:1.45)); } }
-  _animateCamTo(P, Math.min(sph.r, rr), 520);
-  // Mass-Label(s) hervorheben (auch über Rebuilds: _focusField/_focusUntil)
-  _focusField=id; _focusUntil=performance.now()+2200;
-  hits.forEach(o=>o.el.classList.add('vl-hl'));
-  _highlightMeshForField(id);
-}
+// ── Bauteil-Fokus: Highlight durch AUSGRAUEN der übrigen Bauteile (kein Pulsieren) ──────────
+// Feld → Komponente (Bauteil). Solange ein Feld eines Bauteils aktiv ist, bleibt dieses normal,
+// die übrigen werden ausgegraut; die Kamera rahmt den Fundamentkörper (Pfähle dürfen abschneiden).
+const _FIELD_COMP = {
+  g_bx:'block', g_by:'block', g_hblock:'block', g_uberd:'block',
+  g_kx:'kopf', g_ky:'kopf', g_hkopf:'kopf',
+  pb_bx:'bankett', pb_by:'bankett', pb_bank_d:'bankett', pb_ue:'bankett',
+  pb_hk:'kopf', pb_kx:'kopf', pb_ky:'kopf', pb_L:'pile'
+};
+// Raycaster: Klick auf ein Bauteil im 3D → zugehöriges Eingabefeld einblenden (nur „Vermassung klickbar").
+// KEINE Kamerafahrt, KEIN Ausgrauen der übrigen Bauteile (auf Nutzerwunsch entfernt).
+const _ray=new THREE.Raycaster(), _ndc=new THREE.Vector2();
+function _viewerPick(cx,cy){ if(!scene||!camera) return null;
+  const el=document.getElementById('viewer'); if(!el) return null; const r=el.getBoundingClientRect();
+  _ndc.x=((cx-r.left)/r.width)*2-1; _ndc.y=-((cy-r.top)/r.height)*2+1; _ray.setFromCamera(_ndc,camera);
+  const tg=[]; scene.traverse(o=>{ if(o.isMesh && o.userData && Array.isArray(o.userData.ffields) && o.userData.ffields.length) tg.push(o); });
+  const h=_ray.intersectObjects(tg,false); return h.length?h[0].object:null; }
+function _viewerClick(cx,cy){ if(!vizStyle().dimInteractive) return;
+  const m=_viewerPick(cx,cy);
+  if(m && m.userData.ffields && m.userData.ffields.length && typeof vizFocusField==='function') vizFocusField(m.userData.ffields[0]); }
 // Kamera-Modus aus VIZ: perspektivisch (Default) oder isometrisch (orthographisch)
 function applyCameraMode(){
   if(typeof scene==='undefined'||!scene||!renderer||!camera) return;
@@ -3020,7 +3096,7 @@ function loadVizUI(){ const C=vizStyle();
   sc('viz-druck',_vizHex(C.druck)); sc('viz-zug',_vizHex(C.zug));
   sc('viz-forceN',_vizHex(C.forceN)); sc('viz-forceH',_vizHex(C.forceH)); sc('viz-moment',_vizHex(C.moment));
   sc('viz-solidOp', Math.round((C.solidOp||0.85)*100)); ck('viz-grid', C.gridShow!==false);
-  ck('viz-diminter', C.dimInteractive===true); ck('viz-autozoom', C.autoZoom===true);
+  ck('viz-diminter', C.dimInteractive===true);
   sc('viz-iso-sel', C.cameraIso===true?'iso':'persp');
   (C.layer||VIZ_DEFAULTS.layer).forEach((c,i)=>sc('viz-layer'+i,_vizHex(c)));
 }
@@ -3040,16 +3116,28 @@ function toggleUberd(cb){
 // ── Zentrale 3D-Vermassung (einheitlich für Block / Flach / Pfahlfundament) ───────────────
 // Misst zwischen zwei Bauteilpunkten a,b; die Masslinie liegt um n·off versetzt, mit
 // Hilfslinien vom Bauteil und 45°-Endmarken. EIN Abstand (DIM3_OFF) für alle Typen.
-const DIM3_OFF=0.5, DIM3_LBL=0.20, DIM3_TICK=0.09, DIM3_OVER=0.05;
-let _DIM_GRP=null, _DIM_MAT=null;                       // aktiver Vermassungs-Container + Material
-function _dimBegin(grp, mat){ _DIM_GRP=grp; _DIM_MAT=mat; }
+const DIM3_OFF=0.5, DIM3_LBL=0.20, DIM3_TICK=0.07, DIM3_OVER=0.05, DIM3_RAD=0.006;
+const _DIM_YUP=new THREE.Vector3(0,1,0);
+let _DIM_GRP=null, _DIM_MAT=null, _DIM_TMAT=null;       // Container + (Mesh-)Material für dicke Masslinien
+// Theme-bewusste Vermassungsfarbe: Nutzer-Override gewinnt, sonst hell→dunkel / dunkel→weiss
+function _dimColor(){
+  if(typeof SETTINGS!=='undefined' && SETTINGS.viz && SETTINGS.viz.dim!=null) return SETTINGS.viz.dim;
+  return (document.documentElement.getAttribute('data-theme')==='light')?0x70727e:0xffffff;
+}
+function _dimBegin(grp, mat){ _DIM_GRP=grp; _DIM_MAT=mat;
+  // dicke Masslinien als dünne Zylinder (WebGL/Android ignorieren linewidth) → MeshBasic aus der Linienfarbe
+  _DIM_TMAT=new THREE.MeshBasicMaterial({color:mat.color.clone(), opacity:(mat.opacity!=null?mat.opacity:0.85), transparent:true}); }
 function _dim3(a, b, n, opt){
-  if(!_DIM_GRP||!_DIM_MAT) return;
+  if(!_DIM_GRP||!_DIM_TMAT) return;
   opt=opt||{};
   const off=opt.off ?? DIM3_OFF, nn=n.clone().normalize();
   const a2=a.clone().add(nn.clone().multiplyScalar(off));
   const b2=b.clone().add(nn.clone().multiplyScalar(off));
-  const L=(p,q)=>_DIM_GRP.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p,q]),_DIM_MAT));
+  const L=(p,q)=>{ const dir=q.clone().sub(p), len=dir.length(); if(len<1e-6) return;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(DIM3_RAD,DIM3_RAD,len,5), _DIM_TMAT);
+    m.position.copy(p.clone().add(q).multiplyScalar(0.5));
+    m.quaternion.setFromUnitVectors(_DIM_YUP, dir.normalize());
+    _DIM_GRP.add(m); };
   L(a2,b2);                                              // Masslinie
   const ov=nn.clone().multiplyScalar(DIM3_OVER);
   L(a, a2.clone().add(ov)); L(b, b2.clone().add(ov));    // Hilfslinien (vom Bauteil, knapp über die Masslinie)
@@ -3112,12 +3200,13 @@ function buildPfahlbockViz(){
   // ── Bankett (OK an −ü, eingebettet) + Fundamentkopf darauf (ragt durch GOK)
   const matBank=new THREE.MeshLambertMaterial({color:_dim?C.concreteDim:C.concrete,transparent:true,opacity:_dim?C.ghostOp:C.solidOp});
   const edgeMat=new THREE.LineBasicMaterial({color:_dim?C.edgeDim:C.edge,transparent:true,opacity:0.6});
-  const addBox=(w,h,d,cy,ffields)=>{ const g=new THREE.BoxGeometry(w,h,d);
+  const addBox=(w,h,d,cy,ffields,comp)=>{ const g=new THREE.BoxGeometry(w,h,d);
     const m=new THREE.Mesh(g, ffields?matBank.clone():matBank); m.position.set(0,cy,0);
-    if(ffields) m.userData.ffields=ffields; grp.add(m);
-    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat); ed.position.set(0,cy,0); grp.add(ed); };
-  addBox(Bbank,dBank,Lbank, yBankTop-dBank/2, ['pb_bx','pb_by','pb_bank_d','pb_ue']);  // Bankett (OK an −ü)
-  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2, ['pb_hk','pb_kx','pb_ky']);  // Fundamentkopf auf Bankett
+    if(ffields){ m.userData.ffields=ffields; m.userData.comp=comp; m.userData._op0=m.material.opacity; } grp.add(m);
+    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat.clone()); ed.position.set(0,cy,0);
+    if(comp){ ed.userData.comp=comp; ed.userData._op0=ed.material.opacity; } grp.add(ed); };
+  addBox(Bbank,dBank,Lbank, yBankTop-dBank/2, ['pb_bx','pb_by','pb_bank_d','pb_ue'], 'bankett');  // Bankett (OK an −ü)
+  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2, ['pb_hk','pb_kx','pb_ky'], 'kopf');  // Fundamentkopf auf Bankett
 
   // ── Pfähle (geneigt) — Zylinder, eingefärbt nach Druck/Zug
   const yAxis=new THREE.Vector3(0,1,0);
@@ -3132,6 +3221,7 @@ function buildPfahlbockViz(){
       new THREE.MeshLambertMaterial({color:pcol,transparent:true,opacity:_dim?C.ghostOp:C.solidOp}));
     cyl.position.copy(head).addScaledVector(dv,0.5);
     cyl.quaternion.setFromUnitVectors(yAxis, dv.clone().normalize());
+    cyl.userData.ffields=['pb_L']; cyl.userData.comp='pile'; cyl.userData._op0=cyl.material.opacity;
     grp.add(cyl);
   });
 
@@ -3205,7 +3295,7 @@ function buildPfahlbockViz(){
   // ── Layer «Einwirkungen» (showLabels, wie Block): Mastlasten N/H/M am Kopf
   if(showLabels){
     // Stil/Farben 1:1 vom Blockfundament; Werte k/d wie Block
-    const glD=viz.govLoad||{}, topY=yBankTop+hKopf, S_MIN=0.55, S_MAX=2.5;
+    const glD=viz.govLoad||{}, topY=yBankTop+hKopf, S_MIN=0.55, S_MAX=2.0;
     const isChar=(typeof _gztCharMode!=='undefined')&&_gztCharMode, sfx=isChar?'k':'d';
     const glL=(isChar&&viz.govLoadChar)?viz.govLoadChar:glD;   // angezeigte Werte (Pfeilgrösse bleibt Bemessung)
     // Vertikal-Vektor = MASTLAST ohne Bankett/Kopf-Eigengewicht (wie Block). Grösse aus char. Mastlast
@@ -3217,7 +3307,7 @@ function buildPfahlbockViz(){
       const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s,8),m); cy.position.set(0,topY+s/2+0.15,0); grp.add(cy);
       const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.set(0,topY+0.07,0); co.rotation.z=Math.PI; grp.add(co);
       _vlAdd('N'+sfx+' = '+nDisp.toFixed(0)+' kN',new THREE.Vector3(0.4,topY+s/2+0.15,0),'vl-frc'); }
-    if(Hmag>0.5){ const s=Math.max(S_MIN,Math.min(S_MAX,Hmag/20)), d=new THREE.Vector3(Hx,0,Hy).normalize();
+    if(Hmag>0.5){ const s=Math.max(S_MIN,Math.min(S_MAX,Hmag/35)), d=new THREE.Vector3(Hx,0,Hy).normalize();
       const m=new THREE.MeshLambertMaterial({color:C.forceH}), q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),d), base=new THREE.Vector3(0,topY,0);
       const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s*1.4,8),m); cy.position.copy(base.clone().add(d.clone().multiplyScalar(s*0.7))); cy.applyQuaternion(q); grp.add(cy);
       const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.copy(base.clone().add(d.clone().multiplyScalar(s*1.4))); co.applyQuaternion(q); grp.add(co);
@@ -3234,12 +3324,12 @@ function buildPfahlbockViz(){
 
   // ── Vermassung (zentral via _dim3 — identische Abstände/Hilfslinien wie Block)
   if(showDim){
-    _dimBegin(grp, new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true}));
+    _dimBegin(grp, new THREE.LineBasicMaterial({color:_dimColor(),opacity:C.dimOp,transparent:true}));
     const V=(x,y,z)=>new THREE.Vector3(x,y,z), yb=yBankTop;
     // B (x) vorne · L Bankett (z) links-aussen — auf OK-Bankett-Ebene
     _dim3(V(-Bbank/2,yb,Lbank/2), V(Bbank/2,yb,Lbank/2), V(0,0,1), {label:'B = '+Bbank.toFixed(2)+' m', field:'pb_bx'});
     _dim3(V(-Bbank/2,yb,-Lbank/2), V(-Bbank/2,yb,Lbank/2), V(-1,0,0), {off:DIM3_OFF+0.7, label:'L = '+Lbank.toFixed(2)+' m', field:'pb_by'});
-    // Links-innen vertikale Kette (z=0): H_Kopf (oben) + Bankettdicke d (unten)
+    // Links-innen vertikale Kette (z=0): H_Kopf (oben) + Bankettdicke d (unten) — neben der L-Bankett-Vermassung
     if(hKopf>0.01) _dim3(V(-Bbank/2,yBankTop,0), V(-Bbank/2,yBankTop+hKopf,0), V(-1,0,0), {label:'H_Kopf = '+hKopf.toFixed(2)+' m', field:'pb_hk'});
     _dim3(V(-Bbank/2,yBankTop,0), V(-Bbank/2,yUK,0), V(-1,0,0), {label:'d = '+dBank.toFixed(2)+' m', field:'pb_bank_d'});
     // Rechts vertikale Kette (z=0): ü (oben, GOK→OK Bankett) + Pfahllänge L (tief, aussen)
@@ -3265,7 +3355,7 @@ function rebuildScene(){
   if(_lgB) _lgB.style.display=_isPb?'none':''; if(_lgP) _lgP.style.display=_isPb?'':'none';
   applyGridStyle();   // Raster-Stil (VIZ) — beide Modi
   // Pfahlfundament: eigenes 3D-Modell statt Block/Flach (Bankett + geneigte Pfähle + σ'v + Kräfte)
-  if(_isPb){ try{ buildPfahlbockViz(); if(_pendingFit){_pendingFit=false; fitCameraToModel();} if(_focusField && performance.now()<_focusUntil) _highlightMeshForField(_focusField); }catch(err){ console.error('buildPfahlbockViz:', err); } updateSB(); return; }
+  if(_isPb){ try{ buildPfahlbockViz(); if(_pendingFit){_pendingFit=false; fitCameraToModel();} }catch(err){ console.error('buildPfahlbockViz:', err); } updateSB(); return; }
   const C=vizStyle();   // zentrales Darstellungs-Modul (auch Block liest jetzt hier, via SETTINGS.viz konfigurierbar)
   const bg=new THREE.Group();bg.name='blk';
   // Block: sitzt ue unterhalb GOK
@@ -3274,10 +3364,10 @@ function rebuildScene(){
   const bCol=_dimMode?C.concreteDim:C.concrete, bOp=_dimMode?C.ghostOp:C.solidOp;
   const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:bCol,transparent:true,opacity:bOp}));
   bMesh.position.set(0,-ue-hb/2,0);bMesh.castShadow=true;bMesh.renderOrder=1;
-  bMesh.userData.ffields=['g_bx','g_by','g_hblock','g_uberd'];bg.add(bMesh);
+  bMesh.userData.ffields=['g_bx','g_by','g_hblock','g_uberd'];bMesh.userData.comp='block';bMesh.userData._op0=bMesh.material.opacity;bg.add(bMesh);
   const bEdgeCol=_dimMode?C.edgeDim:C.edge;
   const bEdge=new THREE.LineSegments(new THREE.EdgesGeometry(bGeo),new THREE.LineBasicMaterial({color:bEdgeCol,opacity:_dimMode?0.5:0.7,transparent:true}));
-  bEdge.position.copy(bMesh.position);bg.add(bEdge);
+  bEdge.position.copy(bMesh.position);bEdge.userData.comp='block';bEdge.userData._op0=bEdge.material.opacity;bg.add(bEdge);
   // Kopf: nur bei Block oder Beton-Flach (nicht bei Stahl-Platte)
   const _showKopf = CALC_MODEL==='block' || FLACH_MAT==='beton';
   if(_showKopf && kx>0.01 && ky>0.01 && hk>0.01){
@@ -3285,9 +3375,9 @@ function rebuildScene(){
     const kCol=_dimMode?C.concreteDim:C.concrete, kOp=_dimMode?C.ghostOp:C.solidOp;
     const kMesh=new THREE.Mesh(kGeo,new THREE.MeshLambertMaterial({color:kCol,transparent:true,opacity:kOp}));
     kMesh.position.set(ex,-ue+hk/2,ey);kMesh.castShadow=true;kMesh.renderOrder=1;
-    kMesh.userData.ffields=['g_hkopf','g_kx','g_ky'];bg.add(kMesh);
+    kMesh.userData.ffields=['g_hkopf','g_kx','g_ky'];kMesh.userData.comp='kopf';kMesh.userData._op0=kMesh.material.opacity;bg.add(kMesh);
     const kEdge=new THREE.LineSegments(new THREE.EdgesGeometry(kGeo),new THREE.LineBasicMaterial({color:C.edge,opacity:0.7,transparent:true}));
-    kEdge.position.copy(kMesh.position);bg.add(kEdge);
+    kEdge.position.copy(kMesh.position);kEdge.userData.comp='kopf';kEdge.userData._op0=kEdge.material.opacity;bg.add(kEdge);
   }
   // Auflasten (Stahl-Platte) als graue Quader auf der Platte
   if(CALC_MODEL==='flach' && FLACH_MAT==='stahl'){
@@ -3356,9 +3446,9 @@ function rebuildScene(){
     // Hilfsfunktion: ShapeGeometry mit Aussparung — ein einziger Mesh, keine Nahtprobleme
     // Bei Flachfundament: Loch = Plattenfootprint (bx×by); bei Block: Loch = Kopf (kx×ky)
     const _isFlach = CALC_MODEL === 'flach';
-    // Überdeckung aktiv (Block deckt unter Erde) → keine Aussparung in der Geländefläche
+    // Überdeckung aktiv (Fundament unter Erde) → keine Aussparung in der Geländefläche (Block UND Flach)
     const _uberdActive = _uberdOn() && ue > 0.001;
-    const _holeOn = _isFlach ? true : !_uberdActive;
+    const _holeOn = !_uberdActive;
     const holeW = _isFlach ? bx : kx;
     const holeD = _isFlach ? by : ky;
 
@@ -3475,10 +3565,10 @@ function rebuildScene(){
     const _Gk=(_gb*(bx*by*hb+(_kpf?_kx*_ky*(hk+_ue):0))+(_ue>0?((_kpf?_kx*_ky:0)*_ue*_gb+(bx*by-_kx*_ky)*_ue*_ga):0));
     const _gGe=+gi('lw_G_eig')||1.00;
     const Nd=gG*NG+_gGe*_Gk;
-    const S_MIN=0.55, S_MAX=2.5; // Mindest- / Maximallänge Vektoren [m]
+    const S_MIN=0.55, S_MAX=2.0; // Mindest- / Maximallänge Vektoren [m] (N kappt bei grossen Lasten, z. B. 150 kN)
     const okKopf = -_ue + hk;    // OK Fundamentkopf (Lastangriff) in Welt-y — Pfeile setzen hier an (wie Pfahlfundament)
     if(Ht>0.001){
-      const s=Math.max(S_MIN,Math.min(S_MAX,Ht/20));
+      const s=Math.max(S_MIN,Math.min(S_MAX,Ht/35));
       const d=new THREE.Vector3(Hxd,0,Hyd).normalize();
       const g=new THREE.Group();g.name='arH';
       const m=new THREE.MeshLambertMaterial({color:C.forceH});
@@ -3520,7 +3610,7 @@ function rebuildScene(){
       const isChar = (typeof _gztCharMode !== 'undefined') && _gztCharMode;
       const sfx = isChar ? 'k' : 'd';
       if(Ht>0.001){
-        const s=Math.max(S_MIN,Math.min(S_MAX,Ht/20));
+        const s=Math.max(S_MIN,Math.min(S_MAX,Ht/35));
         const d=new THREE.Vector3(Hxd,0,Hyd).normalize();
         const Hxk=HGx+HWx, Hyk=HGy+HWy;
         const Htk=Math.sqrt(Hxk**2+Hyk**2);
@@ -3562,17 +3652,17 @@ function rebuildScene(){
   // ── Vermassung (zentral via _dim3 — einheitliche Abstände/Hilfslinien wie Pfahlfundament)
   if(showDim){
     const dg=new THREE.Group();dg.name='dim';
-    _dimBegin(dg, new THREE.LineBasicMaterial({color:C.dim,opacity:C.dimOp,transparent:true}));
+    _dimBegin(dg, new THREE.LineBasicMaterial({color:_dimColor(),opacity:C.dimOp,transparent:true}));
     const V=(x,y,z)=>new THREE.Vector3(x,y,z);
     const dimY=-ue, t_eff=hb+ue, okKopf=-ue+hk;
     // B (x) vorne · L (z) rechts — beide auf OK-Block-Ebene
     _dim3(V(-bx/2,dimY,by/2), V(bx/2,dimY,by/2), V(0,0,1), {label:`B = ${bx.toFixed(2)} m`, field:'g_bx'});
     _dim3(V(bx/2,dimY,-by/2), V(bx/2,dimY,by/2), V(1,0,0), {label:`L = ${by.toFixed(2)} m`, field:'g_by'});
-    // Vertikale Kette rechts (z=0): ü innen, t aussen
-    if(ue>0.01) _dim3(V(bx/2,0,0), V(bx/2,-ue,0), V(1,0,0), {label:`ü = ${ue.toFixed(2)} m`, field:'g_uberd'});
+    // Rechts vertikal (z=0): Einbindetiefe t
     _dim3(V(bx/2,0,0), V(bx/2,-t_eff,0), V(1,0,0), {off:DIM3_OFF+0.7, label:`t = ${t_eff.toFixed(2)} m`, field:'g_hblock'});
-    // H_Kopf links (OK Block → OK Kopf)
-    if(hk>0.05) _dim3(V(-bx/2,-ue,0), V(-bx/2,okKopf,0), V(-1,0,0), {label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
+    // Links vertikal (z=0): ü innen (GOK → OK Block) · H_Kopf aussen (davor, Abstand zur ü-Vermassung)
+    if(ue>0.01) _dim3(V(-bx/2,0,0), V(-bx/2,-ue,0), V(-1,0,0), {label:`ü = ${ue.toFixed(2)} m`, field:'g_uberd'});
+    if(hk>0.05) _dim3(V(-bx/2,-ue,0), V(-bx/2,okKopf,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
     scene.add(dg);
   }
 
@@ -3608,8 +3698,6 @@ function rebuildScene(){
   }
 
   if(_pendingFit){ _pendingFit=false; fitCameraToModel(); }
-  // Bauteil-Highlight bei aktivem Eingabe-Fokus über den Rebuild hinweg neu aufleuchten lassen
-  if(_focusField && performance.now()<_focusUntil) _highlightMeshForField(_focusField);
   updateSB();
 }
 const updateViewer=rebuildScene;
@@ -3857,7 +3945,7 @@ function buildStress(){
     `<div class="lg-row"><div class="lg-sq" style="background:${cNL}"></div>Nulllinie y_NL</div>`;
   document.getElementById('lg-str').style.display='block';
 }
-function resetCam(){_cancelCamFly(true);sph={t:0.6,p:1.0,r:12};moveCam();}
+function resetCam(){_cancelCamFly(true);_panOff.set(0,0,0);sph={t:0.6,p:1.0,r:12};moveCam();}
 function setCamTop(){sph={t:0,p:0.08,r:14};moveCam();}
 function setCamFront(){sph={t:0,p:Math.PI/2-0.08,r:14};moveCam();}
 function setCamSide(){sph={t:Math.PI/2,p:Math.PI/2-0.08,r:14};moveCam();}
@@ -4128,7 +4216,7 @@ function buildPfahlViz(){
   const p_seite = 'gegenueber';  // Pfähle stehen fix auf der gleisabgewandten Seite (Feldseite)
   // Richtstütze immer an Fundamentkopf-Achse
   const typ     = gi('pfahl_typ')      || 'HEB200';
-  const prof    = HEB_PROFILES[typ]    || HEB_PROFILES['HEB200'];
+  const prof    = pfahlSection(typ);
   const B_pf    = prof.b;
 
   const _lt  = document.documentElement.getAttribute('data-theme') === 'light';
@@ -4342,6 +4430,13 @@ function buildPfahlViz(){
   // rotY: Rotation um y-Achse [rad] → dreht Steg in radiale Richtung
   function addHEB(cx, cy, cz, profil, length, mat, matE, rotY = 0){
     const { b, h, tw, tf } = profil;
+    // Krinner V (Rundrohr) → Zylinder statt I-Profil
+    if(profil.round){
+      const geo=new THREE.CylinderGeometry(b/2, b/2, length, 16);
+      const m=new THREE.Mesh(geo, mat); m.position.set(cx, cy, cz); m.rotation.y=rotY; grp.add(m);
+      const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo), matE); e.position.copy(m.position); e.rotation.y=rotY; grp.add(e);
+      return;
+    }
     const hw = h - 2*tf;
     const sub = new THREE.Group();
     sub.position.set(cx, cy, cz);
@@ -5472,8 +5567,20 @@ function renderPfahlbock(){
   const sys=cat[+gi('pb_sys')] || cat[0];
   const tdn=sys.vars[+gi('pb_var')] || sys.vars[0];
   if(!sys || !tdn) return;
+  const _Lfull=+gi('pb_L')||10;                                  // Gesamtlänge (gestossen) — Axial/Bettung/Knicken
+  const _LbendMax = sys.LelemMax || 0;                          // längstes Einzelelement → Biegelänge M+N (Stoss=Gelenk)
+  // ── Böschung: geneigtes Gelände (auf- ODER abfallend, Pfahl auf/an der Böschung) reduziert die
+  //    laterale Bettung der talseitigen (bergab zeigenden) Seite — bei umkehrender Lastrichtung
+  //    (Wind ±) ist diese Seite immer massgebend. Faktor Kp,β/Kp mit |β|, global über die Einbinde-
+  //    länge angesetzt (konservativ). Globale Standsicherheit (Gleitkreis) NICHT abgedeckt.
+  const _slBeta=+gi('bg_beta')||0, _slBtyp=(document.getElementById('bg_btyp')||{}).value||'none';
+  const _slopeActive = _slBtyp!=='none' && Math.abs(_slBeta) > 0.1;
+  let _bettungFac=1;
+  if(_slopeActive){ const _phiSl=+gi('bg_phi')||30;
+    _bettungFac = Math.max(0.25, kpSlopeRankine(_phiSl, Math.abs(_slBeta)) / Math.max(1e-6, kpSlopeRankine(_phiSl, 0))); }
   const info=document.getElementById('pb_tendon_info');
-  if(info) info.innerHTML=`${sys.grade} · A_s=${tdn.As} mm² · R_t,k=${micropileRtk(tdn).toFixed(0)} kN`+(tdn.Ftk?` · F_tk=${tdn.Ftk} kN`:'');
+  if(info) info.innerHTML=`${sys.grade} · A_s=${tdn.As} mm² · R_t,k=${micropileRtk(tdn).toFixed(0)} kN`+(tdn.Ftk?` · F_tk=${tdn.Ftk} kN`:'')
+    +(_LbendMax?`<br><span style="color:var(--xdim)">gestossen: L=${_Lfull.toFixed(2)} m gesamt (N+V) · M+N über längstes Element ${Math.min(_Lfull,_LbendMax).toFixed(2)} m (Stoss = Gelenk)</span>`:'');
   const n=+gi('pb_n')||4;
   const ax=+gi('pb_ax')||0, ay=+gi('pb_ay')||0;
   // Bankett-Maße zuerst (Block ist Primär-Eingabe) — daraus folgen die max. Pfahlabstände
@@ -5515,11 +5622,13 @@ function renderPfahlbock(){
   });
   const gzgFullC=(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,1,1,1)}));
   const gzgVarC =(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,0,0,1)}));
-  const r=pfahlbockAnalyse({ piles, L:+gi('pb_L')||10, e:+gi('pb_e')||0,
+  const r=pfahlbockAnalyse({ piles, L:_Lfull, e:+gi('pb_e')||0, LbendMax:_LbendMax, bettungFac:_bettungFac,
     dGrout:(+gi('pb_dG')||150)/1000, tendon:tdn, E_steel:sys.E,
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
+  // Böschungs-Status fürs Panel + Greifer (globale Standsicherheit NICHT abgedeckt → kein blindes „Erfüllt")
+  r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
   // Knickkurve für ALLE hinterlegten Tragglieder (gleiche Geometrie/Boden → kbed,
   // nur EI und N_pl,k variieren je Stab) — zum Vergleich/zur Auswahl
   r.knickAll = [];
@@ -5569,8 +5678,9 @@ function _renderPfahlbockResultsRight(r, piles, n){
   scroll.style.display=''; scroll.innerHTML=_pbResultHTML(r, piles, n);
   const pill=document.getElementById('overall-pill');
   if(pill){ const e=r&&isFinite(r.eta_massg)?r.eta_massg:0;
-    pill.className='pill '+(e>=1.0?'pill-ok':'pill-f');
-    pill.textContent = e>=1.0?'Erfüllt':'Nicht erfüllt'; }
+    if(e<1.0){ pill.className='pill pill-f'; pill.textContent='Nicht erfüllt'; }
+    else if(r&&r.slopeActive){ pill.className='pill pill-w'; pill.textContent='Prüfen'; }   // Böschung: globale Standsicherheit offen → nicht blind „Erfüllt"
+    else { pill.className='pill pill-ok'; pill.textContent='Erfüllt'; } }
   if(typeof _updateDrawerStatus==='function') _updateDrawerStatus();
 }
 // Draufsicht (SVG, live) — ECHTES Bankett (proportional), Pfähle zu Ø-Massstab, Neigungs-Pfeile,
@@ -5585,7 +5695,7 @@ function buildPfahlbockDraufsicht(piles, ax, ay, Bbank, Lbank, dG){
   const yExt=Math.max(Lbank/2, Math.max(...ys.map(Math.abs))+rP);
   const mgn=Math.max(0.30, xExt*0.26, yExt*0.26);
   const W=2*(xExt+mgn), H=2*(yExt+mgn);
-  const VB=232, padX=30, padTop=22, padBot=50;
+  const VB=232, padX=30, padTop=22, padBot=34;
   const sc=Math.min((VB-2*padX)/Math.max(0.2,W), 150/Math.max(0.2,H));
   const HB=Math.round(H*sc+padTop+padBot);
   const X=x=>VB/2+x*sc, Y=y=>padTop+10+(yExt+mgn-y)*sc;   // 0-zentriert, y oben = +längs
@@ -5603,18 +5713,27 @@ function buildPfahlbockDraufsicht(piles, ax, ay, Bbank, Lbank, dG){
     if(dx||dy){ s+=`<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${(px+nx*aL).toFixed(1)}" y2="${(py-ny*aL).toFixed(1)}" stroke="var(--xdim)" stroke-width="1"/>
       <polygon points="${(px+nx*aL).toFixed(1)},${(py-ny*aL).toFixed(1)} ${(px+nx*(aL-4)-ny*2.2).toFixed(1)},${(py-ny*(aL-4)-nx*2.2).toFixed(1)} ${(px+nx*(aL-4)+ny*2.2).toFixed(1)},${(py-ny*(aL-4)+nx*2.2).toFixed(1)}" fill="var(--xdim)"/>`; }
     s+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${rpx.toFixed(1)}" fill="${c}" fill-opacity="0.85" stroke="${c}" stroke-width="1.2"/>
-    <text x="${px.toFixed(1)}" y="${(py+rpx*0.45).toFixed(1)}" font-family="var(--f-mono)" font-size="${Math.max(6,rpx*0.85).toFixed(0)}" text-anchor="middle" fill="var(--bg)">${i+1}</text>
-    <text x="${px.toFixed(1)}" y="${(py+rpx+8).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${c}">${edges[i].toFixed(2)}</text>`;
+    <text x="${px.toFixed(1)}" y="${(py+rpx*0.45).toFixed(1)}" font-family="var(--f-mono)" font-size="${Math.max(6,rpx*0.85).toFixed(0)}" text-anchor="middle" fill="var(--bg)">${i+1}</text>`;
   });
-  // Bankett-Vermassung: B unten, L links
-  const yB=Y(-(yExt+mgn*0.45)), xL=X(-(xExt+mgn*0.45)), ymL=(Y(-Lbank/2)+Y(Lbank/2))/2;
-  s+=`<line x1="${X(-Bbank/2).toFixed(1)}" y1="${yB.toFixed(1)}" x2="${X(Bbank/2).toFixed(1)}" y2="${yB.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7"/>
-    <text x="${VB/2}" y="${(yB-3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--dim)">B = ${Bbank.toFixed(2)} m</text>
-    <line x1="${xL.toFixed(1)}" y1="${Y(-Lbank/2).toFixed(1)}" x2="${xL.toFixed(1)}" y2="${Y(Lbank/2).toFixed(1)}" stroke="var(--dim)" stroke-width="0.7"/>
-    <text x="${(xL-2).toFixed(1)}" y="${ymL.toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--dim)" transform="rotate(-90 ${(xL-2).toFixed(1)} ${ymL.toFixed(1)})">L = ${Lbank.toFixed(2)} m</text>`;
-  s+=`<text x="6" y="${HB-16}" font-family="var(--f-mono)" font-size="6.5" fill="var(--xdim)">Zahl = Randabstand Pfahlmitte→Kante [m] · α_x=${ax}° α_y=${ay}° (Pfeil=Fuss)</text>
-  <text x="6" y="${HB-6}" font-family="var(--f-mono)" font-size="6.5" fill="var(--xdim)">&lt; ${randMin.toFixed(2)} m = <tspan fill="var(--warn)">orange</tspan> · Pfahl schneidet Kante / ausserhalb = <tspan fill="var(--fail)">rot</tspan></text>
-  </svg>`;
+  // ── Vermassungskette Rand–Pfahl–…–Rand (B unten · L links). Rand-Segmente nach Status eingefärbt.
+  const uniq=(a)=>[...new Set(a.map(v=>+v.toFixed(3)))].sort((p,q)=>p-q);
+  const segCol=d=> d < dG/2 ? 'var(--fail)' : d < randMin ? 'var(--warn)' : 'var(--dim)';
+  const DM='var(--dim)';
+  const yB=Y(-(yExt+mgn*0.45)), xL=X(-(xExt+mgn*0.45));
+  // B-Kette (horizontal): −B/2 · Pfahlspalten · +B/2
+  const chX=[-Bbank/2, ...uniq(xs), Bbank/2];
+  s+=`<line x1="${X(chX[0]).toFixed(1)}" y1="${yB.toFixed(1)}" x2="${X(chX[chX.length-1]).toFixed(1)}" y2="${yB.toFixed(1)}" stroke="${DM}" stroke-width="0.7"/>`;
+  chX.forEach(xw=>{ const xx=X(xw); s+=`<line x1="${xx.toFixed(1)}" y1="${(yB-3).toFixed(1)}" x2="${xx.toFixed(1)}" y2="${(yB+3).toFixed(1)}" stroke="${DM}" stroke-width="0.7"/>`; });
+  for(let i=0;i<chX.length-1;i++){ const a=chX[i],b=chX[i+1],len=b-a,mid=(a+b)/2,isEdge=(i===0||i===chX.length-2);
+    s+=`<text x="${X(mid).toFixed(1)}" y="${(yB+10).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${isEdge?segCol(len):DM}">${len.toFixed(2)}</text>`; }
+  // L-Kette (vertikal): −L/2 · Pfahlreihen · +L/2
+  const chY=[-Lbank/2, ...uniq(ys), Lbank/2];
+  s+=`<line x1="${xL.toFixed(1)}" y1="${Y(chY[0]).toFixed(1)}" x2="${xL.toFixed(1)}" y2="${Y(chY[chY.length-1]).toFixed(1)}" stroke="${DM}" stroke-width="0.7"/>`;
+  chY.forEach(yw=>{ const yy=Y(yw); s+=`<line x1="${(xL-3).toFixed(1)}" y1="${yy.toFixed(1)}" x2="${(xL+3).toFixed(1)}" y2="${yy.toFixed(1)}" stroke="${DM}" stroke-width="0.7"/>`; });
+  for(let i=0;i<chY.length-1;i++){ const a=chY[i],b=chY[i+1],len=b-a,mid=(a+b)/2,isEdge=(i===0||i===chY.length-2);
+    const yy=Y(mid), tx=(xL-4).toFixed(1);
+    s+=`<text x="${tx}" y="${yy.toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${isEdge?segCol(len):DM}" transform="rotate(-90 ${tx} ${yy.toFixed(1)})">${len.toFixed(2)}</text>`; }
+  s+=`</svg>`;
   return s;
 }
 // Generisch: Wert im fokussierten Zahlenfeld per Mausrad ändern (Raster = step)
@@ -5798,8 +5917,13 @@ function buildPbSchnittSVG(r, n, wide){
 
 // Systemverformung (Elevation quer, überhöht): Bankett-Rotation + Pfahl-Axialkräfte (Druck/Zug)
 function buildPbSystemSVG(r, piles, n, wide){
-  if(!piles || !piles.length || !r.uls || !r.gzgFull) return '';
-  const F=r.uls.F, q=r.uls.q, g=r.gzgFull, e=Math.max(0,r.e||0), L=r.L||6;
+  if(!piles || !piles.length || !r.gzgFull) return '';
+  const g=r.gzgFull, e=Math.max(0,r.e||0), L=r.L||6;
+  // GZG-Nachweis → durchgängig die massgebende CHARAKTERISTISCHE (GZG) Lösung zeigen:
+  // Pfahl-Axialkräfte, Verdrehung und Sway aus gzgFull.sol (nicht die ULS-Bemessungslösung).
+  const sol = (g.sol && g.sol.F) ? g.sol : r.uls;
+  if(!sol) return '';
+  const F=sol.F, q=sol.q;
   // Pfähle auf x-Spalten projizieren (Elevation in Querrichtung)
   const m=new Map();
   piles.forEach((p,i)=>{ const k=(+p.x).toFixed(3), cur=m.get(k);
@@ -5820,7 +5944,7 @@ function buildPbSystemSVG(r, piles, n, wide){
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
    <text x="${VB/2}" y="13" font-family="var(--f-mono)" font-size="8" letter-spacing=".05em" text-anchor="middle" fill="var(--dim)">SYSTEMVERFORMUNG — ELEVATION QUER (überhöht)</text>
-   <text x="${VB/2}" y="24" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--xdim)">Schiefstellung ${(1000*g.tiltQuer).toFixed(1)} ‰ · Verdrehung + Horizontalverschiebung · <tspan fill="var(--warn)">Druck</tspan> / <tspan fill="#4db8c9">Zug</tspan> [kN]</text>
+   <text x="${VB/2}" y="24" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--xdim)">Schiefstellung ${(1000*g.tiltQuer).toFixed(1)} ‰ · Verdrehung + Horizontalverschiebung · <tspan fill="var(--warn)">Druck</tspan> / <tspan fill="#4db8c9">Zug</tspan> [kN, char.]</text>
    <line x1="6" y1="${gy.toFixed(1)}" x2="${VB-6}" y2="${gy.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7" stroke-dasharray="4,3"/>
    <text x="${VB-8}" y="${(gy-2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">GOK</text>
    <line x1="${X(xmin).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(xmax).toFixed(1)}" y2="${capY0.toFixed(1)}" stroke="var(--xdim)" stroke-width="2" opacity="0.3"/>`;
@@ -5848,12 +5972,25 @@ function buildPbSystemSVG(r, piles, n, wide){
     }
     s+=`<circle cx="${headX.toFixed(1)}" cy="${hy.toFixed(1)}" r="2.6" fill="${colC(c.F)}"/>
       <text x="${fx.toFixed(1)}" y="${(fy+10).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${colC(c.F)}">${c.F<0?'−':''}${Math.abs(c.F).toFixed(0)}</text>`; });
-  // Sway-Annotation (Pfeil + reale Horizontalverschiebung aus GZG, falls vorhanden)
-  if(sway){ const ah=by1-8, ax0=cxp, ax1=cxp+driftPx;
-    const uReal = (g && isFinite(g.uQuer)) ? ', u ≈ '+Math.abs(g.uQuer).toFixed(1)+' mm' : '';
-    s+=`<line x1="${ax0.toFixed(1)}" y1="${ah.toFixed(1)}" x2="${ax1.toFixed(1)}" y2="${ah.toFixed(1)}" stroke="var(--acc)" stroke-width="1.2"/>
-      <path d="M ${ax1.toFixed(1)} ${ah.toFixed(1)} l ${(driftPx>0?-4:4)} -2.5 v5 z" fill="var(--acc)"/>
-      <text x="${ax1.toFixed(1)}" y="${(ah-3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="${driftPx>0?'start':'end'}" fill="var(--acc)">H${uReal}</text>`; }
+  // ── Horizontalverschiebung quer aufgeteilt: Anteil aus HORIZONTALLAST (H) + aus MOMENT (M),
+  //    als Tip-to-Tail-Vektorkette (macht die Kompensation sichtbar: gekoppelt gegensinnig →
+  //    Resultierende klein; entkoppelt M-Anteil ≈ 0). Zahlen real (mm), Länge illustrativ skaliert.
+  const uH=(sol.uH!=null)?sol.uH:0, uM=(sol.uM!=null)?sol.uM:0, uR=uH+uM;   // [mm]
+  if(Math.abs(uH)+Math.abs(uM) > 0.003){
+    const budget=(wide?120:82), ppm=budget/(Math.abs(uH)+Math.abs(uM)+1e-3), yD=34;
+    let ox=cxp, xH=ox+uH*ppm, xR=xH+uM*ppm;
+    const lo=Math.min(ox,xH,xR), hi=Math.max(ox,xH,xR), off=cxp-(lo+hi)/2;   // Kette um cxp zentrieren
+    ox+=off; xH+=off; xR+=off;
+    const MCOL='#b07cd0';
+    const seg=(x0,x1,col)=>Math.abs(x1-x0)<0.5?'':`<line x1="${x0.toFixed(1)}" y1="${yD}" x2="${x1.toFixed(1)}" y2="${yD}" stroke="${col}" stroke-width="1.7"/>`
+      +(Math.abs(x1-x0)>3?`<path d="M ${x1.toFixed(1)} ${yD} l ${(x1>x0?-4:4)} -2.6 v5.2 z" fill="${col}"/>`:'');
+    const rEnd=Math.max(ox,xH,xR)+5;   // rechter Rand der Kette (nach Zentrierung)
+    s+=`<line x1="${ox.toFixed(1)}" y1="${(yD-5).toFixed(1)}" x2="${ox.toFixed(1)}" y2="${(yD+5).toFixed(1)}" stroke="var(--xdim)" stroke-width="0.7"/>`;
+    s+=seg(ox,xH,'var(--acc)') + seg(xH,xR,MCOL);
+    s+=`<text x="${((ox+xH)/2).toFixed(1)}" y="${(yD-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--acc)">aus H ${Math.abs(uH).toFixed(1)}</text>`;
+    s+=`<text x="${((xH+xR)/2).toFixed(1)}" y="${(yD+9).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${MCOL}">aus M ${Math.abs(uM).toFixed(1)}</text>`;
+    s+=`<text x="${rEnd.toFixed(1)}" y="${(yD+3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="start" fill="var(--on)">Σ=${uR>=0?'':'−'}${Math.abs(uR).toFixed(1)} mm</text>`;
+  }
   return s+`</svg>`;
 }
 
@@ -5916,6 +6053,8 @@ function _pbResultHTML(r, piles, n){
       <span style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Massgebender Nachweis</span>
       <span style="font-weight:600;color:${cV(r.eta_massg)}">${isFinite(r.eta_massg)?'η = '+r.eta_massg.toFixed(2)+(govLbl?' · '+govLbl:''):'n.m.'}${r.govCombo?' <span style="color:var(--xdim);font-weight:400;font-size:9px">('+shortLF(r.govCombo)+')</span>':''}</span>
     </div>
+    ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.45;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
+      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ). Die <b>globale Böschungsstandsicherheit (Gleitkreis) ist NICHT nachgewiesen</b> — gesondert prüfen. Status daher „Prüfen" statt „Erfüllt".</div>`:''}
 
     ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
 
@@ -6658,6 +6797,18 @@ const HEB_PROFILES = {
   'HEB260': { b:0.260, h:0.260, tw:0.0100, tf:0.0175,Iy:14920e-8, Wply:1283e-6, A:118.4e-4 },
   'HEB300': { b:0.300, h:0.300, tw:0.0110, tf:0.019, Iy:25170e-8, Wply:1869e-6, A:149e-4   },
 };
+// Krinner V-Serie als Sicherungs-Pfahl (Stahlrohr S355, Wandstärke t=5 mm, di=da−10 mm, gestossen).
+// b=da (laterale Breite für Broms/Bettung), Iy=π/64·(da⁴−di⁴), Wply=(da³−di³)/6, A=π/4·(da²−di²).
+// round:true → 3D als Zylinder (statt I-Profil). Stahlgüte S355 (Mpl nutzt fy=355, wie HEB).
+const KRINNER_PILES = {
+  'KRV76':  { da:0.076, di:0.066, b:0.076, h:0.076, round:true, Iy:7.06e-7,  Wply:25.3e-6,  A:11.15e-4 },
+  'KRV89':  { da:0.089, di:0.079, b:0.089, h:0.089, round:true, Iy:1.168e-6, Wply:35.3e-6,  A:13.19e-4 },
+  'KRV114': { da:0.114, di:0.104, b:0.114, h:0.114, round:true, Iy:2.548e-6, Wply:59.4e-6,  A:17.12e-4 },
+  'KRV140': { da:0.140, di:0.130, b:0.140, h:0.140, round:true, Iy:4.840e-6, Wply:91.2e-6,  A:21.21e-4 },
+  'KRV168': { da:0.168, di:0.158, b:0.168, h:0.168, round:true, Iy:8.512e-6, Wply:133.0e-6, A:25.61e-4 },
+};
+// Sicherungs-Pfahl-Querschnitt: HEB-Profil ODER Krinner-V-Rohr (Fallback HEB200).
+function pfahlSection(typ){ return HEB_PROFILES[typ] || KRINNER_PILES[typ] || HEB_PROFILES['HEB200']; }
 
 // ════════════════════════════════════════════════════════════════════════
 // MIKROPFAHL-SYSTEME (CH-Raum) — Tragglied-Kennwerte für das Pfahlbock-Modul
@@ -6719,6 +6870,8 @@ const MICROPILE_SYSTEMS = [
       {bez:'R38 INOX 3b', da:38, As:800,  fy:650, ft:800, Ryk:460, Ftk:630},
     ]},
 ];
+// Hinweis: Die Krinner V-Serie ist KEIN Mikropfahl (Verpresskörper) → sie gehört ins SICHERUNGS-Modul
+// (Block + Richtstütze + Pfahl) als `KRINNER_PILES` (Stahlrohr-Querschnitt), nicht in diesen Katalog.
 
 // Korrosionsschutz-/Dauerhaftigkeitsstufen (SIA 267 — KEINE Querschnittsreduktion;
 // regelt Schutzart & Lebensdauer, vgl. ASTRA 717 Tab. 22).
@@ -6744,12 +6897,12 @@ function micropileRtk(v){ return v && v.Ryk != null ? Math.max(0, v.Ryk)
 function micropileRtd(v, gammaS){ return micropileRtk(v) / Math.max(1, gammaS||1.15); }
 
 function onPfahlTyp(val){
-  const p = HEB_PROFILES[val];
+  const p = pfahlSection(val);
   if(!p) return;
   const EI = 210e6 * p.Iy; // kNm²  (E = 210'000 MPa = 210e6 kN/m²)
   const el = document.getElementById('pfahl-ei-row');
   if(el) el.textContent =
-    `EI = ${(EI/1000).toFixed(0)} kNm²  ·  B = ${(p.b*100).toFixed(0)} cm  ·  W_pl = ${(p.Wply*1e6).toFixed(0)} cm³`;
+    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${p.round?'Ø':'B'} = ${(p.b*100).toFixed(0)} cm  ·  W_pl = ${(p.Wply*1e6).toFixed(0)} cm³`;
   calcPfahlsicherung();
 }
 
@@ -7399,12 +7552,18 @@ function pileLatCapPush(EI, B, e, L, ksAt, puAt, Hseed){
 // Querverschiebung) — Default 0.05·kAx (Mikropfahl biegeweich). Kopf gelenkig (keine Momenten-
 // einleitung in den schlanken Pfahl). δ_i = T_i·q mit T_i=[I3 | −skew(r_i)]; K_i = T_iᵀ·Kg_i·T_i.
 // piles[i] = {x, y, axDeg, ayDeg, kAx, kLat?}. Rückgabe {q, dir:[u_i], F:[F_i axial], FLat:[…]} | null.
-function solvePfahlbock(piles, load){
+// verticalAxis=true: Pfahlachse für die Steifigkeit senkrecht idealisiert (tx=ty=0) → die
+// Schrägstellung wird für die VERFORMUNG vernachlässigt (Kopplungsterm K[u,θ] entfällt:
+// Moment → reine Verdrehung θ=M/Σ kAx·xᵢ², Horizontalkraft → reine Verschiebung u=H/Σ kLat).
+// Opt-in über SETTINGS.pfahlGzgDecouple; NUR für die GZG-Verformung — die Kraftberechnung
+// (Axialkräfte) läuft immer mit echter Neigung (verticalAxis=false).
+function solvePfahlbock(piles, load, verticalAxis){
   if(!piles || !piles.length) return null;
   const K = Array.from({length:6}, () => new Array(6).fill(0));
   const store = [];
   for(const p of piles){
-    const tx = Math.tan((p.axDeg||0)*Math.PI/180), ty = Math.tan((p.ayDeg||0)*Math.PI/180);
+    const tx = verticalAxis ? 0 : Math.tan((p.axDeg||0)*Math.PI/180),
+          ty = verticalAxis ? 0 : Math.tan((p.ayDeg||0)*Math.PI/180);
     const Ln = Math.hypot(tx, ty, 1);
     const u = [tx/Ln, ty/Ln, -1/Ln];                     // Achse abwärts
     // zwei Senkrechte zur Achse
@@ -7548,8 +7707,10 @@ function pfahlbockAnalyse(cfg){
   const kAx = microAxialStiffness(L, dG, Es * As);        // kN/m: Stahl + Boden-Last-Setzung (t-z)
   // Laterale Bettung (schichtweise M_E) + p-y-Kopfsteifigkeit
   const nu = 0.3, alat = Math.min(1, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 0.30)));
+  // Böschung (abfallend) reduziert die laterale Bettung/Stützung (Talseite) — Faktor Kp,β/Kp aus renderPfahlbock.
+  const bettungFac = Math.min(1, Math.max(0.1, cfg.bettungFac ?? 1));
   const ksAt = z => { const s = schichtAtDepth(Math.max(0,z)); const me = Math.max(0.5, s.me ?? (+gi('bg_me')||10));
-                      return me*1000 / ((1-nu*nu)*dG) * alat; };
+                      return me*1000 / ((1-nu*nu)*dG) * alat * bettungFac; };
   const py1 = bddBeamPY(EI, dG, e, L, 1, ksAt);
   const kLat = py1 ? Math.max(1, 1000/Math.max(1e-3, py1.yHead_mm)) : 0.02*kAx;
   // Mantelreibung am Verpresskörper — schichtweise, q_s je Schicht (s.qs) oder α_c·c + β·σ'v.
@@ -7568,7 +7729,12 @@ function pfahlbockAnalyse(cfg){
   // Biegewiderstand Tragglied: W_pl ≈ (da³−di³)/6 (Voll-/Hohlkreis), M_Rd = W_pl·f_yk/γ_s
   const Wpl  = (Math.pow(da,3) - Math.pow(di,3)) / 6;      // m³
   const M_Rd = Wpl * (tdn.fy||500)*1000 / gS;             // kNm
-  const Mmax1 = py1 ? py1.Mmax_kNm : 0;                    // Biegemoment je kN Lateral-Kopflast
+  // Biegemoment für M+N: bei gestossenen Pfählen (Stoss = Gelenk, nur N+V) baut sich Moment nur
+  // innerhalb des längsten Einzelelements auf (M=0 am Stoss) → Biegelänge auf LbendMax begrenzen.
+  // Das obere Element wird als eigenständiger Bettungsbalken (freie/gelenkige Enden) gerechnet.
+  const Lbend = (cfg.LbendMax && cfg.LbendMax > 0) ? Math.min(L, cfg.LbendMax) : L;
+  const pyBend = (Lbend < L - 1e-6) ? bddBeamPY(EI, dG, e, Lbend, 1, ksAt) : py1;
+  const Mmax1 = pyBend ? pyBend.Mmax_kNm : (py1 ? py1.Mmax_kNm : 0);  // Biegemoment je kN Lateral-Kopflast (über Biegelänge)
   // Konsistent GELENKIGER (pinned) Kopf — konservativ: KEINE Kopf-Drehfixität der Pfähle.
   // Die translatorischen Kopfsteifigkeiten (kAx, kLat) an ihren Hebelarmen halten die Bankett-
   // Rotation über das Druck/Zug-Paar — vollständig, solange die Pfähle NICHT kollinear sind
@@ -7642,11 +7808,28 @@ function pfahlbockAnalyse(cfg){
   const gzgEval = combos => {
     const arr = Array.isArray(combos) ? combos : (combos ? [{load:combos}] : []);
     if(!arr.length) return null;
-    let tQ=0,tL=0,uQ=0,uL=0,w=0, any=false;
-    arr.forEach(c => { const s = solvePfahlbock(piles, c.load || {}); if(!s) return; any=true;
-      tQ=Math.max(tQ,Math.abs(s.q[4])); tL=Math.max(tL,Math.abs(s.q[3]));
-      uQ=Math.max(uQ,Math.abs(s.q[0])*1000); uL=Math.max(uL,Math.abs(s.q[1])*1000); w=Math.max(w,Math.abs(s.q[2])*1000); });
-    return any ? { tiltQuer:tQ, tiltLaengs:tL, uQuer:uQ, uLaengs:uL, w_mm:w } : null;
+    let tQ=0,tL=0,uQ=0,uL=0,w=0, any=false, govSol=null, govT=-1, govLd=null;
+    // Opt-in (Optionen): Verformung ohne Schrägstellungs-Kopplung. Kräfte (s.F) bleiben gekoppelt.
+    const dec = !!(typeof SETTINGS!=='undefined' && SETTINGS.pfahlGzgDecouple);
+    arr.forEach(c => {
+      const s = solvePfahlbock(piles, c.load || {}); if(!s) return;
+      const sD = dec ? (solvePfahlbock(piles, c.load || {}, true) || s) : s;   // Verformung (ggf. entkoppelt)
+      any=true;
+      tQ=Math.max(tQ,Math.abs(sD.q[4])); tL=Math.max(tL,Math.abs(sD.q[3]));
+      uQ=Math.max(uQ,Math.abs(sD.q[0])*1000); uL=Math.max(uL,Math.abs(sD.q[1])*1000); w=Math.max(w,Math.abs(sD.q[2])*1000);
+      // massgebende GZG-Lösung (max. Quer-Schiefstellung) für die Systemverformungs-Figur:
+      // entkoppelte Verformung (sD.q, konsistent zu den gemeldeten Werten), Kräfte gekoppelt (s.F)
+      if(Math.abs(sD.q[4]) >= govT){ govT=Math.abs(sD.q[4]); govSol={q:sD.q, F:s.F, FLat:s.FLat}; govLd=c.load||{}; } });
+    // Quer-Horizontalverschiebung (q[0]) der massgebenden Kombo in Anteil aus HORIZONTALLAST und aus
+    // MOMENT zerlegen (lineare Superposition, gleicher gekoppelt/entkoppelt-Zustand). Im gekoppelten
+    // Modell wirken die Anteile gegensinnig (Kompensation) → resultierend uH+uM; entkoppelt uM≈0.
+    if(govSol && govLd){
+      const sH = solvePfahlbock(piles, {Hx:govLd.Hx||0, Hy:govLd.Hy||0}, dec);
+      const sM = solvePfahlbock(piles, {Mx:govLd.Mx||0, My:govLd.My||0}, dec);
+      govSol.uH = sH ? sH.q[0]*1000 : 0;   // [mm] Anteil aus Horizontallast
+      govSol.uM = sM ? sM.q[0]*1000 : 0;   // [mm] Anteil aus Moment
+    }
+    return any ? { tiltQuer:tQ, tiltLaengs:tL, uQuer:uQ, uLaengs:uL, w_mm:w, sol:govSol } : null;
   };
   const gFull = gzgEval(cfg.gzgFull || cfg.loadGZG_full), gVar = gzgEval(cfg.gzgVar || cfg.loadGZG_var);
   const aZul = cfg.alphaZul ?? 0.01, aZulV = cfg.alphaZulVar ?? 0.005;
@@ -7674,6 +7857,7 @@ function pfahlbockAnalyse(cfg){
            gzgFull:gFull, gzgVar:gVar, etaGZG:+etaGZG.toFixed(2),
            e:+e.toFixed(3), L:+L.toFixed(3), dG:+dG.toFixed(4), Mmax1:+Mmax1.toFixed(4),
            govLatPile:govLat, FLatMax:+FLatMax.toFixed(2), pyProfile: py1?py1.profile:null,
+           bettungFac:+bettungFac.toFixed(3), Lbend:+Lbend.toFixed(2),
            eta_massg:+Math.min(etaGeo, etaSteel, etaKnick, etaGZG).toFixed(2) };
 }
 
@@ -7760,7 +7944,7 @@ function calcPfahlsicherung(){
   const d_ex     = Math.max(0, +gi('pfahl_dex') || 0);  // Aushubtiefe [m]
   const ex_seite = gi('pfahl_dex_seite') || 'gleis';
 
-  const prof = HEB_PROFILES[typ] || HEB_PROFILES['HEB200'];
+  const prof = pfahlSection(typ);
   const B    = prof.b;              // Profilbreite [m]
   const EI   = 210e6 * prof.Iy;    // [kNm²]
   const Mpl  = 355e3 * prof.Wply;  // [kNm]  f_y=355 MPa=355000 kN/m²
@@ -7786,7 +7970,7 @@ function calcPfahlsicherung(){
   // Profilinfo aktualisieren
   const eiEl = document.getElementById('pfahl-ei-row');
   if(eiEl) eiEl.textContent =
-    `EI = ${(EI/1000).toFixed(0)} kNm²  ·  B = ${(B*100).toFixed(0)} cm  ·  W_pl = ${(prof.Wply*1e6).toFixed(0)} cm³`;
+    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${prof.round?'Ø':'B'} = ${(B*100).toFixed(0)} cm  ·  W_pl = ${(prof.Wply*1e6).toFixed(0)} cm³`;
 
   // H_d, M_d und Block-GZT aus letztem Berechnungsergebnis (massgebender LF nach H)
   let H_d_bemessung = 0, M_d_bemessung = 0, lfName = '—';
@@ -12796,12 +12980,21 @@ function toggleProjBanner(force){
   b.classList.toggle('open', open);
   if(btn) btn.classList.toggle('open', open);
 }
+// Offenes Banner einrollen, sobald daneben (Modell/Sidebar) geklickt wird — Klicks im Banner
+// oder auf den Toggle-Button schliessen es NICHT (dort übernimmt der eigene Handler).
+document.addEventListener('pointerdown', e=>{
+  const b=document.getElementById('proj-banner'); if(!b || !b.classList.contains('open')) return;
+  const btn=document.getElementById('proj-banner-btn');
+  if(b.contains(e.target) || (btn && btn.contains(e.target))) return;
+  toggleProjBanner(false);
+});
 // Ergebnis-Schublade ein-/ausfahren (≥768px). Zustand wird in SETTINGS.resDrawerOpen gemerkt.
 function toggleResDrawer(force){
   const ws=_wsEl(); if(!ws) return;
   const open = (force!==undefined) ? !!force : !ws.classList.contains('res-open');
   ws.classList.toggle('res-open', open);
   if(typeof SETTINGS!=='undefined'){ SETTINGS.resDrawerOpen=open; if(typeof dbSet==='function') dbSet('bc_settings',SETTINGS); }
+  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift(open);   // Modell aus dem verdeckten Bereich schieben
   requestAnimationFrame(resizeViewer);
 }
 function _initWsResize(){
@@ -12810,7 +13003,9 @@ function _initWsResize(){
     _wsCols.l = +SETTINGS.wsCols.l || _wsCols.l; _wsCols.r = +SETTINGS.wsCols.r || _wsCols.r;
   }
   // Schublade: gemerkten Zustand anwenden (Default eingeklappt → Fokus auf Modellierung)
-  ws.classList.toggle('res-open', (typeof SETTINGS!=='undefined' && SETTINGS.resDrawerOpen===true));
+  const _drOpen=(typeof SETTINGS!=='undefined' && SETTINGS.resDrawerOpen===true);
+  ws.classList.toggle('res-open', _drOpen);
+  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift(_drOpen);   // Start-Verschiebung passend zum Zustand
   _updateDrawerStatus();
   applyWorkspaceCols();
   window.addEventListener('resize', applyWorkspaceCols);   // Fensteränderung → Spalten neu begrenzen
@@ -13443,6 +13638,8 @@ function resizeViewer(){
     camera.left=-d*asp; camera.right=d*asp; camera.top=d; camera.bottom=-d; }
   else { camera.aspect = w / h; }
   camera.updateProjectionMatrix();
+  // Schublade offen → View-Offset mit neuer Canvas-Breite neu setzen (fullWidth in setViewOffset sonst stale)
+  if(typeof _drawerShiftCur!=='undefined' && Math.abs(_drawerShiftCur)>0.5 && typeof moveCam==='function') moveCam();
 }
 
 function mobSwitch(view){
