@@ -1568,6 +1568,11 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
             <option value="nein">Nur Druck (Kontaktstoss)</option>
           </select>
         </div>
+        <div class="field"><label>Knickwiderstand Stütze N_b,Rd <em>kN — Datenblatt (0 = ohne)</em></label>
+          <input id="pfahl_stab_nrd" type="number" value="0" step="10" min="0"
+            oninput="calcPfahlsicherung()"
+            title="Bemessungs-Knickwiderstand der Richtstütze aus dem Datenblatt des Systemanbieters (Druckstab). 0 = kein Knicknachweis. Nachweis nur, wenn die Stütze auf Druck steht."/>
+        </div>
         <div class="hint" id="pfahl-geom-hint" style="margin-top:-2px"></div>
           </div>
         </div>
@@ -2006,8 +2011,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Pfahlmitte → nächste Bankettkante. Steuert die automatische Maximal-Vorgabe der Pfahlabstände sowie Ampel/Warnung in der Draufsicht.</span>
         </div>
         <div class="toggle-row" style="margin-top:6px">
-          <div><div class="toggle-label">GZG-Verdrehung entkoppeln</div><div class="toggle-sub">Verformung ohne Schrägstellungs-Kopplung: Moment → reine Verdrehung, Horizontalkraft → reine Verschiebung. Vereinfachung; Kraftberechnung bleibt gekoppelt. Standard: aus (gekoppelt).</div></div>
-          <label class="sw"><input type="checkbox" id="set-pfahl-decouple"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+          <div><div class="toggle-label">GZG-Verdrehung entkoppeln</div><div class="toggle-sub">Verformung ohne Schrägstellungs-Kopplung: Moment → reine Verdrehung, Horizontalkraft → reine Verschiebung. Vereinfachung; Kraftberechnung bleibt gekoppelt. Standard: an (entkoppelt) — abschalten für das gekoppelte Modell.</div></div>
+          <label class="sw"><input type="checkbox" id="set-pfahl-decouple" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
       </div>
     </div>
@@ -2253,7 +2258,7 @@ let SETTINGS = {
   gbx:1.0, gby:1.0, ghb:1.8, gkx:0.6, gky:0.6, ghk:1.0,
   tG:1.35, tQ:1.5, tph:1.20, tc:1.5, tEa:1.35, tEp:1.40,
   bgphi:27, bgc:0, bggamma:20, bgme:25, uberd:0.40,
-  mob:0.25, alphaZul:0.005,
+  mob:0.25, alphaZul:0.005, pfahlGzgDecouple:true,   // GZG-Verformung Standard: entkoppelt (Schrägstellung vernachlässigt)
   nw:{sohlsp:true, grundb:true, gleiten:true, kippen:true, gzg:true, gzt:true},
   gz_labels:{
     t2_block:'Grundbruch · Gleiten · Sohlsp. · Steckner GZT',
@@ -5627,8 +5632,13 @@ function renderPfahlbock(){
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
-  // Böschungs-Status fürs Panel + Greifer (globale Standsicherheit NICHT abgedeckt → kein blindes „Erfüllt")
+  // Böschungs-Status fürs Panel + Greifer
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
+  // Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — Bankett als Auflast; Mast-H destabilisierend
+  r.bishop = _slopeActive ? bishopStability({ bx:Bbank, t_bl:(+gi('pb_ue')||0)+dBank,
+      q_block:(NG + G_eig)/Math.max(0.3, Bbank),
+      H_des: Math.abs((r.govLoadChar && r.govLoadChar.Hx) || 0), y_H:-(+gi('pb_ue')||0) }) : null;
+  if(r.bishop && r.bishop.ok && isFinite(r.bishop.eta)) r.eta_massg = Math.min(r.eta_massg, +r.bishop.eta.toFixed(2));
   // Knickkurve für ALLE hinterlegten Tragglieder (gleiche Geometrie/Boden → kbed,
   // nur EI und N_pl,k variieren je Stab) — zum Vergleich/zur Auswahl
   r.knickAll = [];
@@ -5756,24 +5766,51 @@ document.addEventListener('wheel', function(e){
 const _pbE = e => e>=1.5?'var(--ok)':e>=1.0?'var(--warn)':'var(--fail)';
 
 // Geotechnik: Axialkraft pro Pfahl vs. R_s,d (Mantelreibung; Druck/Zug getrennt)
+// Mantelreibungswiderstand über die Tiefe (kumulativ) + Schichtbänder, Druck- und Zug-Bemessungswert,
+// mit den angesetzten max. Pfahl-Axialkräften (Druck/Zug) als Vergleichslinien → zeigt, ab welcher
+// Tiefe der Widerstand die Last deckt (Ausnutzung über die Einbindelänge).
 function buildPbAxialDiagram(r, n, wide){
-  if(!r || !r.pileRes || !r.pileRes.length) return '';
-  const cap=r.Rskin_d, capZ=(r.Rskin_dZ!=null?r.Rskin_dZ:cap), np=r.pileRes.length;
-  const hasZ=Math.abs(capZ-cap)>0.5;
-  const xmax=Math.max(...r.pileRes.map(p=>Math.abs(p.F)), cap, capZ, 1)*1.14;
-  const VB=wide?620:248, padL=24, padR=56, padTop=24, rowH=wide?26:19, padBot=hasZ?34:28;
-  const HB=padTop+np*rowH+padBot, x0=padL, xW=VB-padL-padR, X=v=>x0+v/xmax*xW;
+  const LY = r && r.skinLayers ? r.skinLayers : [];
+  if(!LY.length) return '';
+  const L = r.L||6, Rd = r.Rskin_d||0, RdZ = (r.Rskin_dZ!=null?r.Rskin_dZ:Rd), hasZ = Math.abs(RdZ-Rd)>0.5;
+  const pr = r.pileRes||[];
+  const Nd_max = Math.max(0, ...pr.filter(p=>!p.zug).map(p=>Math.abs(p.F)));
+  const Nz_max = Math.max(0, ...pr.filter(p=>p.zug).map(p=>Math.abs(p.F)));
+  const xmax = Math.max(Rd, RdZ, Nd_max, Nz_max, 1)*1.16;
+  const AMB='var(--warn)', TEAL='#4db8c9';
+  const VB=wide?560:272, padL=32, padR=wide?54:14, padTop=30, padBot=34;
+  const plotH=wide?300:200, plotW=VB-padL-padR, HB=padTop+plotH+padBot;
+  const X=R=>padL+R/xmax*plotW, Y=z=>padTop+z/Math.max(0.01,L)*plotH;
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
-   <text x="6" y="13" font-family="var(--f-mono)" font-size="8.5" letter-spacing=".05em" fill="var(--dim)">AXIALKRÄFTE PRO PFAHL vs. R_s,d</text>
-   <line x1="${X(cap).toFixed(1)}" y1="${padTop-3}" x2="${X(cap).toFixed(1)}" y2="${HB-padBot+3}" stroke="var(--acc)" stroke-width="1" stroke-dasharray="3,2"/>
-   <text x="${X(cap).toFixed(1)}" y="${HB-padBot+15}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--acc)">R_s,d ${cap.toFixed(0)}${hasZ?' (Druck)':''}</text>
-   ${hasZ?`<line x1="${X(capZ).toFixed(1)}" y1="${padTop-3}" x2="${X(capZ).toFixed(1)}" y2="${HB-padBot+3}" stroke="#4db8c9" stroke-width="1" stroke-dasharray="3,2"/>
-   <text x="${X(capZ).toFixed(1)}" y="${HB-padBot+25}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="#4db8c9">${capZ.toFixed(0)} (Zug)</text>`:''}`;
-  r.pileRes.forEach((p,i)=>{ const y=padTop+i*rowH+rowH*0.5, F=Math.abs(p.F), col=_pbE(p.eGeo);
-    s+=`<text x="2" y="${(y+3).toFixed(1)}" font-family="var(--f-mono)" font-size="8.5" fill="var(--dim)">P${i+1}</text>
-        <rect x="${x0}" y="${(y-rowH*0.31).toFixed(1)}" width="${Math.max(1,X(F)-x0).toFixed(1)}" height="${(rowH*0.62).toFixed(1)}" rx="2" fill="${col}" fill-opacity="0.85"/>
-        <text x="${(X(F)+4).toFixed(1)}" y="${(y+3).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--on)">${F.toFixed(0)}${p.zug?'↑':'↓'}</text>`; });
+   <text x="6" y="13" font-family="var(--f-mono)" font-size="8.5" letter-spacing=".05em" fill="var(--dim)">MANTELREIBUNGSWIDERSTAND ÜBER TIEFE</text>`;
+  // Schichtbänder (monochrom, alternierend) + q_s,k-Label
+  LY.forEach((l,i)=>{ const y0=Y(l.z0), y1=Y(l.z1);
+    s+=`<rect x="${padL}" y="${y0.toFixed(1)}" width="${plotW.toFixed(1)}" height="${Math.max(0,y1-y0).toFixed(1)}" fill="var(--s3)" fill-opacity="${i%2?0.35:0.62}"/>
+        <line x1="${padL}" y1="${y0.toFixed(1)}" x2="${(padL+plotW).toFixed(1)}" y2="${y0.toFixed(1)}" stroke="var(--ol)" stroke-width="0.6" stroke-dasharray="3,2"/>
+        <text x="${(padL+4).toFixed(1)}" y="${((y0+y1)/2+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="var(--xdim)">${(l.name||l.preset||'Schicht '+(i+1))} · q_s,k=${l.qs} kPa</text>`; });
+  // Achsen
+  s+=`<line x1="${padL}" y1="${padTop}" x2="${padL}" y2="${(padTop+plotH).toFixed(1)}" stroke="var(--ol2)" stroke-width="1"/>
+      <line x1="${padL}" y1="${(padTop+plotH).toFixed(1)}" x2="${(padL+plotW).toFixed(1)}" y2="${(padTop+plotH).toFixed(1)}" stroke="var(--ol2)" stroke-width="1"/>
+      <text x="${(padL-3)}" y="${(padTop+4)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--dim)">0</text>
+      <text x="${(padL-3)}" y="${(padTop+plotH+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--dim)">${L.toFixed(1)}</text>
+      <text x="9" y="${(padTop+plotH/2).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--dim)" transform="rotate(-90 9 ${(padTop+plotH/2).toFixed(1)})">Tiefe [m]</text>
+      <text x="${(padL+plotW/2).toFixed(1)}" y="${(HB-5)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--dim)">kumul. Widerstand R [kN]</text>`;
+  // Kumulative Widerstandskurven (linear je Schicht, da q_s,k schichtkonstant)
+  let cumD=0, cumZ=0; const pD=[[X(0),Y(0)]], pZ=[[X(0),Y(0)]];
+  LY.forEach(l=>{ cumD+=l.dRd; cumZ+=l.dRdZ; pD.push([X(cumD),Y(l.z1)]); pZ.push([X(cumZ),Y(l.z1)]); });
+  const poly=(pts,col,dash)=>`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${col}" stroke-width="1.8"${dash?' stroke-dasharray="4,2"':''}/>`;
+  if(hasZ) s+=poly(pZ,TEAL,true);
+  s+=poly(pD,AMB,false);
+  s+=`<circle cx="${X(Rd).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${AMB}"/>
+      <text x="${(X(Rd)+4).toFixed(1)}" y="${(Y(L)-2).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${AMB}">R_s,d ${Rd.toFixed(0)}${hasZ?' Druck':''}</text>`;
+  if(hasZ) s+=`<circle cx="${X(RdZ).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${TEAL}"/>
+      <text x="${(X(RdZ)+4).toFixed(1)}" y="${(Y(L)+9).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${TEAL}">${RdZ.toFixed(0)} Zug</text>`;
+  // Angesetzte max. Pfahl-Axialkräfte als Vergleichslinien (Druck/Zug)
+  const appl=(N,col,lbl,yl)=>N>0.5?`<line x1="${X(N).toFixed(1)}" y1="${padTop}" x2="${X(N).toFixed(1)}" y2="${(padTop+plotH).toFixed(1)}" stroke="${col}" stroke-width="1" stroke-dasharray="2,2"/>
+      <text x="${X(N).toFixed(1)}" y="${yl}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${col}">${lbl} ${N.toFixed(0)}</text>`:'';
+  s+=appl(Nd_max,AMB,'|N| Druck',padTop-3);
+  s+=appl(Nz_max,TEAL,'|N| Zug',padTop-12);
   return s+`</svg>`;
 }
 
@@ -5880,6 +5917,8 @@ function buildPbSchnittSVG(r, n, wide){
   const yMx=Math.max(1e-3,...py.map(p=>Math.abs(p.v))), VMx=Math.max(1e-3,...pV.map(p=>Math.abs(p.v)));
   const MMx=Math.max(1e-3,...pM.map(p=>Math.abs(p.v))), MScale=Math.max(MMx, Mrd*1.05);
   const Mgov=pM.reduce((a,p)=>Math.abs(p.v)>Math.abs(a.v)?p:a,{v:0,z:0});
+  const yGov=py.reduce((a,p)=>Math.abs(p.v)>Math.abs(a.v)?p:a,{v:0,z:py[0].z});   // max Verformung
+  const vGov=pV.reduce((a,p)=>Math.abs(p.v)>Math.abs(a.v)?p:a,{v:0,z:pV[0].z});   // max Querkraft
   const VB=wide?520:248, HB=wide?420:300, PADL=18,PADR=8,PADT=42,PADB=26, ph=HB-PADT-PADB, pw=VB-PADL-PADR, cw=pw/3;
   const axc=i=>PADL+cw*(i+0.5), depY=z=>PADT+((z+e)/(e+L))*ph, gokY=depY(0);
   const S=(v,mx)=>v/mx*cw*0.40;
@@ -5905,13 +5944,17 @@ function buildPbSchnittSVG(r, n, wide){
    <text x="${axc(2).toFixed(1)}" y="${PADT-7}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="${eC}">M [kNm]</text>
    ${ticks}
    ${curve(py,axc(0),yMx,'var(--acc)',true)}
+   <circle cx="${(axc(0)+S(yGov.v,yMx)).toFixed(1)}" cy="${depY(yGov.z).toFixed(1)}" r="2.4" fill="var(--acc)"/>
    ${curve(pV,axc(1),VMx,'#4db8c9',false)}
+   <circle cx="${(axc(1)+S(vGov.v,VMx)).toFixed(1)}" cy="${depY(vGov.z).toFixed(1)}" r="2.4" fill="#4db8c9"/>
    ${mLimOK?`<line x1="${(aM+mLim).toFixed(1)}" y1="${PADT}" x2="${(aM+mLim).toFixed(1)}" y2="${PADT+ph}" stroke="${eC}" stroke-width="0.8" stroke-dasharray="3,2"/>
    <line x1="${(aM-mLim).toFixed(1)}" y1="${PADT}" x2="${(aM-mLim).toFixed(1)}" y2="${PADT+ph}" stroke="${eC}" stroke-width="0.8" stroke-dasharray="3,2"/>
    <text x="${(aM+mLim).toFixed(1)}" y="${(PADT+ph+9).toFixed(1)}" font-family="var(--f-mono)" font-size="6" text-anchor="middle" fill="${eC}">M_Rd</text>`:''}
    ${curve(pM,axc(2),MScale,eC,true)}
    <circle cx="${(aM+S(Mgov.v,MScale)).toFixed(1)}" cy="${depY(Mgov.z).toFixed(1)}" r="2.6" fill="${eC}"/>
-   <text x="${(aM+S(Mgov.v,MScale)).toFixed(1)}" y="${(depY(Mgov.z)-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${eC}">M_max ${Math.abs(Mgov.v).toFixed(1)}</text>
+   <text x="${axc(0).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--acc)">y_max ${Math.abs(yGov.v).toFixed(1)}</text>
+   <text x="${axc(1).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="#4db8c9">V_max ${Math.abs(vGov.v).toFixed(1)}</text>
+   <text x="${axc(2).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${eC}">M_max ${Math.abs(Mgov.v).toFixed(1)}</text>
    </svg>`;
 }
 
@@ -5932,23 +5975,36 @@ function buildPbSystemSVG(r, piles, n, wide){
   cols.forEach(c=>{ c.footx=c.x + L*Math.sin((c.ax)*Math.PI/180); });
   const xall=[...cols.map(c=>c.x),...cols.map(c=>c.footx)];
   const xmin=Math.min(...xall), xmax=Math.max(...xall), xc=(xmin+xmax)/2;
-  const VB=wide?460:248, HB=wide?380:290, PADX=18, PADT=46, PADB=26;
-  const sc=Math.min((VB-2*PADX)/Math.max(0.6,(xmax-xmin)+0.4), (HB-PADT-PADB)/Math.max(0.6,e+L+0.4));
-  const X=x=>VB/2+(x-xc)*sc, Y=z=>PADT+(z+e)*sc;
-  const dir=(q[4]>=0?1:-1), visT=9*Math.PI/180*dir;       // Rotation überhöht auf 9° zur Anschauung
+  const VB=wide?470:264, HB=wide?400:322, PADL=30, PADR=14, PADT=58, PADB=24;
+  const plotW=VB-PADL-PADR, plotH=HB-PADT-PADB;
+  const sc=Math.min(plotW/Math.max(0.6,(xmax-xmin)+0.5), plotH/Math.max(0.6,e+L+0.3));
+  const cx0=PADL+plotW/2;                                  // horizontale Plotmitte
+  const X=x=>cx0+(x-xc)*sc, Y=z=>PADT+(z+e)*sc;
+  const dir=(q[4]>=0?1:-1), visT=9*Math.PI/180*dir;       // Verdrehung überhöht auf 9° zur Anschauung
   const cxp=X(xc), cyp=Y(-e);
   const rot=(px,py)=>{ const dx=px-cxp, dy=py-cyp;
     return [cxp+dx*Math.cos(visT)-dy*Math.sin(visT), cyp+dx*Math.sin(visT)+dy*Math.cos(visT)]; };
   const colC=f=>f>=0?'var(--warn)':'#4db8c9';             // Druck (warn) / Zug (teal)
-  const gy=Y(0), capY0=Y(-e);
+  const gy=Y(0), capY0=Y(-e), tilt=1000*g.tiltQuer;
+  let ticks=''; const stp=L<=2?0.5:1;                     // Tiefenachse
+  for(let z=0;z<=L+0.01;z+=stp){ const ty=Y(z);
+    ticks+=`<line x1="${(PADL-3).toFixed(1)}" y1="${ty.toFixed(1)}" x2="${PADL}" y2="${ty.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7"/>
+      <text x="${(PADL-5).toFixed(1)}" y="${(ty+2.4).toFixed(1)}" font-family="var(--f-mono)" font-size="6" text-anchor="end" fill="var(--xdim)">${z.toFixed(z%1?1:0)}</text>`; }
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
-   <text x="${VB/2}" y="13" font-family="var(--f-mono)" font-size="8" letter-spacing=".05em" text-anchor="middle" fill="var(--dim)">SYSTEMVERFORMUNG — ELEVATION QUER (überhöht)</text>
-   <text x="${VB/2}" y="24" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--xdim)">Schiefstellung ${(1000*g.tiltQuer).toFixed(1)} ‰ · Verdrehung + Horizontalverschiebung · <tspan fill="var(--warn)">Druck</tspan> / <tspan fill="#4db8c9">Zug</tspan> [kN, char.]</text>
-   <line x1="6" y1="${gy.toFixed(1)}" x2="${VB-6}" y2="${gy.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7" stroke-dasharray="4,3"/>
-   <text x="${VB-8}" y="${(gy-2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">GOK</text>
-   <line x1="${X(xmin).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(xmax).toFixed(1)}" y2="${capY0.toFixed(1)}" stroke="var(--xdim)" stroke-width="2" opacity="0.3"/>`;
-  cols.forEach(c=>{ s+=`<line x1="${X(c.x).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(c.footx).toFixed(1)}" y2="${Y(L).toFixed(1)}" stroke="var(--xdim)" stroke-width="1" opacity="0.28"/>`; });
+   <text x="${VB/2}" y="12" font-family="var(--f-mono)" font-size="8" letter-spacing=".05em" text-anchor="middle" fill="var(--dim)">SYSTEMVERFORMUNG QUER</text>
+   <text x="${VB/2}" y="23" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--xdim)">θ = ${tilt.toFixed(1)} ‰ (char.) · <tspan fill="var(--warn)">Druck</tspan> / <tspan fill="#4db8c9">Zug</tspan> [kN] · überhöht</text>
+   <rect x="${PADL}" y="${(PADT-3).toFixed(1)}" width="${plotW.toFixed(1)}" height="${(HB-PADB-PADT+3).toFixed(1)}" fill="none" stroke="var(--ol)" stroke-width="0.6"/>
+   <rect x="${PADL}" y="${gy.toFixed(1)}" width="${plotW.toFixed(1)}" height="${(HB-PADB-gy).toFixed(1)}" fill="var(--dim)" fill-opacity="0.05"/>
+   <line x1="${PADL}" y1="${gy.toFixed(1)}" x2="${(PADL+plotW).toFixed(1)}" y2="${gy.toFixed(1)}" stroke="var(--dim)" stroke-width="0.8" stroke-dasharray="4,3"/>
+   <text x="${(PADL+plotW-2).toFixed(1)}" y="${(gy-2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">GOK</text>
+   <line x1="${PADL}" y1="${PADT.toFixed(1)}" x2="${PADL}" y2="${(HB-PADB).toFixed(1)}" stroke="var(--ol2)" stroke-width="0.8"/>
+   <text x="9" y="${(PADT+plotH/2).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--dim)" transform="rotate(-90 9 ${(PADT+plotH/2).toFixed(1)})">Tiefe [m]</text>
+   ${ticks}`;
+  // ── Unverformtes Referenzsystem (gestrichelt, grau)
+  s+=`<line x1="${X(xmin).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(xmax).toFixed(1)}" y2="${capY0.toFixed(1)}" stroke="var(--xdim)" stroke-width="1.3" stroke-dasharray="3,2" opacity="0.55"/>`;
+  cols.forEach(c=>{ s+=`<line x1="${X(c.x).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(c.footx).toFixed(1)}" y2="${Y(L).toFixed(1)}" stroke="var(--xdim)" stroke-width="0.9" stroke-dasharray="3,2" opacity="0.5"/>`; });
+  s+=`<text x="${(X(xmin)).toFixed(1)}" y="${(capY0-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6" fill="var(--xdim)">unverformt</text>`;
   // ── Verformtes System: Bankett rotiert (Verdrehung) + horizontal verschoben (Sway),
   //    Pfähle als laterale Auslenkung zwischen verschobenem Kopf und ~festem Fuss.
   //    Verformungsfigur aus DEMSELBEN freien-Kopf-p-y-Profil wie Berechnung/Schnittgrössen
@@ -5960,6 +6016,10 @@ function buildPbSystemSVG(r, piles, n, wide){
   const driftPx = Math.abs(ux) < 1e-7 ? 0 : Math.sign(ux) * ((xmax-xmin)+0.4) * sc * 0.18;
   const sway = spF && Math.abs(driftPx) > 0.5;
   const [bx1,by1]=rot(X(xmin),capY0), [bx2,by2]=rot(X(xmax),capY0);
+  // Verdrehungswinkel θ am Bankettzentrum (Bogen zwischen unverformt-horizontal und rotiert)
+  const rA=Math.min(20, (xmax-xmin)*sc*0.34+8);
+  s+=`<path d="M ${(cxp+rA+driftPx).toFixed(1)} ${cyp.toFixed(1)} A ${rA} ${rA} 0 0 ${visT>=0?1:0} ${(cxp+rA*Math.cos(visT)+driftPx).toFixed(1)} ${(cyp+rA*Math.sin(visT)).toFixed(1)}" fill="none" stroke="var(--on2)" stroke-width="0.8"/>
+      <text x="${(cxp+rA+driftPx+3).toFixed(1)}" y="${(cyp+ (visT>=0?7:-3)).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--on2)">θ</text>`;
   s+=`<line x1="${(bx1+driftPx).toFixed(1)}" y1="${by1.toFixed(1)}" x2="${(bx2+driftPx).toFixed(1)}" y2="${by2.toFixed(1)}" stroke="var(--on)" stroke-width="3" stroke-linecap="round"/>`;
   cols.forEach(c=>{ const [hx,hy]=rot(X(c.x),capY0), fx=X(c.footx), fy=Y(L), headX=hx+driftPx;
     if(sway){
@@ -5977,7 +6037,7 @@ function buildPbSystemSVG(r, piles, n, wide){
   //    Resultierende klein; entkoppelt M-Anteil ≈ 0). Zahlen real (mm), Länge illustrativ skaliert.
   const uH=(sol.uH!=null)?sol.uH:0, uM=(sol.uM!=null)?sol.uM:0, uR=uH+uM;   // [mm]
   if(Math.abs(uH)+Math.abs(uM) > 0.003){
-    const budget=(wide?120:82), ppm=budget/(Math.abs(uH)+Math.abs(uM)+1e-3), yD=34;
+    const budget=(wide?120:82), ppm=budget/(Math.abs(uH)+Math.abs(uM)+1e-3), yD=44;
     let ox=cxp, xH=ox+uH*ppm, xR=xH+uM*ppm;
     const lo=Math.min(ox,xH,xR), hi=Math.max(ox,xH,xR), off=cxp-(lo+hi)/2;   // Kette um cxp zentrieren
     ox+=off; xH+=off; xR+=off;
@@ -6028,7 +6088,7 @@ function _pbResultHTML(r, piles, n){
   const govName=(()=>{ const m=r.eta_massg;
     if(m===r.etaGeo) return 'Geo'; if(m===r.etaSteel) return 'Stahl';
     if(m===r.etaKnick) return 'Knick'; if(m===r.etaGZG) return 'GZG'; return ''; })();
-  const govLbl={Geo:'Äusserer Tragwiderstand',Stahl:'Innerer Tragwiderstand · Querschnitt',Knick:'Innerer Tragwiderstand · Knicken',GZG:'GZG'}[govName]||'';
+  const gL=r.govLoad||{}, Hd=Math.hypot(gL.Hx||0, gL.Hy||0);   // Sohlkräfte massg. Kombo (UK Bankett)
   const govF=r.govPile>=0?Math.abs(r.pileRes[r.govPile]?.F||0):0;
   const govZug=r.govPile>=0 && !!r.pileRes[r.govPile]?.zug;
   const gRv=+gi('pb_gR')||1.4;
@@ -6044,17 +6104,53 @@ function _pbResultHTML(r, piles, n){
         <span>P${i+1} <span style="color:var(--xdim);font-size:8px">▸ ${shortLF(p.lf)}</span></span>
         <span><span style="color:${cV(eg)}">N=${p.F}${p.zug?'↑':''}</span> · M=${p.Mp} · η=${isFinite(eg)?eg.toFixed(2):'∞'}</span>
       </div><div class="nw-row-formula"><div class="f-num">${detail}</div></div>`; }).join('');
+  // ── Mantelreibungswiderstand je Schicht (Drill-down): q_s,k · U · Δz → ΔR, aufsummiert
+  const skL=r.skinLayers||[];
+  const skRow=(k,v,note)=>`<div style="display:flex;justify-content:space-between;padding:1px 0"><span style="color:var(--dim)">${k}${note?' <span style="color:var(--xdim)">'+note+'</span>':''}</span><span>${v}</span></div>`;
+  const skinDetail = skL.length
+    ? skL.map((l,i)=>skRow(`${l.name||l.preset||'Schicht '+(i+1)} · z ${l.z0}–${l.z1} m`, `+${l.dRk.toFixed(1)} kN`, `q_s,k=${l.qs} kPa · Δz=${l.dz} m`)).join('')
+      + `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--ol);margin-top:2px;padding-top:2px;color:var(--on2)"><span>Σ R_s,k (Druck · η_g=${(r.grpEta||1).toFixed(2)})</span><span>${(r.Rskin_k||0).toFixed(1)} kN</span></div>`
+      + skRow('R_s,d = R_s,k / γ_R (Druck)', `${(r.Rskin_d||0).toFixed(1)} kN`)
+      + (r.zugFac<0.999?skRow(`R_s,d Zug (×${r.zugFac.toFixed(2)}, Herausziehen)`, `${(r.Rskin_dZ||0).toFixed(1)} kN`):skRow('R_s,d Zug (= Druck, zugFac=1)', `${(r.Rskin_dZ||0).toFixed(1)} kN`))
+      + `<div style="color:var(--xdim);margin-top:2px">U = π·d_G = ${(Math.PI*(r.dG||0.15)).toFixed(3)} m · q_s,k schichtkonstant (Verpresspfahl)</div>`
+    : '(keine Schichtdaten)';
+  // ── Innerer Widerstand Tragglied (Drill-down): Herleitung R_t,d (Stahl axial) + M_Rd (Biegung) + N+M
+  const stP = r.pileRes.find(p=>p.eSteel===r.etaSteel) || r.pileRes[0] || {F:0,Mp:0};
+  const NEd = Math.abs(stP.F||0), MEd = Math.abs(stP.Mp||0);
+  const un = NEd/Math.max(0.01, r.Rt_d||1), um = MEd/Math.max(0.01, r.M_Rd||1);
+  const stI = r.pileRes.indexOf(stP);
+  const steelDetail =
+      skRow('R_t,k Streckgrenzkraft Tragglied', `${(r.N_pl_k||0).toFixed(0)} kN`, 'Katalog (F_yk bzw. A_s·f_y)')
+    + skRow('R_t,d = R_t,k / γ_s (Druck/Zug)', `${(r.Rt_d||0).toFixed(1)} kN`, `γ_s=${(r.gammaS||1.15).toFixed(2)}`)
+    + skRow('W_pl = (d_a³−d_i³)/6', `${((r.Wpl||0)*1e6).toFixed(1)} cm³`, `d_a=${((r.da||0)*1000).toFixed(0)} · d_i=${((r.di||0)*1000).toFixed(0)} mm`)
+    + skRow('M_Rd = W_pl·f_yk/γ_s', `${(r.M_Rd||0).toFixed(1)} kNm`, `f_yk=${r.fyk||500} N/mm²`)
+    + skRow('M_max Pfahl (p-y)', `${(r.Mmax||0).toFixed(1)} kNm`)
+    + `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--ol);margin-top:2px;padding-top:2px;color:var(--on2)"><span>massg. Pfahl P${stI+1} · N_Ed / M_Ed</span><span>${NEd.toFixed(1)} kN / ${MEd.toFixed(1)} kNm</span></div>`
+    + skRow('Ausnutzung |N|/R_t,d + |M|/M_Rd', `${(un+um).toFixed(2)}`, `${un.toFixed(2)} + ${um.toFixed(2)}`)
+    + skRow('η = 1 / Ausnutzung', `${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`);
   return `
   <div style="font-family:var(--f-mono);font-size:11px">
-    <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim);margin-bottom:6px">Pfahlfundament — Nachweise</div>
+    <div style="font-size:9px;color:var(--xdim);padding:8px 0 2px">Modell: <span style="color:var(--acc)">Pfahlfundament · Mikropfahl-Gruppe</span> · SIA 267</div>
+    ${SCHICHTEN.length>1?`<div style="font-size:9px;color:var(--xdim);padding:0 0 4px">${SCHICHTEN.length} Bodenschichten</div>`:''}
 
-    <!-- Massgebender Nachweis — immer sichtbar -->
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin:0 0 8px;background:var(--s3);border-radius:var(--r1)">
-      <span style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Massgebender Nachweis</span>
-      <span style="font-weight:600;color:${cV(r.eta_massg)}">${isFinite(r.eta_massg)?'η = '+r.eta_massg.toFixed(2)+(govLbl?' · '+govLbl:''):'n.m.'}${r.govCombo?' <span style="color:var(--xdim);font-weight:400;font-size:9px">('+shortLF(r.govCombo)+')</span>':''}</span>
-    </div>
-    ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.45;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
-      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ). Die <b>globale Böschungsstandsicherheit (Gleitkreis) ist NICHT nachgewiesen</b> — gesondert prüfen. Status daher „Prüfen" statt „Erfüllt".</div>`:''}
+    <div class="summary"><div class="summary-ttl">Massgebend — ${r.govCombo||'—'}</div>
+      <div class="kv-grid">
+        <div class="kv"><span>N_d</span><span>${(gL.N||0).toFixed(1)} kN</span></div>
+        <div class="kv"><span>H_d</span><span>${Hd.toFixed(1)} kN</span></div>
+        <div class="kv"><span>M_xd</span><span>${(gL.Mx||0).toFixed(1)} kNm</span></div>
+        <div class="kv"><span>M_yd</span><span>${(gL.My||0).toFixed(1)} kNm</span></div>
+      </div></div>
+
+    ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.4;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
+      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ) → Verformung/Moment ungünstiger. Globale Standsicherheit siehe Gleitkreis-Nachweis unten.</div>`:''}
+    ${r.bishop ? (r.bishop.ok && isFinite(r.bishop.eta) ? `
+      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', r.bishop.eta, null, false)}
+        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht)</div>
+        ${row('η massgebender Kreis', r.bishop.eta.toFixed(2))}
+        ${row('Radius R', r.bishop.R.toFixed(2)+' m')}
+        <div style="margin-top:6px">${buildBishopSVG(r.bishop, false)}</div>
+        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Bankett + ständige Last als Auflast, φ′_d/c′_d (SIA 267), GW-Porendruck. Pfahl-Beitrag zur Gleitfläche konservativ vernachlässigt. Näherung — bei η &lt; 1.3 vertiefte GEO-Untersuchung.</div>
+      ${CARD_END}` : `<div style="font-size:9px;color:var(--warn);margin:0 0 8px">Gleitkreissuche lieferte kein Ergebnis — global gesondert prüfen.</div>`) : ''}
 
     ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
 
@@ -6069,13 +6165,13 @@ function _pbResultHTML(r, piles, n){
       ${row('q_s,k '+(r.qsTab?'(Tab./Erfahrung)':'Erfahrungswert')+', Mittel', r.qsAvg+' kPa')}
       ${r.qsMax>r.qsMin+0.1?row('q_s,k Bereich (je Schicht)', r.qsMin+' … '+r.qsMax+' kPa'):''}
       ${r.grpEta<0.999?row('Gruppenwirkungsgrad η_g (s̄/D='+r.grpSd+')', '×'+r.grpEta.toFixed(2)+' &nbsp;<span style="color:var(--xdim)">s̄='+r.grpSMean+' m (Kopf '+r.grpSCap+' → Fuss '+r.grpSToe+')</span>'):row('Gruppenwirkung (s̄/D='+(isFinite(r.grpSd)?r.grpSd:'∞')+')', 'η_g = 1.00 (gespreizt)')}
-      ${row('R_s,k Druck (Mantelreibung, η_g)', r.Rskin_k+' kN')}
+      ${rowD('R_s,k Druck (Mantelreibung, η_g)', r.Rskin_k+' kN', skinDetail)}
       ${row('R_s,d = R_s,k / γ_R (Druck)', r.Rskin_d+' kN')}
       ${r.zugFac<0.999?row('R_s,d Zug (×'+r.zugFac.toFixed(2)+', Herausziehen)', r.Rskin_dZ+' kN'):''}
       ${r.skinFac<0.999?row('Abminderung Verrohrung', '×'+r.skinFac.toFixed(2)):''}
       ${row('|N|_max (P'+(r.govPile+1)+', '+(govZug?'Zug':'Druck')+')', govF.toFixed(1)+' kN')}
       ${etaRow('η Geotechnik', r.etaGeo, 'η = R_s,d '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(govZug?r.Rskin_dZ:r.Rskin_d).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
-      <div style="font-size:8px;color:var(--xdim);margin-top:2px">q_s,k Erfahrungswert je Schicht (EA-Pfähle/DIN 4128, Verpresspfahl, tiefenkonstant — Vordimensionierung) · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · Spitzendruck & kritische Tiefe vernachlässigt</div>
+      <div style="font-size:8px;color:var(--xdim);margin-top:2px">q_s,k Erfahrungswert je Schicht (EA-Pfähle/DIN 4128, Verpresspfahl, tiefenkonstant — Vordimensionierung) · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · <b>Spitzendruck NICHT angesetzt</b> (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand) · kritische Tiefe vernachlässigt</div>
       ${diagWrap('_pbdiag_axial', buildPbAxialDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
@@ -6086,7 +6182,7 @@ function _pbResultHTML(r, piles, n){
       ${row('R_t,d Stahl axial', r.Rt_d+' kN')}
       ${row('M_Rd = W_pl·f_yk/γ_s', r.M_Rd+' kNm')}
       ${row('M_max Pfahl (p-y)', r.Mmax+' kNm')}
-      ${etaRow('η Querschnitt (N+M)', r.etaSteel, 'η = 1 / (|N|/R_t,d + |M|/M_Rd)<br>massg. Pfahl: |N|/'+r.Rt_d.toFixed(0)+' + |M|/'+r.M_Rd.toFixed(1)+'<br>N+M-Interaktion (linear, konservativ)')}
+      ${etaRow('η Querschnitt (N+M)', r.etaSteel, steelDetail)}
       ${diagWrap('_pbdiag_schnitt', buildPbSchnittSVG(r,n,_gztExpanded))}
       ${diagWrap('_pbdiag_steel', buildPbSteelDiagram(r,n,_gztExpanded))}
       <!-- Knicken SIA 263 -->
@@ -6119,7 +6215,7 @@ function _pbResultHTML(r, piles, n){
       ${diagWrap('_pbdiag_gzg', buildPbGZGDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
-    ${cardHd('Setzung Bankett', null, r.settle_mm+' mm')}
+    ${cardHd('Setzung Bankett (informativ — kein Grenzwert)', null, r.settle_mm+' mm')}
       <div class="nw-formula">k_ax = EA·λ·tanh(λL) (Lastübertragung t-z) · λ = √(k_shaft/EA) · k_shaft = 2π·G/ζ</div>
       ${row('Setzung Bankett (char.)', r.settle_mm+' mm')}
       ${row('k_ax (Stahl + Boden-Last-Setzung)', (r.kAx/1000).toFixed(1)+' MN/m')}
@@ -7014,8 +7110,10 @@ function kpSlopeRankine(phi_deg, beta_deg){
 // vernachlässigt), ebener Schnitt (2D).
 function bishopStability(opts){
   opts = opts || {};
-  const bx     = Math.max(0.3, +gi('g_bx') || 1);
-  const t_bl   = Math.max(0.3, +gi('g_hblock') || 2) + Math.max(0, +gi('g_uberd') || 0);
+  // Fundament-Footprint als Auflast: Default Block-DOM, per opts überschreibbar (Pfahlfundament: Bankett)
+  const bx     = opts.bx != null ? Math.max(0.3, opts.bx) : Math.max(0.3, +gi('g_bx') || 1);
+  const t_bl   = opts.t_bl != null ? Math.max(0.3, opts.t_bl)
+                                   : Math.max(0.3, +gi('g_hblock') || 2) + Math.max(0, +gi('g_uberd') || 0);
   const d_ex   = (typeof showPfahl!=='undefined' && showPfahl) ? Math.max(0, +gi('pfahl_dex') || 0) : 0;
   const exSign = (gi('pfahl_dex_seite') || 'gleis') === 'gleis' ? -1 : 1;
   const beta   = (+gi('bg_beta') || 0) * Math.PI/180;
@@ -7055,10 +7153,11 @@ function bishopStability(opts){
   // Block-Surcharge: Eigengewicht + ständige Vertikallast über den Footprint |x|<bx/2
   const Gk_block = bx * t_bl * (+gi('g_gbeton') || 25);
   const N_perm   = +gi('l_NG') || 0;
-  const q_block  = (Gk_block + N_perm) / bx;     // [kN/m²] gleichmässig
-  // Horizontale Bemessungslast am Block (destabilisierend) — aus letztem Ergebnis
-  let H_des = 0, y_H = -t_bl*0.5;
-  if(_lastResults && _lastResults.length){
+  const q_block  = opts.q_block != null ? opts.q_block : (Gk_block + N_perm) / bx;     // [kN/m²] gleichmässig
+  // Horizontale Bemessungslast am Fundament (destabilisierend): opts (Pfahlfundament) oder letztes Block-Ergebnis
+  let H_des = 0, y_H = opts.y_H != null ? opts.y_H : -t_bl*0.5;
+  if(opts.H_des != null){ H_des = Math.abs(opts.H_des); }
+  else if(_lastResults && _lastResults.length){
     const w = _lastResults.reduce((a,b)=>Math.max(Math.abs(b.Hxd),Math.abs(b.Hyd))>Math.max(Math.abs(a.Hxd),Math.abs(a.Hyd))?b:a);
     H_des = Math.abs(w.Hxd) || 0;        // quer (in Schnittebene)
     y_H   = Math.max(0, +gi('g_hkopf')||0) - Math.max(0,+gi('g_uberd')||0) + 0.0; // ~OK Kopf
@@ -7166,6 +7265,37 @@ function bishopStability(opts){
   return { ok:true, eta:best.eta, xc:best.xc, Yc:best.Yc, R:best.R,
            slices:best.slices, failSide, surfY, gwElev:isFinite(gwd)?-gwd:null,
            gph, gc, t_bl, bx, d_ex, exSign, hasSlope, beta_deg:+gi('bg_beta')||0 };
+}
+
+// Gleitkreis-Schnitt (Bishop): Oberfläche, Baugrund, Fundament, kritische Gleitfläche, Lamellen, GW.
+function buildBishopSVG(b, wide){
+  if(!b || !b.ok || !b.slices || !b.slices.length) return '';
+  const S=b.slices, R=b.R, xc=b.xc, Yc=b.Yc, surfY=b.surfY, bx=b.bx, t_bl=b.t_bl;
+  const xs=S.map(s=>s.xm);
+  const xlo=Math.min(...xs, -bx/2)-0.6, xhi=Math.max(...xs, bx/2)+0.6;
+  const ylo=Math.min(...S.map(s=>s.Yb), -t_bl)-0.4, yhi=Math.max(0, ...S.map(s=>s.Ys))+0.5;
+  const VB=wide?520:264, HB=wide?300:210, PADL=10,PADR=10,PADT=24,PADB=18;
+  const pw=VB-PADL-PADR, ph=HB-PADT-PADB, sc=Math.min(pw/Math.max(0.5,xhi-xlo), ph/Math.max(0.5,yhi-ylo));
+  const X=x=>PADL+(x-xlo)*sc, Y=y=>PADT+(yhi-y)*sc;                       // y nach oben
+  const eC=b.eta>=1.5?'var(--ok)':b.eta>=1.0?'var(--warn)':'var(--fail)';
+  let surf=''; const nS=64;
+  for(let i=0;i<=nS;i++){ const x=xlo+(xhi-xlo)*i/nS; surf+=`${X(x).toFixed(1)},${Y(surfY(x)).toFixed(1)} `; }
+  const soilPoly=`${X(xlo).toFixed(1)},${Y(ylo).toFixed(1)} `+surf+`${X(xhi).toFixed(1)},${Y(ylo).toFixed(1)}`;
+  let arc=''; S.forEach(s=>{ arc+=`${X(s.xm).toFixed(1)},${Y(s.Yb).toFixed(1)} `; });
+  const bxTop=Math.max(surfY(-bx/2),surfY(bx/2),0);
+  let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
+   <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
+   <text x="6" y="13" font-family="var(--f-mono)" font-size="8.5" letter-spacing=".05em" fill="var(--dim)">GLEITKREIS (BISHOP) — η = <tspan fill="${eC}" font-weight="600">${b.eta.toFixed(2)}</tspan></text>
+   <polygon points="${soilPoly}" fill="var(--dim)" fill-opacity="0.07"/>
+   <polyline points="${surf}" fill="none" stroke="var(--dim)" stroke-width="1"/>`;
+  if(b.gwElev!=null && b.gwElev>ylo && b.gwElev<yhi)
+    s+=`<line x1="${X(xlo).toFixed(1)}" y1="${Y(b.gwElev).toFixed(1)}" x2="${X(xhi).toFixed(1)}" y2="${Y(b.gwElev).toFixed(1)}" stroke="#4db8c9" stroke-width="0.7" stroke-dasharray="4,3"/>`;
+  s+=`<rect x="${X(-bx/2).toFixed(1)}" y="${Y(bxTop).toFixed(1)}" width="${(bx*sc).toFixed(1)}" height="${((bxTop+t_bl)*sc).toFixed(1)}" fill="var(--xdim)" fill-opacity="0.28" stroke="var(--dim)" stroke-width="0.7"/>`;
+  S.forEach(s2=>{ s+=`<line x1="${X(s2.xm).toFixed(1)}" y1="${Y(s2.Ys).toFixed(1)}" x2="${X(s2.xm).toFixed(1)}" y2="${Y(s2.Yb).toFixed(1)}" stroke="var(--ol)" stroke-width="0.3" opacity="0.55"/>`; });
+  s+=`<polyline points="${arc}" fill="none" stroke="${eC}" stroke-width="2"/>`;
+  const cyP=Y(Yc);
+  if(cyP>PADT+2 && cyP<HB-PADB) s+=`<circle cx="${X(xc).toFixed(1)}" cy="${cyP.toFixed(1)}" r="1.8" fill="${eC}"/>`;
+  return s+`</svg>`;
 }
 
 // Broms-Methode: freier Kopf, kurzer Pfahl
@@ -7632,19 +7762,25 @@ function microQsExp(s){
   return Math.min(220, Math.max(100, 100 + (phi-30)*12.5));             // nichtbindig: φ als Dichte-Proxy
 }
 function microSkinFriction(L, dG, skinFac, alphaC){
-  const U = Math.PI * dG, Na = 40, dz = L/Na;
-  const sf = (skinFac > 0 ? skinFac : 1);
-  let Rk = 0, qsSum = 0, qsMin = Infinity, qsMax = 0;
-  for(let i=0;i<Na;i++){
-    const z = (i+0.5)*dz, s = schichtAtDepth(z);
-    // explizit (Tabelle/Probebelastung) hat Vorrang, sonst Erfahrungswert q_s,k (tiefenkonstant je Schicht)
-    let qs = (s.qs != null && +s.qs > 0) ? +s.qs : microQsExp(s);
-    qs = Math.max(0, qs);
-    Rk += qs * U * dz;
-    qsSum += qs; qsMin = Math.min(qsMin, qs); qsMax = Math.max(qsMax, qs);
+  const U = Math.PI * dG, sf = (skinFac > 0 ? skinFac : 1);
+  // Schichtweise EXAKT an den Schichtgrenzen (innerhalb der Einbindelänge [0,L], Tiefe ab Pfahlkopf/GOK)
+  // → Widerstand je Schicht + Verlauf über die Tiefe. q_s,k: explizit (Tabelle/Probebelastung, s.qs) hat
+  // Vorrang, sonst Erfahrungswert (tiefenkonstant je Schicht). dRk je Schicht inkl. Verrohrung sf.
+  const layers = []; let z = 0;
+  for(let k=0; k<SCHICHTEN.length && z < L-1e-6; k++){
+    const s = SCHICHTEN[k], isLast = (k===SCHICHTEN.length-1);
+    const bot = (s.d===999 || isLast) ? L : Math.min(L, z + (+s.d||0));
+    const z0 = z, z1 = Math.min(L, bot);
+    if(z1 > z0 + 1e-6){
+      let qs = (s.qs != null && +s.qs > 0) ? +s.qs : microQsExp(s); qs = Math.max(0, qs);
+      layers.push({ name:(s.name||''), preset:(s.preset||''), z0, z1, dz:z1-z0, qs, dRk: qs*U*(z1-z0)*sf });
+    }
+    z = bot;
   }
-  // qsAvg = charakteristischer Mittelwert q_s,k (vor skinFac); Rk inkl. Verrohrungs-Abminderung sf
-  return { Rk: Rk * sf, qsAvg: qsSum/Na, qsMin: isFinite(qsMin)?qsMin:0, qsMax };
+  const Rk = layers.reduce((a,l)=>a + l.dRk, 0);
+  const qsAvg = L>0 ? layers.reduce((a,l)=>a + l.qs*l.dz, 0)/L : 0;
+  const qsArr = layers.map(l=>l.qs);
+  return { Rk, qsAvg, qsMin: qsArr.length?Math.min(...qsArr):0, qsMax: qsArr.length?Math.max(...qsArr):0, layers };
 }
 
 // ── Axiale Kopfsteifigkeit Mikropfahl: Lastübertragung (t-z, Randolph) ───────────
@@ -7809,8 +7945,9 @@ function pfahlbockAnalyse(cfg){
     const arr = Array.isArray(combos) ? combos : (combos ? [{load:combos}] : []);
     if(!arr.length) return null;
     let tQ=0,tL=0,uQ=0,uL=0,w=0, any=false, govSol=null, govT=-1, govLd=null;
-    // Opt-in (Optionen): Verformung ohne Schrägstellungs-Kopplung. Kräfte (s.F) bleiben gekoppelt.
-    const dec = !!(typeof SETTINGS!=='undefined' && SETTINGS.pfahlGzgDecouple);
+    // Standard (Optionen): Verformung ohne Schrägstellungs-Kopplung (entkoppelt). Kräfte (s.F) bleiben
+    // gekoppelt. Default entkoppelt → nur explizites false schaltet auf das gekoppelte Modell.
+    const dec = (typeof SETTINGS==='undefined') || SETTINGS.pfahlGzgDecouple!==false;
     arr.forEach(c => {
       const s = solvePfahlbock(piles, c.load || {}); if(!s) return;
       const sD = dec ? (solvePfahlbock(piles, c.load || {}, true) || s) : s;   // Verformung (ggf. entkoppelt)
@@ -7846,8 +7983,13 @@ function pfahlbockAnalyse(cfg){
            skinFac:+skinFac.toFixed(2), zugFac:+zugFac.toFixed(2), alphaC:+alphaC.toFixed(2),
            qsAvg:+_sk.qsAvg.toFixed(1), qsMin:+_sk.qsMin.toFixed(1), qsMax:+_sk.qsMax.toFixed(1),
            qsTab: SCHICHTEN.some(s=>s.qs!=null && +s.qs>0),
+           // Widerstand je Schicht über die Tiefe (char η_g-reduziert · Bemessung Druck/Zug) — Diagramm + Drill-down
+           skinLayers: _sk.layers.map(l=>({ name:l.name, preset:l.preset, z0:+l.z0.toFixed(2), z1:+l.z1.toFixed(2),
+             dz:+l.dz.toFixed(2), qs:Math.round(l.qs),
+             dRk:+(l.dRk*grp.eta).toFixed(1), dRd:+(l.dRk*grp.eta/gR).toFixed(1), dRdZ:+(l.dRk*grp.eta*zugFac/gR).toFixed(1) })),
            grpEta:grp.eta, grpSMean:grp.sMean, grpSd:grp.sd, grpSCap:grp.sCap, grpSToe:grp.sToe,
            Rt_d:+Rt_d.toFixed(1), M_Rd:+M_Rd.toFixed(1), Mmax:+Mmax.toFixed(1),
+           da:+da.toFixed(4), Wpl:Wpl, fyk:(tdn.fy||500), gammaS:+gS.toFixed(2),
            N_cr:+N_cr.toFixed(0), etaKnick:+etaKnick.toFixed(2), Ncomp:+Ncomp.toFixed(1),
            N_pl_k:+N_pl_k.toFixed(0), lamBar:+lamBar.toFixed(2), chi:+chi.toFixed(3), N_bRd:+N_bRd.toFixed(0),
            Es:Es, kbed:+(ksMin*dG).toFixed(4), kAxSteel:kAxSteel, headFixReq,
@@ -8105,6 +8247,14 @@ function calcPfahlsicherung(){
   const py1 = bddBeamPY(EI, B, e_eff, L_emb, 1, ksAt);
   const yHead1 = py1 ? py1.yHead_mm : winklerDeflection(1, e_eff, L_emb, EI, k_s, B);
   const Mmax1  = py1 ? py1.Mmax_kNm : (e_eff + 0.4 * L_emb);          // [kNm pro kN]
+  // ── Gestossene Pfähle (Krinner): Stoss = Gelenk (nur N+V, nicht biegesteif) → das Biegemoment
+  //    baut sich nur über das LÄNGSTE Einzelelement (~2 m) auf (M=0 am Stoss). Für den Stahl-N+M-
+  //    Nachweis die Biegelänge darauf begrenzen; laterale Bettung/Grenzlast + Verformung (η_H/η_V)
+  //    laufen weiter über die volle Einbindelänge L_emb (die Gelenke reduzieren den Bodenwiderstand nicht).
+  const LbendMax_p = prof.round ? 2.0 : 0;                            // Krinner rund → Elementlänge; HEB = voll
+  const Lbend_p    = LbendMax_p > 0 ? Math.min(L_emb, LbendMax_p) : L_emb;
+  const spliced_p  = Lbend_p < L_emb - 1e-6;
+  const Mmax1b     = spliced_p ? ((bddBeamPY(EI, B, e_eff, Lbend_p, 1, ksAt)||{}).Mmax_kNm || Mmax1) : Mmax1;
 
   // ── Steifigkeitsbasierte Lastverteilung Block ↔ Pfahlsystem (Serienfedern)
   // Pfahlkopf-Horizontalfeder (n Pfähle, Gruppenabminderung wie Verformung)
@@ -8143,6 +8293,10 @@ function calcPfahlsicherung(){
   const H_pfahl_d   = H_eff;                         // Horizontallast am vertikalen Pfahl (Broms)
   const F_s         = H_eff / Math.max(0.01, Math.abs(Math.cos(alpha_rad)));  // Stützenstabkraft (axial)
   const V_pfahl     = H_eff * Math.abs(Math.tan(alpha_rad));  // |Vertikalkomponente| → axiale Pfahllast
+  // Knicknachweis Richtstütze über Datenblatt-Grenzwert (Systemanbieter). Nur wenn die Stütze
+  // auf DRUCK steht (kein Zugfall) — Zugstab knickt nicht. N_b,Rd = Bemessungs-Knickwiderstand.
+  const N_bRd_stab     = +gi('pfahl_stab_nrd') || 0;
+  const eta_knick_stab = (N_bRd_stab > 0 && !fall_zug && F_s > 0.05) ? N_bRd_stab / F_s : Infinity;
   // Axialrichtung: Herausziehen iff (Stütze Zug & Anschluss höher) oder (Druck & Pfahlkopf höher).
   // α-Vorzeichen = sign(h_anschluss − e): α>0 Anschluss höher · α<0 Pfahlkopf höher.
   const axial_pullout = fall_zug ? (alpha_rad > 0) : (alpha_rad < 0);
@@ -8237,7 +8391,10 @@ function calcPfahlsicherung(){
   if(pyUse){ pyMob = 0; for(const pt of pyUse.profile){ if(pt.z>0){ const pu=puAt(pt.z); if(pu>0.1) pyMob=Math.max(pyMob, Math.abs(pt.p)/pu); } } }
 
   // Stahlnachweis pro Pfahl: M_max aus der nichtlinearen p-y-Biegelinie (Fallback linear).
-  const M_max_1  = pyUse ? pyUse.Mmax_kNm : Mmax1 * H_per;
+  // Gestossen (Krinner): Biegemoment über die begrenzte Biegelänge Lbend_p (Stoss = Gelenk).
+  const pyNLb    = spliced_p ? bddBeamPY(EI, B, e_eff, Lbend_p, H_per, ksAt, {puAt}) : pyNL;
+  const pyBUse   = (pyNLb && pyNLb.converged) ? pyNLb : (spliced_p ? null : pyUse);
+  const M_max_1  = pyBUse ? pyBUse.Mmax_kNm : Mmax1b * H_per;
   const etaStahl = Mpl / Math.max(0.001, M_max_1);
 
   const Hu_gruppe = n * Hu_1 * f_gr;
@@ -8284,9 +8441,14 @@ function calcPfahlsicherung(){
   const tanZulS     = SETTINGS.alphaZul ?? 0.005;
   const eta_GZG_sys = alpha_sys > 1e-9 ? tanZulS / alpha_sys : Infinity;
 
+  // ── Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub
+  const bishopRes = ((_slBtyp !== 'none' && Math.abs(_slBeta) > 0.1) || d_ex > 0.05)
+    ? bishopStability() : null;
+  const eta_slope = (bishopRes && bishopRes.ok && isFinite(bishopRes.eta)) ? bishopRes.eta : Infinity;
   // ── D) Massgebende Gesamtsicherheit (Minimum aller Nachweise)
   const _etas = [['System', eta_sys], ['Tragf.', eta_H], ['Verform.', eta_V],
-                 ['Stahl', etaStahl], ['Axial', eta_ax]];
+                 ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab],
+                 ['Böschung', eta_slope]];
   let eta_massgebend = Infinity, nw_massgebend = '—';
   for(const [_nm, _ev] of _etas){
     if(isFinite(_ev) && _ev < eta_massgebend){ eta_massgebend = _ev; nw_massgebend = _nm; }
@@ -8381,8 +8543,16 @@ function calcPfahlsicherung(){
         <span style="font-weight:600;color:${!isFinite(eta_massgebend)?'var(--xdim)':eta_massgebend>=1.5?'var(--ok)':eta_massgebend>=1.0?'var(--warn)':'var(--fail)'}">${isFinite(eta_massgebend)?'η = '+eta_massgebend.toFixed(2)+' · '+nw_massgebend:'n.m.'}</span>
       </div>
 
-      <!-- Globale Böschungsstandsicherheit — Modellgrenze, immer sichtbar bei Böschung -->
-      ${(_slBtyp !== 'none' && Math.abs(_slBeta) > 0.1) ? `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--fail);background:var(--fail-s);border-radius:3px;font-size:9.5px;color:var(--fail)">Böschung β = ${_slBeta}° aktiv — die <b>globale Standsicherheit (Gleitkreis durch Block, Pfähle &amp; Aushub)</b> ist NICHT Teil dieses Moduls und gesondert nachzuweisen (Lamellenverfahren / GEO). Broms/Steckner erfassen nur den lokalen Bauteilwiderstand.</div>` : ''}
+      <!-- Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub -->
+      ${bishopRes ? (bishopRes.ok && isFinite(bishopRes.eta) ? `
+      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', bishopRes.eta, null, nw_massgebend==='Böschung')}
+        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht, iterativ)</div>
+        ${row('η massgebender Kreis', bishopRes.eta.toFixed(2), '')}
+        ${row('Radius R', bishopRes.R.toFixed(2), 'm')}
+        ${row('Scherfestigkeit (SIA 267)', 'φ′_d = φ′/γ_φ · c′_d = c′/γ_c', '')}
+        <div style="margin-top:6px">${buildBishopSVG(bishopRes, false)}</div>
+        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Toe-verankerte Kreisschar (Fuss = Aushub-/Böschungsfuss), Block + ständige Last als Auflast, GW-Porendruck. Vereinfachtes Lamellenverfahren (Bishop) — bei η &lt; 1.3 vertiefte GEO-Untersuchung (mehrere Gleitkörper, Schichtungseffekte).</div>
+      ${CARD_END}` : `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Böschung/Aushub aktiv — die Gleitkreissuche lieferte kein gültiges Ergebnis (Geometrie/Boden prüfen). Globale Standsicherheit gesondert nachweisen.</div>`) : ''}
 
       <!-- Richtungsfall Stütze — immer sichtbar -->
       ${fall_zug ? (pile_active
@@ -8419,6 +8589,8 @@ function calcPfahlsicherung(){
       ${row('H_Pfahl = H_eff (⊥ vert. Pfahl)', H_pfahl_d.toFixed(1), 'kN')}
       ${row('V_Pfahl = H_eff · |tan(α)| ('+(axial_pullout?'Herausziehen':'Druck')+')', V_pfahl.toFixed(1), 'kN')}
       ${row('F_s = H_eff / cos(α) — Stützenstab', F_s.toFixed(1), 'kN')}
+      ${N_bRd_stab > 0 ? row('N_b,Rd Stütze (Datenblatt)', N_bRd_stab.toFixed(0), 'kN')
+        + `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)"><span style="color:var(--dim)">η Knick Stütze = N_b,Rd / F_s${fall_zug?' (Zug — n.a.)':''}</span><span style="font-weight:600;font-family:var(--f-mono)">${isFinite(eta_knick_stab)?eta_cls(eta_knick_stab)('η = '+eta_knick_stab.toFixed(2)):'n.a.'}</span></div>` : ''}
       ${Math.abs(alpha) < 4 ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">α = ${alpha.toFixed(1)}° — Stütze fast waagrecht (Pfahlkopf ≈ Anschlusshöhe) → geringe Axialkraft</div>` : ''}
       <div style="margin-top:6px">${buildStrutDecompSVG(alpha, H_eff, F_s, V_pfahl, H_pfahl_d, fall_zug, axial_pullout)}</div>
       ${dH_ep > 0.01 ? `
@@ -8469,6 +8641,7 @@ function calcPfahlsicherung(){
       ${CARD_END}
       ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
       ${row('M_max,1 (p-y'+(pyUse?(pyUse.yielded?', plastisch':', elastisch')+', z='+(pyUse.sMmax-e_eff).toFixed(2)+'m u.GOK':' — Näherung')+')', M_max_1.toFixed(1), 'kNm')}
+      ${spliced_p ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
       ${row('M_pl (S355)', Mpl.toFixed(1), 'kNm')}
       <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
         <span style="color:var(--dim)">η_Stahl = M_pl / M_max,1</span>
@@ -13090,7 +13263,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
   'l_HWx','l_HWy','l_MWx','l_MWy',
   'pfahl_typ','pfahl_anzahl','pfahl_l','pfahl_s','pfahl_alpha','pfahl_e',
   'pfahl_dm','pfahl_dk',
-  'pfahl_dex','pfahl_dex_seite','pfahl_abstand','pfahl_hs','pfahl_laf','pfahl_lv_mode','pfahl_zugfest',
+  'pfahl_dex','pfahl_dex_seite','pfahl_abstand','pfahl_hs','pfahl_laf','pfahl_lv_mode','pfahl_zugfest','pfahl_stab_nrd',
   'pb_n','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
   'pb_bx','pb_by','pb_bank_d','pb_kx','pb_ky','pb_hk','pb_ue','pb_gR','pb_gS','pb_skinfac','pb_zugfac'];
 
