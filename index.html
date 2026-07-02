@@ -1222,8 +1222,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           </div>
           <div class="lf-card-body">
             <div class="field"><label>β Geländewinkel <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_beta_r" min="-40" max="40" step="1" value="0" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_beta" type="number" value="0" step="1" min="-40" max="40" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
-            <div class="field"><label>Böschungsfuss <em>m</em></label><input id="bg_bfuss" type="number" value="0" step="0.1" oninput="autoBtyp()"/></div>
-            <div class="field"><label>Böschungshöhe h_β <em>m · 0 = durchlaufend</em></label><input id="bg_bhoehe" type="number" value="0" step="0.1" min="0" oninput="updateBoeCardSummary();updateViewer();scheduleCalc()"/></div>
+            <div class="field"><label>Böschungsfuss <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bfuss_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"><input id="bg_bfuss" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"/></div></div>
+            <div class="field"><label>Böschungshöhe h_β <em>m · 0 = durchlaufend</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bhoehe_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_bhoehe" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
             <div class="field">
               <label>Böschungstyp</label>
               <select id="bg_btyp" onchange="updateViewer()">
@@ -1271,6 +1271,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div class="field"><label>B_Kopf <em>m</em></label><input id="pb_kx" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
           <div class="field"><label>L_Kopf <em>m</em></label><input id="pb_ky" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
           <div class="field"><label>H_Kopf <em>m</em></label><input id="pb_hk" type="number" value="1.0" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>Versatz e_x <em>m</em></label><input id="pb_ex" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in x (quer). Erzeugt zusätzliches Moment (N+G_Kopf)·e_x."/></div>
+          <div class="field"><label>Versatz e_y <em>m</em></label><input id="pb_ey" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in y (längs). Erzeugt zusätzliches Moment (N+G_Kopf)·e_y."/></div>
           <div class="field"><label>Überdeckung ü <em>m</em></label><input id="pb_ue" type="number" value="0.4" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
           <div class="hint" style="margin-top:0">Hebel Lastangriff → UK Bankett = H_Kopf + Bankettdicke (automatisch). Bankett + Kopf als Eigengewicht angesetzt; ü = Überdeckung über OK Bankett.</div>
 
@@ -2750,6 +2752,18 @@ function slSync(fieldId, val){
   if(rng && rng!==event?.target) rng.value=val;
 }
 
+// Kopf-Exzentrizität auf die Aussenkante begrenzen: der Fundamentkopf darf nicht über den
+// Block bzw. das Bankett hinausragen → |e| ≤ (Aussenmass − Kopfmass)/2. Geklemmter Wert wird
+// ins Feld (und einen etwaigen Slider) zurückgeschrieben. bx/kx = Aussen-/Kopfmass quer, by/ky längs.
+function _clampKopfEcc(bxId,kxId,byId,kyId,exId,eyId){
+  const g=id=>+((document.getElementById(id)||{}).value)||0;
+  const exMax=Math.max(0,(g(bxId)-g(kxId))/2), eyMax=Math.max(0,(g(byId)-g(kyId))/2);
+  const cl=(id,mx)=>{ const el=document.getElementById(id); if(!el) return; const v=+el.value||0;
+    const c=Math.max(-mx,Math.min(mx,v)); if(Math.abs(c-v)>1e-9){ el.value=c.toFixed(2);
+      const r=document.getElementById(id+'_r'); if(r) r.value=c; } };
+  cl(exId,exMax); cl(eyId,eyMax);
+}
+
 // ── Eingaben mit Einheit m app-weit auf 2 Dezimalstellen anzeigen ────────────────
 // Erkennung über das Einheiten-<em> im Feld-Label (exakt "m", nicht mm/kN/m³/MN/m² …).
 function _isMeterField(el){
@@ -3193,6 +3207,7 @@ function buildPfahlbockViz(){
   const dBank=Math.max(0.2,+gi('pb_bank_d')||0.8);
   const ue=Math.max(0,+gi('pb_ue')||0);                          // Überdeckung über OK Bankett
   const kx=Math.max(0,+gi('pb_kx')||0), ky=Math.max(0,+gi('pb_ky')||0), hKopf=Math.max(0,+gi('pb_hk')||0);
+  const exK=+gi('pb_ex')||0, eyK=+gi('pb_ey')||0;                // Kopf-Exzentrizität quer(x)/längs(z)
   const piles=_pbPileLayout(n,sx,sy).map(p=>({x:p.x,y:p.y,..._pbIncl(p,ax,ay)}));
   const Bbank=Math.max(0.3,+gi('pb_bx')||2.0), Lbank=Math.max(0.3,+gi('pb_by')||2.0);
   const yBankTop=-ue, yUK=-ue-dBank;                             // OK / UK Bankett (Pfahlköpfe an UK)
@@ -3205,13 +3220,13 @@ function buildPfahlbockViz(){
   // ── Bankett (OK an −ü, eingebettet) + Fundamentkopf darauf (ragt durch GOK)
   const matBank=new THREE.MeshLambertMaterial({color:_dim?C.concreteDim:C.concrete,transparent:true,opacity:_dim?C.ghostOp:C.solidOp});
   const edgeMat=new THREE.LineBasicMaterial({color:_dim?C.edgeDim:C.edge,transparent:true,opacity:0.6});
-  const addBox=(w,h,d,cy,ffields,comp)=>{ const g=new THREE.BoxGeometry(w,h,d);
-    const m=new THREE.Mesh(g, ffields?matBank.clone():matBank); m.position.set(0,cy,0);
+  const addBox=(w,h,d,cy,ffields,comp,ox,oz)=>{ ox=ox||0; oz=oz||0; const g=new THREE.BoxGeometry(w,h,d);
+    const m=new THREE.Mesh(g, ffields?matBank.clone():matBank); m.position.set(ox,cy,oz);
     if(ffields){ m.userData.ffields=ffields; m.userData.comp=comp; m.userData._op0=m.material.opacity; } grp.add(m);
-    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat.clone()); ed.position.set(0,cy,0);
+    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat.clone()); ed.position.set(ox,cy,oz);
     if(comp){ ed.userData.comp=comp; ed.userData._op0=ed.material.opacity; } grp.add(ed); };
   addBox(Bbank,dBank,Lbank, yBankTop-dBank/2, ['pb_bx','pb_by','pb_bank_d','pb_ue'], 'bankett');  // Bankett (OK an −ü)
-  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2, ['pb_hk','pb_kx','pb_ky'], 'kopf');  // Fundamentkopf auf Bankett
+  if(hKopf>0.01 && kx>0.01 && ky>0.01) addBox(kx,hKopf,ky, yBankTop+hKopf/2, ['pb_hk','pb_kx','pb_ky'], 'kopf', exK, eyK);  // Fundamentkopf auf Bankett (exzentrisch e_x/e_y)
 
   // ── Pfähle (geneigt) — Zylinder, eingefärbt nach Druck/Zug
   const yAxis=new THREE.Vector3(0,1,0);
@@ -3309,11 +3324,11 @@ function buildPfahlbockViz(){
     const mN=viz.mastN||{k:Math.abs(glD.N||0), d:Math.abs(glD.N||0)};
     const nDisp=Math.abs(isChar?(mN.k||0):(mN.d||0)), nSizeV=Math.abs(mN.k||0);
     if(Math.max(nSizeV,nDisp)>0.5){ const s=Math.max(S_MIN,Math.min(S_MAX,nSizeV/50)), m=new THREE.MeshLambertMaterial({color:C.forceN});
-      const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s,8),m); cy.position.set(0,topY+s/2+0.15,0); grp.add(cy);
-      const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.set(0,topY+0.07,0); co.rotation.z=Math.PI; grp.add(co);
-      _vlAdd('N'+sfx+' = '+nDisp.toFixed(0)+' kN',new THREE.Vector3(0.4,topY+s/2+0.15,0),'vl-frc'); }
+      const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s,8),m); cy.position.set(exK,topY+s/2+0.15,eyK); grp.add(cy);
+      const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.set(exK,topY+0.07,eyK); co.rotation.z=Math.PI; grp.add(co);
+      _vlAdd('N'+sfx+' = '+nDisp.toFixed(0)+' kN',new THREE.Vector3(exK+0.4,topY+s/2+0.15,eyK),'vl-frc'); }
     if(Hmag>0.5){ const s=Math.max(S_MIN,Math.min(S_MAX,Hmag/35)), d=new THREE.Vector3(Hx,0,Hy).normalize();
-      const m=new THREE.MeshLambertMaterial({color:C.forceH}), q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),d), base=new THREE.Vector3(0,topY,0);
+      const m=new THREE.MeshLambertMaterial({color:C.forceH}), q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),d), base=new THREE.Vector3(exK,topY,eyK);
       const cy=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,s*1.4,8),m); cy.position.copy(base.clone().add(d.clone().multiplyScalar(s*0.7))); cy.applyQuaternion(q); grp.add(cy);
       const co=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.25,8),m); co.position.copy(base.clone().add(d.clone().multiplyScalar(s*1.4))); co.applyQuaternion(q); grp.add(co);
       _vlAdd('H = '+Math.hypot(glL.Hx||0,glL.Hy||0).toFixed(0)+' kN',base.clone().add(d.clone().multiplyScalar(s*1.4+0.4)),'vl-frc'); }
@@ -3321,7 +3336,7 @@ function buildPfahlbockViz(){
     const Mx=(glD.MxApp!==undefined?glD.MxApp:glD.Mx)||0, My=(glD.MyApp!==undefined?glD.MyApp:glD.My)||0, Mres=Math.hypot(Mx,My);
     if(Mres>0.5 && typeof mkMomArc==='function'){
       const axisRes=new THREE.Vector3(Mx,0,-My).normalize();
-      const arc=mkMomArc(grp,new THREE.Vector3(0,topY+0.1,0),axisRes,Mres,C.moment,-Math.PI/2);
+      const arc=mkMomArc(grp,new THREE.Vector3(exK,topY+0.1,eyK),axisRes,Mres,C.moment,-Math.PI/2);
       const MxL=(glL.MxApp!==undefined?glL.MxApp:glL.Mx)||0, MyL=(glL.MyApp!==undefined?glL.MyApp:glL.My)||0;
       if(arc&&arc.start) _vlAdd('M'+sfx+' = '+Math.hypot(MxL,MyL).toFixed(0)+' kNm',arc.start.clone().add(new THREE.Vector3(0.45,0.55,0.25)),'vl-frc');
     }
@@ -3348,6 +3363,7 @@ function buildPfahlbockViz(){
 function rebuildScene(){
   const bx=+gi('g_bx'),by=+gi('g_by'),hb=+gi('g_hblock');
   const kx=+gi('g_kx'),ky=+gi('g_ky'),hk=+gi('g_hkopf');
+  _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf innerhalb Blockkante halten
   const ex=+gi('g_ex'),ey=+gi('g_ey');
   const ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung (optional, Schalter)
   ['blk','gnd','lyr','arH','arN','arM','axs','spl','vec','dim','pfahl3d','pb3d'].forEach(clr);
@@ -5602,7 +5618,10 @@ function renderPfahlbock(){
   const hl = hKopf + dBank;   // Hebel Lastangriff (OK Kopf) → UK Bankett = H_Kopf + Bankettdicke
   // Eigengewicht Bankett + Fundamentkopf
   const kx=+gi('pb_kx')||0, ky=+gi('pb_ky')||0, gBet=+gi('g_gbeton')||25;
-  const G_eig=(Bbank*Lbank*dBank + kx*ky*hKopf)*gBet;   // Eigengewicht Bankett + Kopf [kN]
+  const G_kopf=kx*ky*hKopf*gBet;                         // Eigengewicht nur Fundamentkopf [kN] (exzentrisch)
+  const G_eig=(Bbank*Lbank*dBank)*gBet + G_kopf;         // Eigengewicht Bankett + Kopf [kN]
+  _clampKopfEcc('pb_bx','pb_kx','pb_by','pb_ky','pb_ex','pb_ey');   // Kopf innerhalb Bankettkante halten
+  const exK=+gi('pb_ex')||0, eyK=+gi('pb_ey')||0;        // Kopf-Exzentrizität quer/längs ggü. Bankettachse [m]
   // ── Einwirkungen je LASTFALL (LF[]): quer/längs GETRENNT — kein gleichzeitiges Ansetzen
   //    von M_x (aus Längslasten) und M_y (aus Querlasten). Je LF zusätzlich γ_G,inf/sup auf die
   //    Vertikallast (Druck- vs. Zug/Herausziehen-massgebend). Massgebenden je Pfahl/Nachweis.
@@ -5614,10 +5633,14 @@ function renderPfahlbock(){
   const lfLoad=(lf,fGv,fGo,fW)=>{ const c=lf.comp||{}, a=(f,v)=>f?v:0;
     const Ng=a(c.NG,NG), HxG=a(c.HGx,HGx),HyG=a(c.HGy,HGy),MxG=a(c.MGx,MGx),MyG=a(c.MGy,MGy);
     const HxW=a(c.HWx,HQx),HyW=a(c.HWy,HQy),MxW=a(c.MWx,MQx),MyW=a(c.MWy,MQy);
-    return { N:fGv*(Ng+G_eig), Hx:fGo*HxG+fW*HxW, Hy:fGo*HyG+fW*HyW,
-      Mx:fGo*(MxG+HyG*hl)+fW*(MxW+HyW*hl), My:fGo*(MyG+HxG*hl)+fW*(MyW+HxW*hl),
-      // Mast-Moment am OK Kopf (ohne H·Hebel) — für die 3D-Einwirkung, konsistent zum Block
-      MxApp:fGo*MxG+fW*MxW, MyApp:fGo*MyG+fW*MyW }; };
+    const N=fGv*(Ng+G_eig);
+    // Exzentrizitätsmoment: nur die exzentrische Vertikallast (Mast + Kopf-Eigengewicht) — das
+    // Bankett ist zentriert; e_x (quer) → M_y, e_y (längs) → M_x (wie Block: N·e).
+    const Necc=fGv*(Ng+G_kopf);
+    return { N, Hx:fGo*HxG+fW*HxW, Hy:fGo*HyG+fW*HyW,
+      Mx:fGo*(MxG+HyG*hl)+fW*(MxW+HyW*hl) + Necc*eyK, My:fGo*(MyG+HxG*hl)+fW*(MyW+HxW*hl) + Necc*exK,
+      // Mast-Moment am OK Kopf (ohne H·Hebel) — für die 3D-Einwirkung, konsistent zum Block (inkl. Exzentrizität)
+      MxApp:fGo*MxG+fW*MxW + Necc*eyK, MyApp:fGo*MyG+fW*MyW + Necc*exK }; };
   const ulsLF=LF.filter(lf=>lf.nw!=='gzg'), gzgLF=LF.filter(lf=>lf.nw!=='gzt');
   const ulsCombos=[];
   (ulsLF.length?ulsLF:LF).forEach(lf=>{ const gGs=lf.gG??1.35, gW=lf.gW??1.5;
@@ -5636,7 +5659,7 @@ function renderPfahlbock(){
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
   // Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — Bankett als Auflast; Mast-H destabilisierend
   r.bishop = _slopeActive ? bishopStability({ bx:Bbank, t_bl:(+gi('pb_ue')||0)+dBank,
-      q_block:(NG + G_eig)/Math.max(0.3, Bbank),
+      q_block:(NG + G_eig)/Math.max(0.09, Bbank * Lbank),   // [kN/m²] Flächenpressung (2D-Smear, nicht /Bbank Linienlast)
       H_des: Math.abs((r.govLoadChar && r.govLoadChar.Hx) || 0), y_H:-(+gi('pb_ue')||0) }) : null;
   if(r.bishop && r.bishop.ok && isFinite(r.bishop.eta)) r.eta_massg = Math.min(r.eta_massg, +r.bishop.eta.toFixed(2));
   // Knickkurve für ALLE hinterlegten Tragglieder (gleiche Geometrie/Boden → kbed,
@@ -7151,9 +7174,12 @@ function bishopStability(opts){
              gam: (Y < -gwd) ? (s.gamma2>0?s.gamma2:Math.max(1,(s.gamma||20)-gamW)) : (s.gamma||20) };
   };
   // Block-Surcharge: Eigengewicht + ständige Vertikallast über den Footprint |x|<bx/2
-  const Gk_block = bx * t_bl * (+gi('g_gbeton') || 25);
-  const N_perm   = +gi('l_NG') || 0;
-  const q_block  = opts.q_block != null ? opts.q_block : (Gk_block + N_perm) / bx;     // [kN/m²] gleichmässig
+  const Gk_block = bx * t_bl * (+gi('g_gbeton') || 25);          // [kN/m] Blockgewicht je lfm
+  const N_perm   = +gi('l_NG') || 0;                              // [kN]  Mast-Vertikallast (Punktlast)
+  const Lfp      = opts.L_fp != null ? opts.L_fp : Math.max(0.3, +gi('g_by') || bx);  // Footprint-Länge quer [m]
+  // q_block als echte Flächenpressung [kN/m²]: Eigengewicht-Pressung t_bl·γ + Mastlast N/(B·L) über die
+  // FLÄCHE (2D-Smear, keine Linienlast — Bishop ist plane-strain; 3D-Stirnscherung konserv. vernachlässigt)
+  const q_block  = opts.q_block != null ? opts.q_block : (Gk_block / bx + N_perm / (bx * Lfp));
   // Horizontale Bemessungslast am Fundament (destabilisierend): opts (Pfahlfundament) oder letztes Block-Ergebnis
   let H_des = 0, y_H = opts.y_H != null ? opts.y_H : -t_bl*0.5;
   if(opts.H_des != null){ H_des = Math.abs(opts.H_des); }
@@ -7208,14 +7234,19 @@ function bishopStability(opts){
     }
     // ── Gültigkeits-Constraints (gegen Mini-Kreis-/Numerik-Artefakte)
     if(!anyValid || slices.length < 8) return null;
-    if(hmax < 0.40 * Hgeo) return null;            // Kreis zu flach → kein globaler Bruch
-    if(maxAbsA > 1.20) return null;                // |α| > ~69° → Bishop unzuverlässig
-    if(minYb > -0.25 * Hgeo) return null;          // erreicht keine relevante Tiefe
-    // Destabilisierendes Moment der Horizontallast (am Block), wenn Kreis den Block fasst
-    const M_H = (xc > -bx/2 && xc < bx/2 + 6 && Math.abs(failSide) > 0)
-      ? H_des * Math.max(0, (Yc - y_H)) / R : 0;
-    const driv = denDriv + M_H;
-    if(driv <= 0.1) return null;                  // kein treibendes Moment → kein Versagen
+    if(!exitFail) return null;                     // Kreis muss auf der Versagensseite daylighten
+    if(hmax < 0.28 * Hgeo) return null;            // Kreis zu flach → kein globaler Bruch
+    if(maxAbsA > 1.35) return null;                // |α| > ~77° → Bishop unzuverlässig
+    if(minYb > -0.18 * Hgeo) return null;          // erreicht keine relevante Tiefe
+    // Destabilisierendes Moment der Horizontallast: zählt nur, wenn der Fundament-Footprint
+    // im Gleitkörper liegt (Kreis überspannt den Block).
+    const inBlk = (xc - R < bx/2 && xc + R > -bx/2);
+    const M_H = inBlk ? H_des * Math.max(0, (Yc - y_H)) / R : 0;
+    // Treibendes Moment = |ΣW·sinα| + M_H. Das geometrische Vorzeichen von ΣW·sinα kodiert
+    // nur den Drehsinn (für einen zum Fuss kippenden Toe-Kreis ist es negativ); massgebend
+    // ist der Betrag. (Ohne den Betrag verwarf die Suche jeden freistehenden Böschungskreis.)
+    const driv = Math.abs(denDriv) + M_H;
+    if(driv <= 0.5) return null;                  // kein treibendes Moment → kein Versagen
     // η iterieren — m_α nach unten auf 0.2 gedeckelt (konservativ; verhindert das
     // Verwerfen kritischer Toe-Kreise mit steiler Basis, ohne η zu überschätzen).
     let eta = 1.3;
@@ -7234,31 +7265,28 @@ function bishopStability(opts){
     return { eta, xc, Yc, R, slices, hmax, M_H, driv };
   };
 
-  // ── Toe-verankerte Kreissuche (robust für Anschnitt/Böschung):
-  // Kreis durch den FUSS (Aushub-/Böschungsfuss) + Eintrittsstelle hinter der Krone.
-  // Zentrum auf der Mittelsenkrechten der Sehne Fuss–Eintritt, Tiefe variiert.
+  // ── Fuss (Aushub-/Böschungsfuss) als Anker für die Grid-Zentrierung
   let toeX, toeY;
   if(d_ex > 0.05){ toeX = failSide * bx/2; toeY = -d_ex; }                       // Aushubfuss
   else if(hasSlope){ const Ls = Hgeo/Math.max(0.05, Math.abs(Math.tan(beta)));   // Böschungsfuss
     toeX = (bx/2 + Math.max(0, bfuss)) + failSide*Ls; toeY = surfY(toeX); }
   else { toeX = failSide * bx/2; toeY = 0; }                                      // flach: Blockkante
+  // ── Freie Zentrum-Grid-Suche mit unabhängigem Radius-Scan.
+  // Ersetzt die frühere toe-verankerte Suche, die (a) für lange flache Böschungen keinen
+  // gültigen Kreis fand und (b) die tiefer liegende kritische Gleitfläche verfehlte.
+  // Grid um den Fuss zentriert, nach der charakteristischen Höhe Hgeo skaliert. Validiert
+  // gegen Taylor φ_u=0 (N_o≈5.52, i=26.57°): freie Grid-FS 2.50 ≈ Taylor 2.45 (<2 %).
   let best = null;
-  const nE = 16, nS = 13, dEmax = 3*Hgeo + bx + 1;
-  for(let ie = 1; ie <= nE; ie++){
-    const dE = 0.5 + dEmax * ie/nE;
-    const xE = toeX - failSide*dE, yE = surfY(xE);          // Eintritt hinter der Krone
-    const mx = (toeX+xE)/2, my = (toeY+yE)/2;
-    const tex = xE-toeX, tey = yE-toeY, Lte = Math.hypot(tex,tey) || 1;
-    let perpx = -tey/Lte, perpy = tex/Lte;
-    if(perpy < 0){ perpx = -perpx; perpy = -perpy; }         // Zentrum oberhalb
-    const sMax = 0.3 + 2.8*Hgeo + dE*0.5;
-    for(let is = 1; is <= nS; is++){
-      const s = 0.2 + sMax * is/nS;
-      const cx = mx + perpx*s, cy = my + perpy*s;
-      if(cy < Math.max(toeY, yE) + 0.2) continue;            // Zentrum über der Sehne
-      const R = Math.hypot(cx-toeX, cy-toeY);
-      const r = bishopCircle(cx, cy, R);
-      if(r && r.eta > 0.05 && (!best || r.eta < best.eta)) best = r;
+  const Hs = Hgeo, half = 3.4*Hs + bx + 1;
+  const dC = Math.max(0.22, Hs*0.16), dR = Math.max(0.22, Hs*0.16);
+  for(let cx = toeX - half; cx <= toeX + half; cx += dC){
+    const surfCx = Math.max(0, surfY(cx));
+    for(let cy = 0.3*Hs; cy <= 3.6*Hs; cy += dC){
+      const Rlo = Math.max(1, cy - surfCx - 0.6*Hs), Rhi = cy + 2.4*Hs;
+      for(let R = Rlo; R <= Rhi; R += dR){
+        const r = bishopCircle(cx, cy, R);
+        if(r && r.eta > 0.05 && (!best || r.eta < best.eta)) best = r;
+      }
     }
   }
   if(!best) return { ok:false, eta:Infinity };
@@ -8543,17 +8571,6 @@ function calcPfahlsicherung(){
         <span style="font-weight:600;color:${!isFinite(eta_massgebend)?'var(--xdim)':eta_massgebend>=1.5?'var(--ok)':eta_massgebend>=1.0?'var(--warn)':'var(--fail)'}">${isFinite(eta_massgebend)?'η = '+eta_massgebend.toFixed(2)+' · '+nw_massgebend:'n.m.'}</span>
       </div>
 
-      <!-- Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub -->
-      ${bishopRes ? (bishopRes.ok && isFinite(bishopRes.eta) ? `
-      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', bishopRes.eta, null, nw_massgebend==='Böschung')}
-        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht, iterativ)</div>
-        ${row('η massgebender Kreis', bishopRes.eta.toFixed(2), '')}
-        ${row('Radius R', bishopRes.R.toFixed(2), 'm')}
-        ${row('Scherfestigkeit (SIA 267)', 'φ′_d = φ′/γ_φ · c′_d = c′/γ_c', '')}
-        <div style="margin-top:6px">${buildBishopSVG(bishopRes, false)}</div>
-        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Toe-verankerte Kreisschar (Fuss = Aushub-/Böschungsfuss), Block + ständige Last als Auflast, GW-Porendruck. Vereinfachtes Lamellenverfahren (Bishop) — bei η &lt; 1.3 vertiefte GEO-Untersuchung (mehrere Gleitkörper, Schichtungseffekte).</div>
-      ${CARD_END}` : `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Böschung/Aushub aktiv — die Gleitkreissuche lieferte kein gültiges Ergebnis (Geometrie/Boden prüfen). Globale Standsicherheit gesondert nachweisen.</div>`) : ''}
-
       <!-- Richtungsfall Stütze — immer sichtbar -->
       ${fall_zug ? (pile_active
         ? `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Momentrichtung zum Aushub — Richtstütze wirkt auf ZUG. Anschlüsse müssen zugfest ausgebildet sein (Annahme: zugfest).</div>`
@@ -8607,6 +8624,8 @@ function calcPfahlsicherung(){
       </div>
 
       ${CARD_END}
+
+      <div class="lf-grp">Äussere Tragsicherheit — Boden (GZT)</div>
       ${cardHd('Lateraltragfähigkeit (Grenzgleichgewicht p_u)', eta_H, null, nw_massgebend==='Tragf.')}
       ${betaRed > 0.1 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)">
         <span style="color:var(--warn)">Böschung talseitig (β = ${_slBeta}°)
@@ -8639,36 +8658,6 @@ function calcPfahlsicherung(){
       </div>
 
       ${CARD_END}
-      ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
-      ${row('M_max,1 (p-y'+(pyUse?(pyUse.yielded?', plastisch':', elastisch')+', z='+(pyUse.sMmax-e_eff).toFixed(2)+'m u.GOK':' — Näherung')+')', M_max_1.toFixed(1), 'kNm')}
-      ${spliced_p ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
-      ${row('M_pl (S355)', Mpl.toFixed(1), 'kNm')}
-      <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
-        <span style="color:var(--dim)">η_Stahl = M_pl / M_max,1</span>
-        <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
-      </div>
-      ${CARD_END}
-      ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
-      <div style="font-size:8px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
-      ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
-      ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
-      ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
-      ${row('δ Pfahlkopf bei H_d (p-y)', delta_gruppe_mm.toFixed(1), 'mm')}
-      ${row('Verkippung tan α × 1000', neig_mm_m.toFixed(1), 'mm/m')}
-      <div style="display:flex;gap:8px;margin-top:2px">
-        <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':neig_mm_m>=d_mass?'var(--warn-s)':'var(--ok-s)'};border-radius:3px;font-size:9px">
-          Massnahme: ${d_mass.toFixed(0)} mm/m
-        </div>
-        <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':'var(--s3)'};border-radius:3px;font-size:9px">
-          Kritisch: ${d_krit.toFixed(0)} mm/m
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:6px;border-top:1px solid var(--ol)">
-        <span style="color:var(--dim)">η_Verformung</span>
-        <span style="font-weight:500">${eta_cls(eta_V)(isFinite(eta_V)?'η = '+eta_V.toFixed(2):'n.m.')}</span>
-      </div>
-      ${warn_s}
-      ${CARD_END}
       ${cardHd('Axialer Pfahlnachweis'+(fall_zug?' (Herausziehen)':''), eta_ax, null, nw_massgebend==='Axial')}
       ${row((fall_zug?'Zugkraft (Herausziehen)':'V_Pfahl')+' pro Pfahl = H_eff·tan(α)/n', V_1.toFixed(1), 'kN')}
       ${row('q̄_s = K₀·σ′v·tan(2/3φ)'+(multiLayer?' (schichtweise)':''), (R_ax_k/Math.max(0.01,U_box*L_emb)).toFixed(1), 'kPa')}
@@ -8681,6 +8670,17 @@ function calcPfahlsicherung(){
       <div style="font-size:8px;color:var(--xdim);margin-top:2px">Mantelreibung HEB-Kasten, Spitzendruck vernachlässigt (konservativ)${fall_zug?' · Herausziehen: gleiche Mantelreibung, Eigengewicht günstig vernachlässigt':''}</div>
       ${CARD_END}
 
+      <div class="lf-grp">Innere Tragsicherheit — Bauteil (GZT)</div>
+      ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
+      ${row('M_max,1 (p-y'+(pyUse?(pyUse.yielded?', plastisch':', elastisch')+', z='+(pyUse.sMmax-e_eff).toFixed(2)+'m u.GOK':' — Näherung')+')', M_max_1.toFixed(1), 'kNm')}
+      ${spliced_p ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
+      ${row('M_pl (S355)', Mpl.toFixed(1), 'kNm')}
+      <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
+        <span style="color:var(--dim)">η_Stahl = M_pl / M_max,1</span>
+        <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
+      </div>
+      ${CARD_END}
+      ${(bishopRes || (isFinite(etaGZT_block) && Md_Hst_block >= 0.1)) ? '<div class="lf-grp">Stabilität — System &amp; Gelände (GZT)</div>' : ''}
       ${(() => {
         // ── Systemnachweis Block + Pfahl (GZT + GZG) — Blockkapazität im Aushubzustand
         if(!isFinite(etaGZT_block) || Md_Hst_block < 0.1) return '';
@@ -8714,6 +8714,40 @@ function calcPfahlsicherung(){
             <div style="font-size:8px;color:var(--xdim);margin-top:3px">Kapazitätssumme: Blockwiderstand im Aushubzustand + kapazitätsgedeckelter Pfahlbeitrag vs. volle Bemessungslast</div>
         ` + CARD_END;
       })()}
+
+      <!-- Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub -->
+      ${bishopRes ? (bishopRes.ok && isFinite(bishopRes.eta) ? `
+      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', bishopRes.eta, null, nw_massgebend==='Böschung')}
+        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht, iterativ)</div>
+        ${row('η massgebender Kreis', bishopRes.eta.toFixed(2), '')}
+        ${row('Radius R', bishopRes.R.toFixed(2), 'm')}
+        ${row('Scherfestigkeit (SIA 267)', 'φ′_d = φ′/γ_φ · c′_d = c′/γ_c', '')}
+        <div style="margin-top:6px">${buildBishopSVG(bishopRes, false)}</div>
+        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Freie Zentrum-Grid-Suche (Fuss = Aushub-/Böschungsfuss als Anker), Fundamentlast als Flächenpressung N/(B·L), GW-Porendruck. Ebenes 2D-Verfahren (Bishop) — seitliche 3D-Stirnscherung des Bruchkörpers konservativ vernachlässigt; gegen Taylor φ_u=0 auf &lt;2 % validiert. Bei η &lt; 1.3 vertiefte GEO-Untersuchung (mehrere Gleitkörper, Schichtungseffekte).</div>
+      ${CARD_END}` : `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Böschung/Aushub aktiv — die Gleitkreissuche lieferte kein gültiges Ergebnis (Geometrie/Boden prüfen). Globale Standsicherheit gesondert nachweisen.</div>`) : ''}
+
+      <div class="lf-grp">Gebrauchstauglichkeit (GZG)</div>
+      ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
+      <div style="font-size:8px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
+      ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
+      ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
+      ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
+      ${row('δ Pfahlkopf bei H_d (p-y)', delta_gruppe_mm.toFixed(1), 'mm')}
+      ${row('Verkippung tan α × 1000', neig_mm_m.toFixed(1), 'mm/m')}
+      <div style="display:flex;gap:8px;margin-top:2px">
+        <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':neig_mm_m>=d_mass?'var(--warn-s)':'var(--ok-s)'};border-radius:3px;font-size:9px">
+          Massnahme: ${d_mass.toFixed(0)} mm/m
+        </div>
+        <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':'var(--s3)'};border-radius:3px;font-size:9px">
+          Kritisch: ${d_krit.toFixed(0)} mm/m
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:6px;border-top:1px solid var(--ol)">
+        <span style="color:var(--dim)">η_Verformung</span>
+        <span style="font-weight:500">${eta_cls(eta_V)(isFinite(eta_V)?'η = '+eta_V.toFixed(2):'n.m.')}</span>
+      </div>
+      ${warn_s}
+      ${CARD_END}
 
       <div style="margin-top:10px;padding:5px 8px;background:var(--s3);border-radius:3px;font-size:8px;color:var(--xdim);line-height:1.55">
         Vordimensionierung · p-y-Bettungsmodell (elasto-plastisch, Grenzlast aus p_u-Hüllkurve) · Stütze: ${fall_zug?'Zugfall':'Druckfall (Knicknachweis offen)'} · ${multiLayer?'schichtweiser Boden':'Boden Schicht 1'} · Kein Ersatz für normativen Nachweis
@@ -8857,6 +8891,7 @@ function _doCalculate(){
   const ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung ab OK Block (optional, Schalter)
   const t=Hb+ue;                                    // effektive Einbindetiefe
   const Bk=+gi('g_kx'), Lk=+gi('g_ky'), Hk=+gi('g_hkopf');
+  _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf innerhalb Blockkante halten
   const exk=+gi('g_ex'), eyk=+gi('g_ey'), gb=+gi('g_gbeton');
   const qu=+gi('bg_qu');
   const gph=+gi('tw_phi'), gc_=+gi('tw_c');
@@ -13265,7 +13300,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
   'pfahl_dm','pfahl_dk',
   'pfahl_dex','pfahl_dex_seite','pfahl_abstand','pfahl_hs','pfahl_laf','pfahl_lv_mode','pfahl_zugfest','pfahl_stab_nrd',
   'pb_n','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
-  'pb_bx','pb_by','pb_bank_d','pb_kx','pb_ky','pb_hk','pb_ue','pb_gR','pb_gS','pb_skinfac','pb_zugfac'];
+  'pb_bx','pb_by','pb_bank_d','pb_kx','pb_ky','pb_hk','pb_ex','pb_ey','pb_ue','pb_gR','pb_gS','pb_skinfac','pb_zugfac'];
 
 function collectState(){
   const st={};FDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
