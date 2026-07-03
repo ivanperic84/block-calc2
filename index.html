@@ -34,8 +34,8 @@
   --ol:   #d0d0da; --ol2:#b8b8c8;
   --on:   #111218; --on2:#3a3c48; --dim:#70727e; --xdim:#9a9caa;
   --acc:  #4a5cb8; --acc-s:rgba(74,92,184,0.10);
-  --ok:   #1a7a40; --ok-s:rgba(26,122,64,0.08);
-  --warn: #8a6010; --warn-s:rgba(138,96,16,0.08);
+  --ok:   #2f9e54; --ok-s:rgba(47,158,84,0.10);
+  --warn: #d9822b; --warn-s:rgba(217,130,43,0.10);
   --fail: #a02020; --fail-s:rgba(160,32,32,0.08);
   --scrim:rgba(0,0,0,0.35);
   --viewer-bg:#e8e8ee;
@@ -77,6 +77,11 @@ html, body {
 .tb-proj-btn .tb-proj { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tb-proj-btn .pbn-chev { flex:none; color:var(--acc); transition:transform .26s ease; }
 .tb-proj-btn.open .pbn-chev { transform:rotate(180deg); }
+/* Eigenständiger Ziehgriff am unteren Banner-Rand (Greif-Pille wie der Splitter) */
+.pb-grip { display:flex; align-items:center; justify-content:center; height:15px; cursor:pointer; }
+.pb-grip::after { content:''; width:52px; height:6px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
+[data-theme="light"] .pb-grip::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.pb-grip:hover::after { background:var(--acc); box-shadow:0 0 0 3px var(--acc-s); }
 /* Live-Plausibilität: Warnzeilen oben im Eingabe-Panel */
 #plaus-bar { display:flex; flex-direction:column; gap:4px; margin:0 0 8px; }
 .plaus-item { font-family:var(--f-mono); font-size:9px; line-height:1.35; padding:5px 8px; border-radius:5px; border:1px solid; }
@@ -393,7 +398,7 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .viewer-fab { position:absolute; top:10px; right:calc(var(--vfab-inset,10px) + var(--drawer-w,0px)); display:flex; flex-direction:column; gap:4px; z-index:2; transition:right .26s ease; }
 .viewer-fab.viewer-fab-l { left:var(--vfab-inset,10px); right:auto; }
 /* Bei offener Nachweis-Schublade die rechtsseitigen/mittigen Viewer-Controls mitschieben (klickbar halten) */
-#viewer-legend-wrap { right:calc(10px + var(--drawer-w,0px)) !important; transition:right .26s ease; }
+#viewer-legend-wrap { right:calc(var(--vfab-inset,10px) + var(--drawer-w,0px)) !important; transition:right .26s ease; }
 #viewer-lf { transform:translateX(calc(-50% - var(--drawer-w,0px) / 2)) !important; transition:transform .26s ease; }
 .viewer-legend {
   background:var(--s1); border:1px solid var(--ol); border-radius:var(--r2);
@@ -454,6 +459,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 .nw-eta.fail { color:var(--fail); }
 .nw-eta.dim  { color:var(--xdim); }
 .nw-bd { display:none; border-top:1px solid var(--ol); padding:8px 12px 10px; }
+/* Ausnutzungsbalken (dezent) — Füllung 1/η, Marker bei η=1 */
+.nwbar { position:relative; height:3px; background:var(--s3); border-radius:2px; margin:0 12px 8px; }
+.nwbar > i { position:absolute; left:0; top:0; bottom:0; border-radius:2px; }
+.nwbar > u { position:absolute; top:-1px; bottom:-1px; left:66%; width:1px; background:var(--dim); opacity:.4; }
 .nw-bd.open { display:block; }
 .nw-formula { font-family:var(--f-mono); font-size:9px; color:var(--xdim); background:var(--bg); padding:5px 8px; border-radius:var(--r1); margin-bottom:6px; line-height:1.75; }
 .nw-row { display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:10px; padding:2.5px 0; border-bottom:1px solid var(--ol); cursor:default; }
@@ -806,15 +815,29 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   .workspace.res-open #panel-results { transform:none; }
   .workspace.res-wide-diag.res-open #panel-results { width:clamp(520px, 46vw, 780px); }  /* Diagramm expandiert */
   .res-drawer-tab {
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
-    position:absolute; top:50%; right:0; transform:translateY(-50%);
-    width:30px; min-height:128px; padding:12px 0; border:1px solid var(--ol); border-right:none;
-    border-radius:9px 0 0 9px; background:var(--s2); color:var(--dim);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+    position:absolute; top:0; bottom:0; right:0;
+    width:34px; padding:16px 0; border:none; border-left:2px solid var(--ol);
+    background:var(--s2); color:var(--dim);
     z-index:19; cursor:pointer; transition:right .26s ease, background .15s, color .15s, border-color .15s;
   }
   .res-drawer-tab:hover { background:var(--s3); }
+  .res-drawer-tab:focus { outline:none; }
+  .res-drawer-tab:focus-visible { outline:2px solid var(--acc); outline-offset:-2px; }
+  /* Greif-Pille wie der linke Splitter (auf der Kantenlinie) */
+  .res-drawer-tab::after { content:''; position:absolute; left:-4px; top:50%; transform:translateY(-50%);
+    width:6px; height:52px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
+  [data-theme="light"] .res-drawer-tab::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .res-drawer-tab.ok::after   { background:var(--ok);   }
+  .res-drawer-tab.warn::after { background:var(--warn); }
+  .res-drawer-tab.fail::after { background:var(--fail); }
+  .res-drawer-tab:hover::after { background:var(--acc); height:68px; box-shadow:0 0 0 3px var(--acc-s); }
   .res-drawer-tab .rdt-label { writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--f-mono);
     font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
+  .res-drawer-tab .rdt-val { writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--f-mono);
+    font-weight:700; font-size:12px; letter-spacing:.02em; white-space:nowrap; color:var(--dim); }
+  .res-drawer-tab .rdt-val small { font-size:8px; font-weight:500; opacity:.7; letter-spacing:.1em; }
+  .res-drawer-tab .rdt-val.ok { color:var(--ok); } .res-drawer-tab .rdt-val.warn { color:var(--warn); } .res-drawer-tab .rdt-val.fail { color:var(--fail); }
   .res-drawer-tab .rdt-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
   .res-drawer-tab.ok   { color:var(--ok);   border-color:var(--ok);   }
   .res-drawer-tab.ok   .rdt-dot { background:var(--ok);   }
@@ -944,6 +967,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       </div>
     </div>
   </div>
+  <div class="pb-grip" onclick="toggleProjBanner(false)" title="Projektangaben einklappen"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -954,8 +978,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   <!-- Splitter-Griffe: ziehen = Breite stufenlos, tippen = Schnellbreiten (Snap-Zyklus) -->
   <div class="ws-split" id="ws-split-l" title="Ziehen: Breite anpassen · Tippen: Schnellbreiten"></div>
   <!-- Ergebnis-Schublade: Griff mit globalem Nachweis-Status (Erfüllt/Nicht erfüllt) -->
-  <button class="res-drawer-tab" id="res-drawer-tab" onclick="toggleResDrawer()" title="Nachweise ein-/ausblenden" aria-label="Nachweise ein-/ausblenden">
+  <button class="res-drawer-tab" id="res-drawer-tab" onclick="toggleResDrawer()" title="Nachweise ein-/ausblenden — massgebende Ausnutzung η" aria-label="Nachweise ein-/ausblenden">
     <span class="rdt-dot"></span>
+    <span class="rdt-val" id="rdt-gzt" style="display:none"></span>
+    <span class="rdt-val" id="rdt-gzg" style="display:none"></span>
     <span class="rdt-label" id="rdt-label">Nachweise</span>
     <svg class="rdt-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg>
   </button>
@@ -6092,9 +6118,12 @@ function _pbResultHTML(r, piles, n){
   const cardHd=(title,etaVal,rightTxt=null,gov=false)=>{
     const cl=rightTxt!=null?'dim':!isFinite(etaVal)?'dim':etaVal>=1.5?'ok':etaVal>=1.0?'warn':'fail';
     const tx=rightTxt!=null?rightTxt:(isFinite(etaVal)?'η = '+etaVal.toFixed(2):'n.m.');
-    return `<div class="nw"${gov?' style="border-color:var(--acc)"':''}><div class="nw-hd" onclick="this.nextElementSibling.classList.toggle('open')">
+    const bc={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[cl];
+    const bar=(rightTxt==null&&isFinite(etaVal)&&etaVal>0)
+      ? `<div class="nwbar" title="Ausnutzung 1/η = ${Math.round(100/etaVal)}% (Marker = Grenze η=1)"><i style="width:${Math.min(100,(1/etaVal)*66).toFixed(1)}%;background:${bc}"></i><u></u></div>` : '';
+    return `<div class="nw"${gov?' style="border-color:var(--acc)"':''}><div class="nw-hd" onclick="this.parentElement.querySelector('.nw-bd').classList.toggle('open')">
       <span class="nw-ttl">${title}${gov?' <span style="color:var(--acc);font-size:8px;letter-spacing:.05em">MASSGEBEND</span>':''}</span><span class="nw-eta ${cl}">${tx}</span>
-    </div><div class="nw-bd">`;
+    </div>${bar}<div class="nw-bd">`;
   };
   const CARD_END='</div></div>';
   // ── Diagramm-Daten registrieren (Expand via toggleGZTExpand, gleicher Mechanismus wie Block)
@@ -8509,9 +8538,12 @@ function calcPfahlsicherung(){
   const cardHd = (title, etaVal, rightTxt=null, gov=false) => {
     const cl = rightTxt!=null ? 'dim' : !isFinite(etaVal) ? 'dim' : etaVal>=1.5?'ok':etaVal>=1.0?'warn':'fail';
     const tx = rightTxt!=null ? rightTxt : (isFinite(etaVal) ? 'η = '+etaVal.toFixed(2) : 'n.m.');
-    return `<div class="nw"${gov?' style="border-color:var(--acc)"':''}><div class="nw-hd" onclick="this.nextElementSibling.classList.toggle('open')">
+    const bc={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[cl];
+    const bar=(rightTxt==null&&isFinite(etaVal)&&etaVal>0)
+      ? `<div class="nwbar" title="Ausnutzung 1/η = ${Math.round(100/etaVal)}% (Marker = Grenze η=1)"><i style="width:${Math.min(100,(1/etaVal)*66).toFixed(1)}%;background:${bc}"></i><u></u></div>` : '';
+    return `<div class="nw"${gov?' style="border-color:var(--acc)"':''}><div class="nw-hd" onclick="this.parentElement.querySelector('.nw-bd').classList.toggle('open')">
       <span class="nw-ttl">${title}${gov?' <span style="color:var(--acc);font-size:8px;letter-spacing:.05em">MASSGEBEND</span>':''}</span><span class="nw-eta ${cl}">${tx}</span>
-    </div><div class="nw-bd">`;
+    </div>${bar}<div class="nw-bd">`;
   };
   const CARD_END = '</div></div>';
 
@@ -12984,6 +13016,11 @@ function renderResults(res,worst,g){
     banner+=`<div style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);padding:0 0 4px">${SCHICHTEN.length} Bodenschichten · massgebend: ${worst.soilName}</div>`;
   }
 
+  // Kernweite/klaffende Fuge beim Block informativ ausweisen (Sohldruck ist beim eingespannten
+  // Block kein Versagenskriterium — Standsicherheit über Steckner GZT Gl.66).
+  const blockKernHint = (g.isBlock && worst.inKern===false)
+    ? `<div style="margin-top:7px;padding:5px 8px;background:var(--s2);border-left:2px solid var(--dim);border-radius:3px;font-size:9px;color:var(--dim);font-family:var(--f-mono);line-height:1.4">Ausmitte ausserhalb der Kernweite (|e| &gt; B/6${worst.smin<0?' · σ_min &lt; 0 → klaffende Sohlfuge':''}). Beim eingespannten Block <b>informativ</b> — massgebend ist die Standsicherheit nach Steckner GZT (Gl. 66), nicht die Sohldruckverteilung.</div>`
+    : '';
   const sd=document.createElement('div');
   sd.innerHTML=`${banner}<div class="summary"><div class="summary-ttl">Massgebend — ${worst.name}</div>
     <div class="kv-grid">
@@ -12997,7 +13034,7 @@ function renderResults(res,worst,g){
       <div class="kv"><span>e_y</span><span>${worst.ey.toFixed(3)} m</span></div>
       ${g.isBlock?`<div class="kv"><span>Ep_x</span><span>${worst.Ep_x.toFixed(1)} kN</span></div>
       <div class="kv"><span>Ep_y</span><span>${worst.Ep_y.toFixed(1)} kN</span></div>`:''}
-    </div></div>`;
+    </div>${blockKernHint}</div>`;
   scroll.appendChild(sd);
 
   const NW=SETTINGS.nw;
@@ -13104,10 +13141,14 @@ function renderResults(res,worst,g){
       const expandBtn = `<button onclick="toggleGZTExpand(event,'${diagKey||gztKey}')" title="Vergrössern"
         style="position:absolute;top:6px;right:6px;z-index:2;background:var(--s3);border:1px solid var(--ol2);
         border-radius:3px;cursor:pointer;color:var(--dim);padding:1px 6px;font-size:11px;line-height:1.5">⤢</button>`;
-      el.innerHTML=`<div class="nw-hd" onclick="this.nextElementSibling.classList.toggle('open')">
+      const _eC=eCls(card.e), _barCol={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[_eC];
+      const _utilBar = (isFinite(card.e)&&card.e>0)
+        ? `<div class="nwbar" title="Ausnutzung 1/η = ${Math.round(100/card.e)}% (Marker = Grenze η=1)"><i style="width:${Math.min(100,(1/card.e)*66).toFixed(1)}%;background:${_barCol}"></i><u></u></div>` : '';
+      el.innerHTML=`<div class="nw-hd" onclick="this.parentElement.querySelector('.nw-bd').classList.toggle('open')">
           <span class="nw-ttl">${card.t}</span>
-          <span class="nw-eta ${eCls(card.e)}">${eTxt(card.e)}</span>
+          <span class="nw-eta ${_eC}">${eTxt(card.e)}</span>
         </div>
+        ${_utilBar}
         <div class="nw-bd">
           <div class="nw-formula">${card.f}</div>
           ${rowsHtml}
@@ -13166,6 +13207,25 @@ function _updateDrawerStatus(){
   }
   tab.classList.remove('ok','fail','warn'); if(cls) tab.classList.add(cls);
   if(lbl) lbl.textContent = txt;
+  // Massgebende Ausnutzung getrennt nach GZT / GZG über alle Nachweis-Karten (renderer-agnostisch
+  // aus dem DOM; Gruppenzuordnung über die vorausgehenden .lf-grp-Köpfe). Ein Frame verzögert, da
+  // die Karten teils erst nach dem overall-pill in #res-scroll landen.
+  requestAnimationFrame(()=>{
+    const scroll=document.getElementById('res-scroll');
+    let gGzt=Infinity, gGzg=Infinity, cur='gzt';
+    if(scroll) scroll.querySelectorAll('.lf-grp, .nw-hd .nw-eta').forEach(el=>{
+      if(el.classList.contains('lf-grp')){ const t=(el.textContent||'').toUpperCase();
+        cur = t.includes('GZG')?'gzg' : t.includes('GZT')?'gzt' : cur; return; }
+      const m=/η\s*=\s*(-?\d+(?:[.,]\d+)?)/.exec(el.textContent||''); if(!m) return;
+      const v=parseFloat(m[1].replace(',','.')); if(!isFinite(v)) return;
+      if(cur==='gzg'){ if(v<gGzg) gGzg=v; } else { if(v<gGzt) gGzt=v; }
+    });
+    const setVal=(id,pfx,val)=>{ const e=document.getElementById(id); if(!e) return;
+      if(isFinite(val)){ e.innerHTML='<small>'+pfx+' </small>'+val.toFixed(2);
+        e.className='rdt-val '+(val>=1.5?'ok':val>=1.0?'warn':'fail'); e.style.display=''; }
+      else e.style.display='none'; };
+    setVal('rdt-gzt','GZT',gGzt); setVal('rdt-gzg','GZG',gGzg);
+  });
 }
 function _clampWsCol(side, w, wsW){
   const other = side==='l' ? _wsCols.r : _wsCols.l;
