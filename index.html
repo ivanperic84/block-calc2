@@ -70,18 +70,17 @@ html, body {
 .pb-projlist { max-height:240px; overflow-y:auto; }
 @media (max-width:900px){ .pb-cols { flex-wrap:wrap; } .pb-col, .pb-col.pb-col-wide, .pb-col.pb-col-proj { flex:1 1 100%; } }
 /* Topbar-Toggle (Projektname + Chevron) */
-.tb-proj-btn { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--ol); cursor:pointer;
-  padding:5px 12px; border-radius:7px; color:inherit; transition:background .15s, border-color .15s; max-width:46vw; }
-.tb-proj-btn:hover { background:var(--s3); border-color:var(--acc); }
-.tb-proj-btn.open { background:var(--acc-s); border-color:var(--acc); }
+/* Projektname als reiner Text (kein Button-Chrome) — geöffnet wird über die Ausroll-Pille */
+.tb-proj-btn { display:flex; align-items:center; gap:8px; background:transparent; border:none; cursor:pointer;
+  padding:5px 8px; color:inherit; transition:color .15s; max-width:46vw; }
+.tb-proj-btn:hover, .tb-proj-btn.open { color:var(--acc); }
 .tb-proj-btn .tb-proj { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tb-proj-btn .pbn-chev { flex:none; color:var(--acc); transition:transform .26s ease; }
-.tb-proj-btn.open .pbn-chev { transform:rotate(180deg); }
-/* Eigenständiger Ziehgriff am unteren Banner-Rand (Greif-Pille wie der Splitter) */
-.pb-grip { display:flex; align-items:center; justify-content:center; height:15px; cursor:pointer; }
-.pb-grip::after { content:''; width:52px; height:6px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
-[data-theme="light"] .pb-grip::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
-.pb-grip:hover::after { background:var(--acc); box-shadow:0 0 0 3px var(--acc-s); }
+/* Ausroll-Pille auf der Topbar-Randlinie (Greif-Pille wie Splitter/Drawer) — Banner ein-/ausklappen */
+.banner-roll { position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); z-index:25;
+  width:44px; height:10px; display:flex; align-items:center; justify-content:center; border:none; background:none; cursor:pointer; padding:0; }
+.banner-roll::after { content:''; width:44px; height:5px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
+[data-theme="light"] .banner-roll::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.banner-roll:hover::after { background:var(--acc); box-shadow:0 0 0 3px var(--acc-s); }
 /* Live-Plausibilität: Warnzeilen oben im Eingabe-Panel */
 #plaus-bar { display:flex; flex-direction:column; gap:4px; margin:0 0 8px; }
 .plaus-item { font-family:var(--f-mono); font-size:9px; line-height:1.35; padding:5px 8px; border-radius:5px; border:1px solid; }
@@ -828,9 +827,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   .res-drawer-tab::after { content:''; position:absolute; left:-4px; top:50%; transform:translateY(-50%);
     width:6px; height:52px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
   [data-theme="light"] .res-drawer-tab::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
-  .res-drawer-tab.ok::after   { background:var(--ok);   }
-  .res-drawer-tab.warn::after { background:var(--warn); }
-  .res-drawer-tab.fail::after { background:var(--fail); }
   .res-drawer-tab:hover::after { background:var(--acc); height:68px; box-shadow:0 0 0 3px var(--acc-s); }
   .res-drawer-tab .rdt-label { writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--f-mono);
     font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
@@ -839,11 +835,11 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   .res-drawer-tab .rdt-val small { font-size:8px; font-weight:500; opacity:.7; letter-spacing:.1em; }
   .res-drawer-tab .rdt-val.ok { color:var(--ok); } .res-drawer-tab .rdt-val.warn { color:var(--warn); } .res-drawer-tab .rdt-val.fail { color:var(--fail); }
   .res-drawer-tab .rdt-dot { width:8px; height:8px; border-radius:50%; background:var(--dim); flex:none; }
-  .res-drawer-tab.ok   { color:var(--ok);   border-color:var(--ok);   }
+  .res-drawer-tab.ok   { color:var(--ok);   }
   .res-drawer-tab.ok   .rdt-dot { background:var(--ok);   }
-  .res-drawer-tab.fail { color:var(--fail); border-color:var(--fail); }
+  .res-drawer-tab.fail { color:var(--fail); }
   .res-drawer-tab.fail .rdt-dot { background:var(--fail); }
-  .res-drawer-tab.warn { color:var(--warn); border-color:var(--warn); }
+  .res-drawer-tab.warn { color:var(--warn); }
   .res-drawer-tab.warn .rdt-dot { background:var(--warn); }
   .workspace.res-open .res-drawer-tab { right:clamp(360px, 30vw, 560px); }
   .workspace.res-wide-diag.res-open .res-drawer-tab { right:clamp(520px, 46vw, 780px); }
@@ -881,8 +877,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   <div class="tb-sep"></div>
   <button class="tb-proj-btn" id="proj-banner-btn" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" style="position:absolute;left:50%;transform:translateX(-50%)">
     <span class="tb-proj" id="tb-projname"></span>
-    <svg class="pbn-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
   </button>
+  <button class="banner-roll" id="banner-roll" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" aria-label="Projektangaben ein-/ausblenden"></button>
   <!-- Icon-Buttons zentriert auf Breite der Nachweise-Sidebar (320px) -->
   <div style="width:320px;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;margin-left:auto">
     <button class="btn btn-icon" onclick="openHandbuch()" title="Handbuch">
@@ -967,7 +963,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       </div>
     </div>
   </div>
-  <div class="pb-grip" onclick="toggleProjBanner(false)" title="Projektangaben einklappen"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -5812,7 +5807,7 @@ document.addEventListener('wheel', function(e){
 // ════════════════════════════════════════════
 // PFAHLFUNDAMENT — NACHWEIS-DIAGRAMME (expandierbar via toggleGZTExpand)
 // ════════════════════════════════════════════
-const _pbE = e => e>=1.5?'var(--ok)':e>=1.0?'var(--warn)':'var(--fail)';
+const _pbE = e => e>=1.0?'var(--ok)':'var(--fail)';
 
 // Geotechnik: Axialkraft pro Pfahl vs. R_s,d (Mantelreibung; Druck/Zug getrennt)
 // Mantelreibungswiderstand über die Tiefe (kumulativ) + Schichtbänder, Druck- und Zug-Bemessungswert,
@@ -5961,7 +5956,7 @@ function buildPbSchnittSVG(r, n, wide){
   const prof=r.pyProfile; if(!prof || prof.length<4) return '';
   const sc=r.FLatMax||0; if(sc<1e-6) return '';
   const e=Math.max(0,r.e||0), L=r.L||6, Mrd=r.M_Rd||0, etaS=r.etaSteel;
-  const eC=etaS>=1.5?'var(--ok)':etaS>=1.0?'var(--warn)':'var(--fail)';
+  const eC=etaS>=1.0?'var(--ok)':'var(--fail)';
   const py=prof.map(p=>({z:p.z, v:p.y_mm*sc})), pV=prof.map(p=>({z:p.z, v:(p.V||0)*sc})), pM=prof.map(p=>({z:p.z, v:(p.M||0)*sc}));
   const yMx=Math.max(1e-3,...py.map(p=>Math.abs(p.v))), VMx=Math.max(1e-3,...pV.map(p=>Math.abs(p.v)));
   const MMx=Math.max(1e-3,...pM.map(p=>Math.abs(p.v))), MScale=Math.max(MMx, Mrd*1.05);
@@ -6105,7 +6100,7 @@ function buildPbSystemSVG(r, piles, n, wide){
 
 function _pbResultHTML(r, piles, n){
   if(!r || !r.uls) return '<div style="color:var(--fail);font-size:11px">Berechnung nicht möglich — Eingaben prüfen.</div>';
-  const cV=e=>e>=1.5?'var(--ok)':e>=1.0?'var(--warn)':'var(--fail)';
+  const cV=e=>e>=1.0?'var(--ok)':'var(--fail)';
   const row=(l,v)=>`<div class="nw-row"><span>${l}</span><span>${v}</span></div>`;
   // Anklickbare Zeile mit Aufschlüsselung (gleicher Mechanismus wie Block: toggleGZTFormula)
   const rowD=(l,v,detail)=>detail
@@ -6116,7 +6111,7 @@ function _pbResultHTML(r, piles, n){
     : `<div class="nw-row" style="font-weight:600"><span>${l}</span><span style="color:${cV(e)}">η = ${isFinite(e)?e.toFixed(2):'∞'}</span></div>`;
   // ── Zuklappbare Nachweis-Karte (gleiches Pattern wie Block-GZT/GZG)
   const cardHd=(title,etaVal,rightTxt=null,gov=false)=>{
-    const cl=rightTxt!=null?'dim':!isFinite(etaVal)?'dim':etaVal>=1.5?'ok':etaVal>=1.0?'warn':'fail';
+    const cl=rightTxt!=null?'dim':!isFinite(etaVal)?'dim':etaVal>=1.0?'ok':'fail';
     const tx=rightTxt!=null?rightTxt:(isFinite(etaVal)?'η = '+etaVal.toFixed(2):'n.m.');
     const bc={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[cl];
     const bar=(rightTxt==null&&isFinite(etaVal)&&etaVal>0)
@@ -6154,7 +6149,7 @@ function _pbResultHTML(r, piles, n){
       `<div style="display:flex;justify-content:space-between;padding-top:1px"><span style="color:var(--dim)">η_Geo = R_s,d / |N|</span><span style="color:${cV(p.eGeo)}">${(p.zug?r.Rskin_dZ:r.Rskin_d).toFixed(0)} / ${Math.abs(p.F).toFixed(0)} = ${isFinite(p.eGeo)?p.eGeo.toFixed(2):'∞'}</span></div>`):'(keine Aufschlüsselung)';
     return `<div class="nw-row clickable" onclick="toggleGZTFormula(null,this)">
         <span>P${i+1} <span style="color:var(--xdim);font-size:8px">▸ ${shortLF(p.lf)}</span></span>
-        <span><span style="color:${cV(eg)}">N=${p.F}${p.zug?'↑':''}</span> · M=${p.Mp} · η=${isFinite(eg)?eg.toFixed(2):'∞'}</span>
+        <span>N = ${p.F} kN (${p.zug?'Zug':'Druck'}) · M = ${p.Mp} kNm · η = ${isFinite(eg)?eg.toFixed(2):'∞'}</span>
       </div><div class="nw-row-formula"><div class="f-num">${detail}</div></div>`; }).join('');
   // ── Mantelreibungswiderstand je Schicht (Drill-down): q_s,k · U · Δz → ΔR, aufsummiert
   const skL=r.skinLayers||[];
@@ -6207,7 +6202,7 @@ function _pbResultHTML(r, piles, n){
     ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
 
     <!-- Pfahlkräfte-Übersicht — immer sichtbar, Zeile anklicken = Aufschlüsselung -->
-    <div style="font-size:9px;color:var(--dim);margin:0 0 3px">Pfahlkräfte ULS · massgebend je Pfahl über ${r.ulsCombosN||0} Lastfälle (quer/längs × γ_G inf/sup) &nbsp;<span style="color:var(--xdim)">(↑ Zug · Zeile anklicken → Lastanteile + LF)</span></div>
+    <div style="font-size:9px;color:var(--dim);margin:0 0 3px">Pfahlkräfte ULS (Bemessungswerte, γ_G inf/sup) · massgebend je Pfahl über ${r.ulsCombosN||0} Lastfälle (quer/längs) &nbsp;<span style="color:var(--xdim)">(N: + Druck / − Zug · Zeile anklicken → Lastanteile + LF)</span></div>
     <div style="margin-bottom:10px">${pll}</div>
 
     <div class="lf-grp">GZT — Grenzzustand der Tragfähigkeit · Mikropfahl-Gruppe</div>
@@ -7334,7 +7329,7 @@ function buildBishopSVG(b, wide){
   const VB=wide?520:264, HB=wide?300:210, PADL=10,PADR=10,PADT=24,PADB=18;
   const pw=VB-PADL-PADR, ph=HB-PADT-PADB, sc=Math.min(pw/Math.max(0.5,xhi-xlo), ph/Math.max(0.5,yhi-ylo));
   const X=x=>PADL+(x-xlo)*sc, Y=y=>PADT+(yhi-y)*sc;                       // y nach oben
-  const eC=b.eta>=1.5?'var(--ok)':b.eta>=1.0?'var(--warn)':'var(--fail)';
+  const eC=b.eta>=1.0?'var(--ok)':'var(--fail)';
   let surf=''; const nS=64;
   for(let i=0;i<=nS;i++){ const x=xlo+(xhi-xlo)*i/nS; surf+=`${X(x).toFixed(1)},${Y(surfY(x)).toFixed(1)} `; }
   const soilPoly=`${X(xlo).toFixed(1)},${Y(ylo).toFixed(1)} `+surf+`${X(xhi).toFixed(1)},${Y(ylo).toFixed(1)}`;
@@ -8515,7 +8510,7 @@ function calcPfahlsicherung(){
   const ok  = v => `<span style="color:var(--ok);font-weight:500">${v}</span>`;
   const wrn = v => `<span style="color:var(--warn);font-weight:500">${v}</span>`;
   const fal = v => `<span style="color:var(--fail);font-weight:500">${v}</span>`;
-  const eta_cls = e => e >= 1.5 ? ok : e >= 1.0 ? wrn : fal;
+  const eta_cls = e => e >= 1.0 ? ok : fal;
 
   const row = (lbl, val, unit='') =>
     `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)">
@@ -8536,7 +8531,7 @@ function calcPfahlsicherung(){
   // Zuklappbare Nachweis-Karten (gleiches Pattern wie GZT/GZG im Nachweis-Panel)
   // gov=true markiert die massgebende Karte (Akzent-Rahmen)
   const cardHd = (title, etaVal, rightTxt=null, gov=false) => {
-    const cl = rightTxt!=null ? 'dim' : !isFinite(etaVal) ? 'dim' : etaVal>=1.5?'ok':etaVal>=1.0?'warn':'fail';
+    const cl = rightTxt!=null ? 'dim' : !isFinite(etaVal) ? 'dim' : etaVal>=1.0?'ok':'fail';
     const tx = rightTxt!=null ? rightTxt : (isFinite(etaVal) ? 'η = '+etaVal.toFixed(2) : 'n.m.');
     const bc={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[cl];
     const bar=(rightTxt==null&&isFinite(etaVal)&&etaVal>0)
@@ -8558,7 +8553,7 @@ function calcPfahlsicherung(){
       ${(() => {
         // ── Zustandsvergleich Bestand / A ohne Massnahme / B mit Massnahme
         if(d_ex <= 0.01) return `<div style="margin:6px 0 8px;padding:5px 8px;background:var(--s2);border-radius:var(--r1);font-size:9px;color:var(--xdim)">Kein Aushub definiert — Zustandsvergleich erscheint bei d_ex &gt; 0</div>`;
-        const pill = e => { const c = !isFinite(e) ? 'var(--xdim)' : e>=1.5?'var(--ok)':e>=1.0?'var(--warn)':'var(--fail)';
+        const pill = e => { const c = !isFinite(e) ? 'var(--xdim)' : e>=1.0?'var(--ok)':'var(--fail)';
           return `<span style="color:${c};font-weight:600">${isFinite(e)?e.toFixed(2):'n.m.'}</span>`; };
         const sideLbl = dEx_side==='passiv' ? 'Erdwiderstandsseite' : dEx_side==='aktiv' ? 'aktive Seite'
                       : dEx_side==='parallel' ? 'parallel zur Lastrichtung' : '—';
@@ -8600,7 +8595,7 @@ function calcPfahlsicherung(){
       <!-- Massgebender Nachweis — immer sichtbar -->
       <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin:0 0 8px;background:var(--s3);border-radius:var(--r1)">
         <span style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Massgebender Nachweis</span>
-        <span style="font-weight:600;color:${!isFinite(eta_massgebend)?'var(--xdim)':eta_massgebend>=1.5?'var(--ok)':eta_massgebend>=1.0?'var(--warn)':'var(--fail)'}">${isFinite(eta_massgebend)?'η = '+eta_massgebend.toFixed(2)+' · '+nw_massgebend:'n.m.'}</span>
+        <span style="font-weight:600;color:${!isFinite(eta_massgebend)?'var(--xdim)':eta_massgebend>=1.0?'var(--ok)':'var(--fail)'}">${isFinite(eta_massgebend)?'η = '+eta_massgebend.toFixed(2)+' · '+nw_massgebend:'n.m.'}</span>
       </div>
 
       <!-- Richtungsfall Stütze — immer sichtbar -->
@@ -8716,9 +8711,9 @@ function calcPfahlsicherung(){
       ${(() => {
         // ── Systemnachweis Block + Pfahl (GZT + GZG) — Blockkapazität im Aushubzustand
         if(!isFinite(etaGZT_block) || Md_Hst_block < 0.1) return '';
-        const eta_sys_c = eta_sys >= 1.5 ? 'var(--ok)' : eta_sys >= 1.0 ? 'var(--warn)' : 'var(--fail)';
-        const eta_blk_c = etaGZT_block >= 1.5 ? 'var(--ok)' : etaGZT_block >= 1.0 ? 'var(--warn)' : 'var(--fail)';
-        const eta_ex_c  = !hasExState ? 'var(--xdim)' : etaGZT_ex >= 1.5 ? 'var(--ok)' : etaGZT_ex >= 1.0 ? 'var(--warn)' : 'var(--fail)';
+        const eta_sys_c = eta_sys >= 1.0 ? 'var(--ok)' : 'var(--fail)';
+        const eta_blk_c = etaGZT_block >= 1.0 ? 'var(--ok)' : 'var(--fail)';
+        const eta_ex_c  = !hasExState ? 'var(--xdim)' : etaGZT_ex >= 1.0 ? 'var(--ok)' : 'var(--fail)';
         const capped    = H_pf_full > Hu_gruppe + 0.01;
         const deficit   = Math.max(0, Md_Hst_block - Mu_sys);
         return cardHd('Systemnachweis Block + Pfahl', eta_sys, null, nw_massgebend==='System') + `
@@ -9665,7 +9660,7 @@ function _doCalculate(){
 // ════════════════════════════════════════════
 // RENDER RESULTS
 // ════════════════════════════════════════════
-function eCls(e){if(e===Infinity||isNaN(e))return'dim';return e>=1.5?'ok':e>=1.0?'warn':'fail';}
+function eCls(e){if(e===Infinity||isNaN(e))return'dim';return e>=1.0?'ok':'fail';}
 function eTxt(e){if(e===Infinity||isNaN(e))return'n.m.';return`η = ${e.toFixed(2)}`;}
 
 // ── Formel-Definitionen für GZT-Zeilen (Steckner Typ C) ─────────────────────
@@ -11122,7 +11117,7 @@ function buildPfahlSchnittSVG(params, wide=false){
   const c_on2 = _lt?'#3a3c48':'#b8bac4';
   const c_acc = '#7c8de0', c_ep='#ffaa44', c_ok='#6fcf8e';
   const c_fail= '#cf7070', c_warn='#c9a84c', c_pu_v='#4db8c9';
-  const etaCls = e => e>=1.5?c_ok:e>=1.0?c_warn:c_fail;
+  const etaCls = e => e>=1.0?c_ok:c_fail;
 
   // Skalierung: Wert → Pixel-Abstand von Nullachse
   const sc_y = v => (v / Math.max(0.001, y_max)) * col_w * 0.42;
@@ -11505,7 +11500,7 @@ function buildPfahlSystemSVG(params, wide=false){
   const c_on2= _lt?'#3a3c48':'#b8bac4';
   const c_acc='#7c8de0', c_ep='#ffaa44', c_pu='#4db8c9';
   const c_ok='#6fcf8e', c_fail='#cf7070', c_warn='#c9a84c';
-  const etaCls = v => v>=1.5?c_ok:v>=1.0?c_warn:c_fail;
+  const etaCls = v => v>=1.0?c_ok:c_fail;
   const fOvCol = r_overlap>0.15?c_warn:r_overlap>0.02?c_ep:c_ok;
 
   const etaBox = (lbl,val,x,y,w=82) => {
@@ -11933,7 +11928,7 @@ function buildPfahlErddruckSVG(params, wide=false){
   const c_ok  = '#6fcf8e', c_fail='#cf7070', c_warn='#c9a84c';
   const c_s2  = _lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
   const c_xdim= _lt?'#9a9caa':'#4e5058';
-  const etaCls = e => e>=1.5?c_ok:e>=1.0?c_warn:c_fail;
+  const etaCls = e => e>=1.0?c_ok:c_fail;
 
   // ── Berechnete Grössen für Annotationen
   // Rotationszentrum (starrer freier Pfahl, Winkler): z_r = (2L+3e)×L / (3×(2e+L))
@@ -13222,7 +13217,7 @@ function _updateDrawerStatus(){
     });
     const setVal=(id,pfx,val)=>{ const e=document.getElementById(id); if(!e) return;
       if(isFinite(val)){ e.innerHTML='<small>'+pfx+' </small>'+val.toFixed(2);
-        e.className='rdt-val '+(val>=1.5?'ok':val>=1.0?'warn':'fail'); e.style.display=''; }
+        e.className='rdt-val '+(val>=1.0?'ok':'fail'); e.style.display=''; }
       else e.style.display='none'; };
     setVal('rdt-gzt','GZT',gGzt); setVal('rdt-gzg','GZG',gGzg);
   });
