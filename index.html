@@ -52,11 +52,12 @@ html, body {
 /* ═══════════════════════════════════════════
    APP SHELL — Desktop 3-col
    ═══════════════════════════════════════════ */
-.app { display:grid; grid-template-rows:48px 1fr 26px; height:100dvh; position:relative; }
+.app { display:grid; grid-template-rows:48px auto 1fr 26px; height:100dvh; position:relative; }
 /* Projekt-Banner: vertikal ausklappbar aus der Topbar (Projektangaben/Metadaten) */
-.proj-banner { position:absolute; top:48px; left:0; right:0; z-index:24; background:var(--s1);
-  border-bottom:1px solid var(--ol); box-shadow:0 10px 26px rgba(0,0,0,.32);
-  overflow:hidden; max-height:0; transition:max-height .28s ease; }
+/* In-flow (eigene Grid-Zeile in .app) → schiebt beim Ausrollen den Arbeitsbereich nach unten,
+   statt ihn zu überlagern; beim Einschieben wird die Eingabe oben wieder sichtbar. */
+.proj-banner { background:var(--s1); border-bottom:1px solid var(--ol);
+  overflow:hidden; max-height:0; transition:max-height .28s ease, border-color .15s; }
 .proj-banner.open { max-height:min(78vh, 600px); }
 .proj-banner-inner { padding:14px 18px; max-height:min(76vh, 560px); overflow-y:auto; }
 .pb-cols { display:flex; gap:20px; align-items:flex-start; }
@@ -72,15 +73,21 @@ html, body {
 /* Topbar-Toggle (Projektname + Chevron) */
 /* Projektname als reiner Text (kein Button-Chrome) — geöffnet wird über die Ausroll-Pille */
 .tb-proj-btn { display:flex; align-items:center; gap:8px; background:transparent; border:none; cursor:pointer;
-  padding:5px 8px; color:inherit; transition:color .15s; max-width:46vw; }
+  padding:5px 8px; color:inherit; transition:color .15s; max-width:min(62vw, 760px); }
 .tb-proj-btn:hover, .tb-proj-btn.open { color:var(--acc); }
 .tb-proj-btn .tb-proj { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* Ausroll-Pille auf der Topbar-Randlinie (Greif-Pille wie Splitter/Drawer) — Banner ein-/ausklappen */
-.banner-roll { position:absolute; bottom:-5px; left:50%; transform:translateX(-50%); z-index:25;
-  width:44px; height:10px; display:flex; align-items:center; justify-content:center; border:none; background:none; cursor:pointer; padding:0; }
-.banner-roll::after { content:''; width:44px; height:5px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
+/* Sitzt auf der Banner-Unterkante (Trennlinie zum Arbeitsbereich) und fährt beim Ausrollen mit nach
+   unten (top wird in toggleProjBanner gesetzt, Transition synchron zur Banner-max-height). */
+.banner-roll { position:absolute; top:41px; left:50%; transform:translateX(-50%); z-index:25;
+  width:72px; height:14px; display:flex; align-items:center; justify-content:center; border:none; background:none; cursor:pointer; padding:0; transition:top .28s ease; }
+.banner-roll::after { content:''; width:52px; height:6px; border-radius:3px; background:var(--dim);
+  box-shadow:0 1px 4px rgba(0,0,0,.35); transition:background .15s, width .15s, box-shadow .15s; }
 [data-theme="light"] .banner-roll::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
-.banner-roll:hover::after { background:var(--acc); box-shadow:0 0 0 3px var(--acc-s); }
+.banner-roll:hover::after { background:var(--acc); width:68px; box-shadow:0 0 0 3px var(--acc-s); }
+.banner-roll:focus { outline:none; }
+.banner-roll:focus-visible::after { background:var(--acc); width:68px; box-shadow:0 0 0 3px var(--acc-s); }
+.tb-proj-btn:focus { outline:none; }
 /* Live-Plausibilität: Warnzeilen oben im Eingabe-Panel */
 #plaus-bar { display:flex; flex-direction:column; gap:4px; margin:0 0 8px; }
 .plaus-item { font-family:var(--f-mono); font-size:9px; line-height:1.35; padding:5px 8px; border-radius:5px; border:1px solid; }
@@ -114,11 +121,14 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .topbar {
   display:flex; align-items:center; padding:0 12px; gap:6px;
   background:var(--s1); border-bottom:1px solid var(--ol); z-index:20; flex-shrink:0;
+  transition:border-color .15s;
 }
+/* Hover auf die Ausroll-Pille färbt die zugehörige Trennlinie blau (Topbar zu / Banner-Unterkante offen) */
+.app:has(#banner-roll:hover) .topbar, .app:has(#banner-roll:hover) .proj-banner { border-bottom-color:var(--acc); }
 .tb-logo { font-family:var(--f-mono); font-size:13px; font-weight:500; color:var(--on); letter-spacing:0.04em; white-space:nowrap; flex-shrink:0; }
 .tb-sub  { font-size:9.5px; color:var(--xdim); font-family:var(--f-mono); margin-left:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
 .tb-proj { font-family:var(--f-mono); font-size:11.5px; font-weight:500; color:var(--on2); margin-left:2px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; flex-shrink:1; }
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:min(58vw, 700px); flex-shrink:1; }
 .tb-sep  { flex:1; min-width:8px; }
 /* Responsive: auf kleinen Screens Projektname kürzen */
 @media(max-width:900px){ .tb-proj { max-width:120px; } }
@@ -748,10 +758,9 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
    ═══════════════════════════════════════════ */
 @media (max-width: 767px) {
   html, body { overflow:hidden; }
-  .app { grid-template-rows:52px 1fr; }
+  .app { grid-template-rows:52px auto 1fr; }
   .workspace { grid-template-columns:1fr!important; position:relative; }
   .ws-split { display:none; }   /* Splitter nur Desktop/Foldable; Smartphone nutzt Tabs */
-  .proj-banner { top:52px; }    /* Topbar ist auf Mobile 52px hoch */
   .pb-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
   .statusbar { display:none; }
   .tb-sub { display:none; }
@@ -820,12 +829,13 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
     background:var(--s2); color:var(--dim);
     z-index:19; cursor:pointer; transition:right .26s ease, background .15s, color .15s, border-color .15s;
   }
-  .res-drawer-tab:hover { background:var(--s3); }
+  .res-drawer-tab:hover { background:var(--s3); border-left-color:var(--acc); }
   .res-drawer-tab:focus { outline:none; }
   .res-drawer-tab:focus-visible { outline:2px solid var(--acc); outline-offset:-2px; }
   /* Greif-Pille wie der linke Splitter (auf der Kantenlinie) */
   .res-drawer-tab::after { content:''; position:absolute; left:-4px; top:50%; transform:translateY(-50%);
-    width:6px; height:52px; border-radius:3px; background:var(--dim); transition:background .15s, box-shadow .15s; }
+    width:6px; height:52px; border-radius:3px; background:var(--dim);
+    box-shadow:0 1px 4px rgba(0,0,0,.35); transition:background .15s, height .15s, box-shadow .15s; }
   [data-theme="light"] .res-drawer-tab::after { background:var(--ol2); box-shadow:0 1px 3px rgba(0,0,0,.12); }
   .res-drawer-tab:hover::after { background:var(--acc); height:68px; box-shadow:0 0 0 3px var(--acc-s); }
   .res-drawer-tab .rdt-label { writing-mode:vertical-rl; transform:rotate(180deg); font-family:var(--f-mono);
@@ -13242,6 +13252,15 @@ function toggleProjBanner(force){
   const open=(force!==undefined) ? !!force : !b.classList.contains('open');
   b.classList.toggle('open', open);
   if(btn) btn.classList.toggle('open', open);
+  // Ausroll-Pille auf die Banner-Unterkante setzen (fährt via CSS-Transition mit): geschlossen an der
+  // Topbar-Randlinie, offen an der Banner-Unterkante (Trennlinie zum Arbeitsbereich).
+  const roll=document.getElementById('banner-roll');
+  if(roll){
+    const tbH=(document.querySelector('.topbar')||{}).offsetHeight||48;
+    const cap=Math.min(0.78*window.innerHeight, 600);
+    const bh=open ? Math.min(b.scrollHeight, cap) : 0;
+    roll.style.top=(tbH + bh - 7)+'px';
+  }
 }
 // Offenes Banner einrollen, sobald daneben (Modell/Sidebar) geklickt wird — Klicks im Banner
 // oder auf den Toggle-Button schliessen es NICHT (dort übernimmt der eigene Handler).
@@ -13903,6 +13922,9 @@ function resizeViewer(){
   camera.updateProjectionMatrix();
   // Schublade offen → View-Offset mit neuer Canvas-Breite neu setzen (fullWidth in setViewOffset sonst stale)
   if(typeof _drawerShiftCur!=='undefined' && Math.abs(_drawerShiftCur)>0.5 && typeof moveCam==='function') moveCam();
+  // Sofort neu zeichnen: nach setSize ist der WebGL-Buffer geleert; ohne synchrones Render zeigt der
+  // Compositor während einer CSS-Transition (Splitter-Ziehen / Banner-Ausrollen) einen schwarzen Frame.
+  try{ if(scene && camera) renderer.render(scene, camera); }catch(e){}
 }
 
 function mobSwitch(view){
