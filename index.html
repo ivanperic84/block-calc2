@@ -54,21 +54,23 @@ html, body {
    ═══════════════════════════════════════════ */
 .app { display:grid; grid-template-rows:48px auto 1fr 26px; height:100dvh; position:relative; }
 /* Projekt-Banner: vertikal ausklappbar aus der Topbar (Projektangaben/Metadaten) */
-/* In-flow (eigene Grid-Zeile in .app) → schiebt beim Ausrollen den Arbeitsbereich nach unten,
-   statt ihn zu überlagern; beim Einschieben wird die Eingabe oben wieder sichtbar. */
+/* In-flow (eigene Grid-Zeile) → schiebt beim Ausrollen den GANZEN Arbeitsbereich (beide Overlay-
+   Sidebars + Modellfenster) nach unten, statt ihn zu überlagern → Modell + Ausnutzung bleiben beim
+   Projekt-Laden sichtbar. Kein Schatten. */
 .proj-banner { background:var(--s1); border-bottom:1px solid var(--ol);
   overflow:hidden; max-height:0; transition:max-height .28s ease, border-color .15s; }
 .proj-banner.open { max-height:min(78vh, 600px); }
 .proj-banner-inner { padding:14px 18px; max-height:min(76vh, 560px); overflow-y:auto; }
-.pb-cols { display:flex; gap:20px; align-items:flex-start; }
+.pb-cols { display:flex; gap:20px; align-items:stretch; }
 .pb-col { flex:1 1 0; min-width:0; }
 .pb-col.pb-col-wide { flex:1.15 1 0; }
-.pb-col.pb-col-proj { flex:1.7 1 0; }
+/* Gespeicherte Projekte: Liste füllt die volle Höhe der ausgerollten Schublade */
+.pb-col.pb-col-proj { flex:1.7 1 0; display:flex; flex-direction:column; min-height:0; }
 .pb-col-h { font-family:var(--f-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--acc); margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--ol); }
 .pb-grid2 { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:7px 12px; }
 .pb-grid2 .pb-wide { grid-column:span 2; }
-.pb-projlist { max-height:240px; overflow-y:auto; }
+.pb-projlist { flex:1 1 auto; min-height:120px; overflow-y:auto; }
 @media (max-width:900px){ .pb-cols { flex-wrap:wrap; } .pb-col, .pb-col.pb-col-wide, .pb-col.pb-col-proj { flex:1 1 100%; } }
 /* Topbar-Toggle (Projektname + Chevron) */
 /* Projektname als reiner Text (kein Button-Chrome) — geöffnet wird über die Ausroll-Pille */
@@ -99,10 +101,13 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 #btn-save { position:relative; }
 #btn-save.dirty::after { content:''; position:absolute; top:1px; right:1px; width:8px; height:8px; border-radius:50%;
   background:var(--warn); border:1.5px solid var(--s1); }
-.workspace { display:grid; grid-template-columns:var(--col-l,400px) minmax(0,1fr); overflow:hidden; min-height:0; position:relative; transition:grid-template-columns 0.22s ease; }
+/* Viewer nimmt die volle Breite ein; Eingabe (links) UND Ergebnisse (rechts) liegen als Overlay-
+   Schubladen darüber (position:absolute) → Breiten-/Auf-/Zu-Änderungen verkleinern den Viewer nie
+   (kein Canvas-Resize, kein Schwarz-Flackern). Das Modell wird per View-Offset seitlich versetzt. */
+.workspace { display:grid; grid-template-columns:minmax(0,1fr); overflow:hidden; min-height:0; position:relative; }
 .workspace.resizing { transition:none; }   /* 1:1 beim Ziehen, kein Lag */
-/* Splitter-Griffe (OnePlus-Open-Stil): dünne Linie + Pille. Ziehen = stufenlos, Tippen = Snap-Zyklus */
-.ws-split { position:absolute; top:0; bottom:0; width:16px; z-index:15; cursor:col-resize; touch-action:none;
+/* Splitter-Griffe (OnePlus-Open-Stil): dünne Linie + Pille. Ziehen = stufenlos, Tippen = auf/zu */
+.ws-split { position:absolute; top:0; bottom:0; width:16px; z-index:17; cursor:col-resize; touch-action:none;
   display:flex; align-items:center; justify-content:center; }
 .ws-split::before { content:''; width:2px; height:100%; background:var(--ol); transition:background .15s; }
 .ws-split::after { content:''; position:absolute; width:6px; height:52px; border-radius:3px; background:var(--dim);
@@ -405,10 +410,19 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 #viewer { flex:1; position:relative; background:var(--viewer-bg); overflow:hidden; min-height:0; }
 #viewer canvas { display:block; position:absolute; top:0; left:0; width:100%!important; height:100%!important; }
 .viewer-fab { position:absolute; top:10px; right:calc(var(--vfab-inset,10px) + var(--drawer-w,0px)); display:flex; flex-direction:column; gap:4px; z-index:2; transition:right .26s ease; }
-.viewer-fab.viewer-fab-l { left:var(--vfab-inset,10px); right:auto; }
-/* Bei offener Nachweis-Schublade die rechtsseitigen/mittigen Viewer-Controls mitschieben (klickbar halten) */
+/* Linke Kamera-Leiste + Achsen-Widget bei offener Eingabe-Schublade mitschieben (klickbar halten) */
+.viewer-fab.viewer-fab-l { left:calc(var(--vfab-inset,10px) + var(--inp-w,0px)); right:auto; transition:left .26s ease; }
+#axis-widget { left:calc(10px + var(--inp-w,0px)) !important; transition:left .26s ease; }
+/* Bei offener Nachweis-Schublade (rechts) bzw. Eingabe-Schublade (links) die Viewer-Controls mitschieben */
 #viewer-legend-wrap { right:calc(var(--vfab-inset,10px) + var(--drawer-w,0px)) !important; transition:right .26s ease; }
-#viewer-lf { transform:translateX(calc(-50% - var(--drawer-w,0px) / 2)) !important; transition:transform .26s ease; }
+#viewer-lf { transform:translateX(calc(-50% - var(--drawer-w,0px) / 2 + var(--inp-w,0px) / 2)) !important; transition:transform .26s ease; }
+#viewer-nw-badge { transform:translateX(calc(-50% - var(--drawer-w,0px) / 2 + var(--inp-w,0px) / 2)) !important; transition:transform .26s ease; }
+/* Beim Ziehen der Eingabe-Schublade folgen die Overlay-Controls 1:1 (Transition aus) */
+.workspace.resizing .viewer-fab-l, .workspace.resizing #axis-widget,
+.workspace.resizing #viewer-lf, .workspace.resizing #viewer-nw-badge { transition:none !important; }
+/* Init-Guard: beim Erstaufbau keine Transition (sonst gleiten die Controls einmalig vom Fallback zum Ziel) */
+.ws-noanim #panel-input, .ws-noanim #ws-split-l, .ws-noanim .viewer-fab, .ws-noanim .viewer-fab-l,
+.ws-noanim #axis-widget, .ws-noanim #viewer-lf, .ws-noanim #viewer-nw-badge, .ws-noanim #viewer-legend-wrap { transition:none !important; }
 .viewer-legend {
   background:var(--s1); border:1px solid var(--ol); border-radius:var(--r2);
   padding:8px 12px; font-family:var(--f-mono); font-size:9.5px; color:var(--on2); line-height:1.9;
@@ -488,8 +502,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 /* Nachweisplot Overlay */
 .nw-plot-overlay { position:fixed; inset:0; z-index:200; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; }
 .nw-plot-topbar { display:flex; align-items:center; gap:10px; padding:0 16px; height:48px; border-bottom:1px solid var(--ol); flex-shrink:0; position:relative; }
-.nw-plot-title { position:absolute; left:50%; transform:translateX(-50%); font-family:var(--f-mono); font-size:12px; font-weight:500; white-space:nowrap; pointer-events:none; }
-.nw-plot-title { font-family:var(--f-mono); font-size:11px; font-weight:600; color:var(--on2); letter-spacing:0.05em; flex:1; }
+.nw-plot-title { font-family:var(--f-mono); font-size:11px; font-weight:600; color:var(--on2); letter-spacing:0.05em; flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nw-plot-body { flex:1; overflow:hidden; display:flex; flex-direction:row; gap:0; padding:0; }
 .nw-plot-sidebar { width:148px; flex-shrink:0; overflow-y:auto; background:var(--s1); border-right:1px solid var(--ol); padding:12px 8px; display:flex; flex-direction:column; gap:10px; }
 .nw-plot-thumb { cursor:pointer; border:1.5px solid var(--ol); border-radius:3px; overflow:hidden; position:relative; width:128px; height:181px; background:white; flex-shrink:0; transition:border-color .15s; }
@@ -595,6 +608,11 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 .np-cf{color:var(--dim)}
 .np-cv{color:var(--on2);padding-left:14px}
 .np-cr{color:var(--acc);font-weight:700;padding-left:14px}
+/* Detailtiefe „Einfach": Einsetzen-Zeilen ausblenden → kompakter Formel-+-Ergebnis-Bericht */
+.np-doc.np-simple .np-cv{display:none}
+.np-doc.np-simple .np-calc{padding-bottom:5px}
+/* Abbildungen aus: eingebettete Figuren (SVG-Diagramme, 3D-Screenshot) ausblenden */
+.np-doc.np-nofig .np-fig{display:none}
 .np-ch{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--on2);padding:2px 0;margin:18px 0 9px;color:var(--on2)}
 .np-hr{border:none;border-top:.5px solid var(--ol);margin:10px 0}
 .np-def{display:grid;grid-template-columns:180px 1fr auto;gap:1px 8px;font-size:8.5px;margin-bottom:6px}
@@ -815,6 +833,16 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
      damit sie sich nicht mit Splitter-Griff (links) bzw. Schubladen-Griff + Schatten
      (rechts) der Ergebnis-Schublade überlagern. */
   #viewer { --vfab-inset:44px; }
+  /* Eingabe-Panel als Overlay-Schublade von links (wie die Nachweise rechts) — immer sichtbar.
+     Breite überlagert den Viewer, verkleinert ihn nicht (kein Schwarz-Flackern). Griff: Ziehen =
+     stufenlose Breite, Tippen = zwischen Normal-/Breit-Ansicht wechseln (Tabellen komplett sichtbar). */
+  #panel-input {
+    position:absolute; top:0; left:0; bottom:0; width:var(--col-l,400px);
+    transition:width .26s ease; z-index:16;
+  }
+  .workspace.resizing #panel-input, .workspace.resizing #ws-split-l { transition:none; }   /* 1:1 beim Ziehen */
+  /* Griff folgt der Breite (Snap animiert mit) */
+  #ws-split-l { transition:left .26s ease; }
   #panel-results {
     position:absolute; top:0; right:0; bottom:0; width:clamp(360px, 30vw, 560px);
     transform:translateX(100%); transition:transform .26s ease; z-index:18;
@@ -888,7 +916,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   <button class="tb-proj-btn" id="proj-banner-btn" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" style="position:absolute;left:50%;transform:translateX(-50%)">
     <span class="tb-proj" id="tb-projname"></span>
   </button>
-  <button class="banner-roll" id="banner-roll" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" aria-label="Projektangaben ein-/ausblenden"></button>
   <!-- Icon-Buttons zentriert auf Breite der Nachweise-Sidebar (320px) -->
   <div style="width:320px;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;margin-left:auto">
     <button class="btn btn-icon" onclick="openHandbuch()" title="Handbuch">
@@ -974,6 +1001,9 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
     </div>
   </div>
 </div>
+<!-- Ausroll-Pille (direktes .app-Kind → über dem z-22-Banner). Sitzt auf der Banner-Unterkante
+     bzw. geschlossen auf der Topbar-Randlinie; fährt beim Ausrollen mit (top via toggleProjBanner). -->
+<button class="banner-roll" id="banner-roll" onclick="toggleProjBanner()" title="Projektangaben ein-/ausblenden" aria-label="Projektangaben ein-/ausblenden"></button>
 
 <!-- ═══════════════════════════════════════════
      WORKSPACE
@@ -981,7 +1011,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 <div class="workspace">
 
   <!-- Splitter-Griffe: ziehen = Breite stufenlos, tippen = Schnellbreiten (Snap-Zyklus) -->
-  <div class="ws-split" id="ws-split-l" title="Ziehen: Breite anpassen · Tippen: Schnellbreiten"></div>
+  <div class="ws-split" id="ws-split-l" title="Ziehen: Breite anpassen · Tippen: Eingabe ein-/ausblenden"></div>
   <!-- Ergebnis-Schublade: Griff mit globalem Nachweis-Status (Erfüllt/Nicht erfüllt) -->
   <button class="res-drawer-tab" id="res-drawer-tab" onclick="toggleResDrawer()" title="Nachweise ein-/ausblenden — massgebende Ausnutzung η" aria-label="Nachweise ein-/ausblenden">
     <span class="rdt-dot"></span>
@@ -1834,6 +1864,15 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
     </button>
     <span class="nw-plot-title">Standsicherheitsnachweis — Blockfundament SIA 267</span>
     <div style="flex:1"></div>
+    <label style="display:flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-right:4px">Detail
+      <select id="np-detail" onchange="_setReportDetail(this.value)" style="height:28px;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);font-family:var(--f-mono);font-size:10px;padding:0 6px">
+        <option value="full">Detailliert</option>
+        <option value="simple">Einfach</option>
+      </select>
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-right:8px;cursor:pointer">
+      <input type="checkbox" id="np-figs" onchange="_setReportFigs(this.checked)" checked>Abbildungen
+    </label>
     <button class="btn btn-tonal btn-sm" onclick="window.print()" title="Drucken">
       <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="13" width="12" height="5" rx="1"/><path d="M4 13V8a1 1 0 011-1h10a1 1 0 011 1v5M4 10H2M16 10h2"/><rect x="6" y="2" width="8" height="6" rx="0.5"/></svg>
       Drucken
@@ -3073,17 +3112,25 @@ function _animateDrawerShift(){
     _drawerRAF = Math.abs(_drawerShiftTarget-_drawerShiftCur)>0.4 ? requestAnimationFrame(step) : null;
   })();
 }
-// Schublade auf/zu → Modell-Verschiebung setzen (halbe Schubladenbreite, damit es mittig im Sichtbereich bleibt)
-function setViewerDrawerShift(open){
-  // Nur wenn die Schublade den Viewer ÜBERLAGERT (≥768px → position:absolute); mobil ist sie ein eigener Tab.
-  const pr=document.getElementById('panel-results');
-  const overlay = pr && getComputedStyle(pr).position==='absolute';
-  const w=pr?pr.offsetWidth:0;
-  _drawerShiftTarget = (open && overlay) ? Math.max(0, w*0.5) : 0;
-  // Viewer-Overlay-Controls (Layer-Leiste rechts, Legende, LF) mitschieben → bleiben bei offener Schublade klickbar
+// Beide Overlay-Schubladen (Eingabe links, Nachweise rechts) → Modell-View-Offset setzen, damit das
+// Modell mittig im SICHTBAREN Bereich bleibt (halbe Schubladenbreite je Seite). Nur ≥768px (Overlay);
+// mobil sind es Tabs. Rechts schiebt das Bild nach links (+), links nach rechts (−) → Netto-Versatz.
+function setViewerDrawerShift(immediate){
+  const desktop = window.innerWidth>=768;
+  const ws=_wsEl?_wsEl():document.querySelector('.workspace');
+  const pr=document.getElementById('panel-results'), pi=document.getElementById('panel-input');
+  const rOpen = desktop && ws && ws.classList.contains('res-open');
+  const rW = (rOpen && pr) ? pr.offsetWidth : 0;
+  // Eingabe-Schublade immer sichtbar (Overlay); Breite = Ziel-Spaltenbreite --col-l (nicht das während
+  // der Breiten-Transition nachhinkende offsetWidth → Controls/Modell zielen sofort auf die Endbreite).
+  const colL = desktop && ws ? (parseFloat(getComputedStyle(ws).getPropertyValue('--col-l'))||0) : 0;
+  const iW = (desktop && pi) ? colL : 0;
+  _drawerShiftTarget = Math.max(0, rW*0.5) - Math.max(0, iW*0.5);
+  // Viewer-Overlay-Controls mitschieben (rechts über --drawer-w, links über --inp-w) → klickbar halten
   const viewer=document.getElementById('viewer');
-  if(viewer) viewer.style.setProperty('--drawer-w', ((open && overlay) ? w : 0)+'px');
-  _animateDrawerShift();
+  if(viewer){ viewer.style.setProperty('--drawer-w', rW+'px'); viewer.style.setProperty('--inp-w', iW+'px'); }
+  if(immediate){ _drawerShiftCur=_drawerShiftTarget; if(typeof moveCam==='function') moveCam(); }
+  else _animateDrawerShift();
 }
 // Kamerafahrt abbrechen (wenn der Nutzer selbst dreht/zoomt) — optional Target zurück auf Ursprung
 function _cancelCamFly(resetTarget){ if(_camRAF){ cancelAnimationFrame(_camRAF); _camRAF=null; }
@@ -5688,11 +5735,11 @@ function renderPfahlbock(){
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
   // Böschungs-Status fürs Panel + Greifer
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
-  // Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — Bankett als Auflast; Mast-H destabilisierend
-  r.bishop = _slopeActive ? bishopStability({ bx:Bbank, t_bl:(+gi('pb_ue')||0)+dBank,
-      q_block:(NG + G_eig)/Math.max(0.09, Bbank * Lbank),   // [kN/m²] Flächenpressung (2D-Smear, nicht /Bbank Linienlast)
-      H_des: Math.abs((r.govLoadChar && r.govLoadChar.Hx) || 0), y_H:-(+gi('pb_ue')||0) }) : null;
-  if(r.bishop && r.bishop.ok && isFinite(r.bishop.eta)) r.eta_massg = Math.min(r.eta_massg, +r.bishop.eta.toFixed(2));
+  // Globale Böschungsstandsicherheit (Bishop) hier ENTFERNT (Jul 2026, Nutzerentscheid): der kritische
+  // Gleitkreis schneidet die Tragglieder — für das Lamellenverfahren (reine Bodenscheiben) unzutreffend,
+  // zumal der stabilisierende Pfahlbeitrag ohnehin vernachlässigt würde. Bishop bleibt dem FLACH-
+  // fundament vorbehalten (Fundament nur als Auflast, kein Bauteil im Gleitkörper).
+  r.bishop = null;
   // Knickkurve für ALLE hinterlegten Tragglieder (gleiche Geometrie/Boden → kbed,
   // nur EI und N_pl,k variieren je Stab) — zum Vergleich/zur Auswahl
   r.knickAll = [];
@@ -5727,6 +5774,13 @@ function renderPfahlbock(){
     `<b>UK Bankett, massgebend ${r.govCombo||'—'}:</b> N=${(gl.N||0).toFixed(0)} · H_x=${(gl.Hx||0).toFixed(0)} · H_y=${(gl.Hy||0).toFixed(0)} · M_x=${(gl.Mx||0).toFixed(0)} · M_y=${(gl.My||0).toFixed(0)} kN(m)`;
   // Nachweise → rechte Sidebar
   _renderPfahlbockResultsRight(r, piles, n);
+  // Ergebnis für den Nachweisbericht ablegen (openNachweisplot → buildNachweisDocPfahl)
+  window._pbReport = { r, piles, n };
+  // Export-Button einblenden + beschriften (renderResults läuft im Pfahlfundament-Modus nicht)
+  const _btnPlotPB = document.getElementById('btn-plot');
+  if(_btnPlotPB){ _btnPlotPB.style.display='inline-flex';
+    const _lbl=_btnPlotPB.querySelector('.tb-btn-lbl')||_btnPlotPB.childNodes[_btnPlotPB.childNodes.length-1];
+    if(_lbl && _lbl.nodeType===3) _lbl.textContent=' Nachweisbericht Pfahlfundament'; }
   // 3D-Modell: Pfahlkräfte für die Kraftvektoren ablegen + Szene neu aufbauen.
   // Mastlast OHNE Bankett/Kopf-Eigengewicht für den Vertikal-Vektor (wie Block: nur die Einwirkung).
   // govLoadChar.N = NG + G_eig (γ=1) → mastN_k = NG; fGv = govLoad.N/govLoadChar.N → mastN_d = fGv·NG.
@@ -6137,7 +6191,6 @@ function _pbResultHTML(r, piles, n){
   window['_pbdiag_steel']  ={R:r,n:n,fn:'buildPbSteelDiagram'};
   window['_pbdiag_knick']  ={R:r,n:n,fn:'buildPbKnickDiagram'};
   window['_pbdiag_system'] ={R:r,n:n,piles:piles,fn:'buildPbSystemSVG'};
-  window['_pbdiag_gzg']    ={R:r,n:n,fn:'buildPbGZGDiagram'};
   const diagWrap=(key,svg)=>svg?`<div class="gzt-diagram" style="position:relative;margin-top:6px;border-radius:var(--r1);overflow:hidden;border:1px solid var(--ol)" data-gzt-key="${key}">
     <button onclick="toggleGZTExpand(event,'${key}')" title="Vergrössern" style="position:absolute;top:5px;right:6px;z-index:2;background:var(--s3);border:1px solid var(--ol2);border-radius:3px;cursor:pointer;color:var(--dim);padding:1px 6px;font-size:11px;line-height:1.5">${_gztExpanded?'✕':'⤢'}</button>
     ${svg}</div>`:'';
@@ -6199,15 +6252,7 @@ function _pbResultHTML(r, piles, n){
       </div></div>
 
     ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.4;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
-      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ) → Verformung/Moment ungünstiger. Globale Standsicherheit siehe Gleitkreis-Nachweis unten.</div>`:''}
-    ${r.bishop ? (r.bishop.ok && isFinite(r.bishop.eta) ? `
-      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', r.bishop.eta, null, false)}
-        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht)</div>
-        ${row('η massgebender Kreis', r.bishop.eta.toFixed(2))}
-        ${row('Radius R', r.bishop.R.toFixed(2)+' m')}
-        <div style="margin-top:6px">${buildBishopSVG(r.bishop, false)}</div>
-        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Bankett + ständige Last als Auflast, φ′_d/c′_d (SIA 267), GW-Porendruck. Pfahl-Beitrag zur Gleitfläche konservativ vernachlässigt. Näherung — bei η &lt; 1.3 vertiefte GEO-Untersuchung.</div>
-      ${CARD_END}` : `<div style="font-size:9px;color:var(--warn);margin:0 0 8px">Gleitkreissuche lieferte kein Ergebnis — global gesondert prüfen.</div>`) : ''}
+      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ) → Verformung/Moment ungünstiger.</div>`:''}
 
     ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
 
@@ -6269,7 +6314,6 @@ function _pbResultHTML(r, piles, n){
       ${n>2?'<div style="font-size:8px;color:var(--xdim);padding:2px 0">Verschiebungslimit ±20/±10 mm gilt für 1-/2-Pfahlfundamente</div>':''}
       ${etaRow('η GZG', r.etaGZG, 'η = min(Grenzwert / Wert) über alle Kriterien<br>'+(g?'θ_st+ver: 0.010 / '+Math.max(g.tiltQuer,g.tiltLaengs).toFixed(4)+' = '+(0.010/Math.max(1e-9,Math.max(g.tiltQuer,g.tiltLaengs))).toFixed(2):'')+(gv?'<br>θ_quer,ver: 0.005 / '+gv.tiltQuer.toFixed(4)+' = '+(0.005/Math.max(1e-9,gv.tiltQuer)).toFixed(2):'')+'<br>Minimum ist massgebend')}
       ${diagWrap('_pbdiag_system', buildPbSystemSVG(r,piles,n,_gztExpanded))}
-      ${diagWrap('_pbdiag_gzg', buildPbGZGDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
     ${cardHd('Setzung Bankett (informativ — kein Grenzwert)', null, r.settle_mm+' mm')}
@@ -7326,37 +7370,103 @@ function bishopStability(opts){
   if(!best) return { ok:false, eta:Infinity };
   return { ok:true, eta:best.eta, xc:best.xc, Yc:best.Yc, R:best.R,
            slices:best.slices, failSide, surfY, gwElev:isFinite(gwd)?-gwd:null,
-           gph, gc, t_bl, bx, d_ex, exSign, hasSlope, beta_deg:+gi('bg_beta')||0 };
+           gph, gc, t_bl, bx, d_ex, exSign, hasSlope, beta_deg:+gi('bg_beta')||0,
+           // Für die Diagramm-Beschriftung: treibendes Moment/R [kN] (|ΣW·sinα| + M_H),
+           // Anteil aus der Horizontallast, sowie q_block (Auflast) und y_H (Angriffshöhe H)
+           driv:best.driv, M_H:best.M_H, q_block, H_des, y_H };
 }
 
-// Gleitkreis-Schnitt (Bishop): Oberfläche, Baugrund, Fundament, kritische Gleitfläche, Lamellen, GW.
+// Gleitkreis-Schnitt (Bishop): Oberfläche, Baugrund, Fundament, kritische Gleitfläche, Lamellen, GW,
+// Kreismittelpunkt M + Radien, resultierender Gewichtsvektor ΣW des Gleitkörpers, Gleitrichtung,
+// destabilisierende Horizontallast H und die Momentenbilanz (haltend/treibend → η).
 function buildBishopSVG(b, wide){
   if(!b || !b.ok || !b.slices || !b.slices.length) return '';
   const S=b.slices, R=b.R, xc=b.xc, Yc=b.Yc, surfY=b.surfY, bx=b.bx, t_bl=b.t_bl;
   const xs=S.map(s=>s.xm);
   const xlo=Math.min(...xs, -bx/2)-0.6, xhi=Math.max(...xs, bx/2)+0.6;
-  const ylo=Math.min(...S.map(s=>s.Yb), -t_bl)-0.4, yhi=Math.max(0, ...S.map(s=>s.Ys))+0.5;
-  const VB=wide?520:264, HB=wide?300:210, PADL=10,PADR=10,PADT=24,PADB=18;
+  const ylo=Math.min(...S.map(s=>s.Yb), -t_bl)-0.4;
+  const yhi0=Math.max(0, ...S.map(s=>s.Ys))+0.5;
+  const H0=Math.max(0.5, yhi0-ylo);
+  // Kreiszentrum nur einblenden, wenn es die Figur nicht unbrauchbar zerdrückt
+  const showM=(Yc <= yhi0 + 1.15*H0);
+  const yhi=showM ? Math.max(yhi0, Yc+0.4) : yhi0;
+  const VB=wide?520:264, HB=wide?330:230, PADL=10,PADR=10,PADT=24,PADB=wide?34:28;
   const pw=VB-PADL-PADR, ph=HB-PADT-PADB, sc=Math.min(pw/Math.max(0.5,xhi-xlo), ph/Math.max(0.5,yhi-ylo));
   const X=x=>PADL+(x-xlo)*sc, Y=y=>PADT+(yhi-y)*sc;                       // y nach oben
   const eC=b.eta>=1.0?'var(--ok)':'var(--fail)';
+  const F=wide?7:6.2;                                                      // Basis-Schriftgrösse
+  // ── Kennwerte des Gleitkörpers
+  const sumW=S.reduce((a,s)=>a+s.W,0);
+  const xW=sumW>1e-6 ? S.reduce((a,s)=>a+s.W*s.xm,0)/sumW : 0;            // Schwerpunkt-x
+  const driv=b.driv||0, halt=driv*b.eta;                                   // Moment/R [kN]
+  const dir=(b.failSide||1);                                               // Gleitrichtung (+x = Feldseite)
+  const arrow=(x1,y1,x2,y2,col,w)=>{ const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L, hL=Math.min(4.5,L*0.35);
+    const px=-uy, py=ux;
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${(x2-ux*hL*0.9).toFixed(1)}" y2="${(y2-uy*hL*0.9).toFixed(1)}" stroke="${col}" stroke-width="${w||1.2}"/>
+      <polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${(x2-ux*hL+px*hL*0.42).toFixed(1)},${(y2-uy*hL+py*hL*0.42).toFixed(1)} ${(x2-ux*hL-px*hL*0.42).toFixed(1)},${(y2-uy*hL-py*hL*0.42).toFixed(1)}" fill="${col}"/>`; };
   let surf=''; const nS=64;
   for(let i=0;i<=nS;i++){ const x=xlo+(xhi-xlo)*i/nS; surf+=`${X(x).toFixed(1)},${Y(surfY(x)).toFixed(1)} `; }
   const soilPoly=`${X(xlo).toFixed(1)},${Y(ylo).toFixed(1)} `+surf+`${X(xhi).toFixed(1)},${Y(ylo).toFixed(1)}`;
   let arc=''; S.forEach(s=>{ arc+=`${X(s.xm).toFixed(1)},${Y(s.Yb).toFixed(1)} `; });
+  // Gleitkörper = Fläche zwischen Gleitfläche (Bogen) und Oberfläche
+  const massPts=S.map(s=>`${X(s.xm).toFixed(1)},${Y(s.Yb).toFixed(1)}`)
+    .concat(S.slice().reverse().map(s=>`${X(s.xm).toFixed(1)},${Y(s.Ys).toFixed(1)}`)).join(' ');
   const bxTop=Math.max(surfY(-bx/2),surfY(bx/2),0);
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
    <text x="6" y="13" font-family="var(--f-mono)" font-size="8.5" letter-spacing=".05em" fill="var(--dim)">GLEITKREIS (BISHOP) — η = <tspan fill="${eC}" font-weight="600">${b.eta.toFixed(2)}</tspan></text>
    <polygon points="${soilPoly}" fill="var(--dim)" fill-opacity="0.07"/>
+   <polygon points="${massPts}" fill="${eC}" fill-opacity="0.11"/>
    <polyline points="${surf}" fill="none" stroke="var(--dim)" stroke-width="1"/>`;
   if(b.gwElev!=null && b.gwElev>ylo && b.gwElev<yhi)
-    s+=`<line x1="${X(xlo).toFixed(1)}" y1="${Y(b.gwElev).toFixed(1)}" x2="${X(xhi).toFixed(1)}" y2="${Y(b.gwElev).toFixed(1)}" stroke="#4db8c9" stroke-width="0.7" stroke-dasharray="4,3"/>`;
+    s+=`<line x1="${X(xlo).toFixed(1)}" y1="${Y(b.gwElev).toFixed(1)}" x2="${X(xhi).toFixed(1)}" y2="${Y(b.gwElev).toFixed(1)}" stroke="#4db8c9" stroke-width="0.7" stroke-dasharray="4,3"/>
+      <text x="${(X(xlo)+3).toFixed(1)}" y="${(Y(b.gwElev)-2).toFixed(1)}" font-family="var(--f-mono)" font-size="${F-0.5}" fill="#4db8c9">GW</text>`;
   s+=`<rect x="${X(-bx/2).toFixed(1)}" y="${Y(bxTop).toFixed(1)}" width="${(bx*sc).toFixed(1)}" height="${((bxTop+t_bl)*sc).toFixed(1)}" fill="var(--xdim)" fill-opacity="0.28" stroke="var(--dim)" stroke-width="0.7"/>`;
-  S.forEach(s2=>{ s+=`<line x1="${X(s2.xm).toFixed(1)}" y1="${Y(s2.Ys).toFixed(1)}" x2="${X(s2.xm).toFixed(1)}" y2="${Y(s2.Yb).toFixed(1)}" stroke="var(--ol)" stroke-width="0.3" opacity="0.55"/>`; });
+  S.forEach(s2=>{ s+=`<line x1="${X(s2.xm).toFixed(1)}" y1="${Y(s2.Ys).toFixed(1)}" x2="${X(s2.xm).toFixed(1)}" y2="${Y(s2.Yb).toFixed(1)}" stroke="var(--ol)" stroke-width="0.3" opacity="0.5"/>`; });
   s+=`<polyline points="${arc}" fill="none" stroke="${eC}" stroke-width="2"/>`;
-  const cyP=Y(Yc);
-  if(cyP>PADT+2 && cyP<HB-PADB) s+=`<circle cx="${X(xc).toFixed(1)}" cy="${cyP.toFixed(1)}" r="1.8" fill="${eC}"/>`;
+  // ── Kreiszentrum M + Radien zu den Bogenenden. Liegt M ausserhalb (typisch weit über GOK),
+  //    werden die Radien am oberen Rand abgeschnitten und mit „→ M · R=…" beschriftet, statt die
+  //    ganze Figur zu zerdrücken.
+  {
+    const mx=X(xc), my=Y(Yc), s0=S[0], s1=S[S.length-1], yTop=PADT+1;
+    const clip=(x1,y1)=>{ if(my>=yTop) return [mx,my];
+      const t=(yTop-y1)/((my-y1)||-1e-6); return [x1+(mx-x1)*t, yTop]; };
+    const p0=clip(X(s0.xm),Y(s0.Yb)), p1=clip(X(s1.xm),Y(s1.Yb));
+    s+=`<line x1="${X(s0.xm).toFixed(1)}" y1="${Y(s0.Yb).toFixed(1)}" x2="${p0[0].toFixed(1)}" y2="${p0[1].toFixed(1)}" stroke="${eC}" stroke-width="0.6" stroke-dasharray="3,2.5" opacity="0.7"/>
+        <line x1="${X(s1.xm).toFixed(1)}" y1="${Y(s1.Yb).toFixed(1)}" x2="${p1[0].toFixed(1)}" y2="${p1[1].toFixed(1)}" stroke="${eC}" stroke-width="0.6" stroke-dasharray="3,2.5" opacity="0.7"/>`;
+    if(showM){
+      s+=`<line x1="${(mx-3).toFixed(1)}" y1="${my.toFixed(1)}" x2="${(mx+3).toFixed(1)}" y2="${my.toFixed(1)}" stroke="${eC}" stroke-width="0.9"/>
+          <line x1="${mx.toFixed(1)}" y1="${(my-3).toFixed(1)}" x2="${mx.toFixed(1)}" y2="${(my+3).toFixed(1)}" stroke="${eC}" stroke-width="0.9"/>
+          <text x="${(mx+4).toFixed(1)}" y="${(my-3).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="${eC}">M · R=${R.toFixed(1)}m</text>`;
+    } else {
+      const lx=Math.min(VB-PADR-2, Math.max(PADL+2, (p0[0]+p1[0])/2));
+      s+=`<text x="${lx.toFixed(1)}" y="${(yTop+F+1).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="${eC}" text-anchor="middle">↗ M · R=${R.toFixed(1)} m</text>`;
+    }
+  }
+  // ── Resultierender Gewichtsvektor ΣW des Gleitkörpers (im Schwerpunkt, nach unten)
+  if(sumW>1){
+    const xa=X(xW), ySurf=Y(surfY(xW)), len=Math.min(26, Math.max(14, ph*0.16));
+    s+=arrow(xa, ySurf+3, xa, ySurf+3+len, 'var(--on2)', 1.4)
+      +`<text x="${(xa+3).toFixed(1)}" y="${(ySurf+3+len*0.62).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="var(--on2)">ΣW=${sumW.toFixed(0)} kN</text>`;
+  }
+  // ── Destabilisierende Horizontallast H am Fundament (nur wenn im Gleitkörper wirksam)
+  if((b.M_H||0) > 0.01 && (b.H_des||0) > 0.5){
+    const yH=Y(Math.min(yhi-0.2, b.y_H!=null?b.y_H:0)), x0=X(0), hl=Math.min(24, Math.max(12, pw*0.06));
+    s+=arrow(x0, yH, x0+dir*hl, yH, 'var(--warn)', 1.3)
+      +`<text x="${(x0+dir*hl+dir*3).toFixed(1)}" y="${(yH-3).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="var(--warn)" text-anchor="${dir>0?'start':'end'}">H=${b.H_des.toFixed(0)} kN</text>`;
+  }
+  // ── Gleitrichtung: Pfeil am Austritt des Bogens (Versagensseite)
+  {
+    const sEnd = dir>0 ? S[S.length-1] : S[0], sPrev = dir>0 ? S[S.length-2] : S[1];
+    if(sEnd && sPrev){
+      const x2=X(sEnd.xm), y2=Y(sEnd.Yb), x1=X(sPrev.xm), y1=Y(sPrev.Yb);
+      const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1;
+      s+=arrow(x2-dx/L*9, y2-dy/L*9, x2, y2, eC, 1.4);
+    }
+  }
+  // ── Momentenbilanz (Moment/R) + Scherfestigkeit — Fusszeile
+  s+=`<text x="6" y="${(HB-PADB+11).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="var(--dim)">Σ haltend ${halt.toFixed(0)} kN  /  Σ treibend ${driv.toFixed(0)} kN${(b.M_H||0)>0.01?' (davon H: '+b.M_H.toFixed(0)+')':''}  →  η = <tspan fill="${eC}" font-weight="600">${b.eta.toFixed(2)}</tspan></text>
+   <text x="6" y="${(HB-PADB+11+F+2.5).toFixed(1)}" font-family="var(--f-mono)" font-size="${F-0.5}" fill="var(--xdim)">Momente um M (÷R) · φ′_d = φ′/γ_φ (γ_φ=${(b.gph||1.2).toFixed(2)}) · c′_d = c′/γ_c (γ_c=${(b.gc||1.5).toFixed(2)}) · ${S.length} Lamellen</text>`;
   return s+`</svg>`;
 }
 
@@ -8503,14 +8613,15 @@ function calcPfahlsicherung(){
   const tanZulS     = SETTINGS.alphaZul ?? 0.005;
   const eta_GZG_sys = alpha_sys > 1e-9 ? tanZulS / alpha_sys : Infinity;
 
-  // ── Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub
-  const bishopRes = ((_slBtyp !== 'none' && Math.abs(_slBeta) > 0.1) || d_ex > 0.05)
-    ? bishopStability() : null;
-  const eta_slope = (bishopRes && bishopRes.ok && isFinite(bishopRes.eta)) ? bishopRes.eta : Infinity;
+  // ── Globale Böschungsstandsicherheit (Bishop) hier ENTFERNT (Jul 2026, Nutzerentscheid):
+  // Das Lamellenverfahren setzt Bodenscheiben voraus. Beim eingespannten Blockfundament schneidet
+  // der kritische Gleitkreis regelmässig den Betonblock → Modell nicht gültig, Ergebnis irreführend.
+  // Die Stabilität des Blocks gegenüber der Böschung deckt der Steckner-GZT (mobilisierter
+  // Erdwiderstand, Gl.66) ab; die Böschung geht dort über Kp,β/C₁ ein.
+  const bishopRes = null;
   // ── D) Massgebende Gesamtsicherheit (Minimum aller Nachweise)
   const _etas = [['System', eta_sys], ['Tragf.', eta_H], ['Verform.', eta_V],
-                 ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab],
-                 ['Böschung', eta_slope]];
+                 ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab]];
   let eta_massgebend = Infinity, nw_massgebend = '—';
   for(const [_nm, _ev] of _etas){
     if(isFinite(_ev) && _ev < eta_massgebend){ eta_massgebend = _ev; nw_massgebend = _nm; }
@@ -8717,7 +8828,7 @@ function calcPfahlsicherung(){
         <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
       </div>
       ${CARD_END}
-      ${(bishopRes || (isFinite(etaGZT_block) && Md_Hst_block >= 0.1)) ? '<div class="lf-grp">Stabilität — System &amp; Gelände (GZT)</div>' : ''}
+      ${(isFinite(etaGZT_block) && Md_Hst_block >= 0.1) ? '<div class="lf-grp">Stabilität — System Block + Pfahl (GZT)</div>' : ''}
       ${(() => {
         // ── Systemnachweis Block + Pfahl (GZT + GZG) — Blockkapazität im Aushubzustand
         if(!isFinite(etaGZT_block) || Md_Hst_block < 0.1) return '';
@@ -8752,16 +8863,9 @@ function calcPfahlsicherung(){
         ` + CARD_END;
       })()}
 
-      <!-- Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — bei Böschung ODER Aushub -->
-      ${bishopRes ? (bishopRes.ok && isFinite(bishopRes.eta) ? `
-      ${cardHd('Globale Standsicherheit (Gleitkreis, Bishop)', bishopRes.eta, null, nw_massgebend==='Böschung')}
-        <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht, iterativ)</div>
-        ${row('η massgebender Kreis', bishopRes.eta.toFixed(2), '')}
-        ${row('Radius R', bishopRes.R.toFixed(2), 'm')}
-        ${row('Scherfestigkeit (SIA 267)', 'φ′_d = φ′/γ_φ · c′_d = c′/γ_c', '')}
-        <div style="margin-top:6px">${buildBishopSVG(bishopRes, false)}</div>
-        <div style="font-size:8px;color:var(--xdim);margin-top:3px">Freie Zentrum-Grid-Suche (Fuss = Aushub-/Böschungsfuss als Anker), Fundamentlast als Flächenpressung N/(B·L), GW-Porendruck. Ebenes 2D-Verfahren (Bishop) — seitliche 3D-Stirnscherung des Bruchkörpers konservativ vernachlässigt; gegen Taylor φ_u=0 auf &lt;2 % validiert. Bei η &lt; 1.3 vertiefte GEO-Untersuchung (mehrere Gleitkörper, Schichtungseffekte).</div>
-      ${CARD_END}` : `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Böschung/Aushub aktiv — die Gleitkreissuche lieferte kein gültiges Ergebnis (Geometrie/Boden prüfen). Globale Standsicherheit gesondert nachweisen.</div>`) : ''}
+      <!-- Globale Böschungsstandsicherheit (Bishop) hier entfernt (Jul 2026, Nutzerentscheid, ohne
+           Hinweiszeile): beim eingespannten Blockfundament läge die Gleitfläche teilweise im Betonkörper
+           → Lamellenverfahren nicht gültig. Stabilität ggü. der Böschung deckt der Steckner-GZT ab. -->
 
       <div class="lf-grp">Gebrauchstauglichkeit (GZG)</div>
       ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
@@ -9899,34 +10003,59 @@ function buildGZGRows(R, G){
 function openNachweisplot(){
   const body=document.getElementById('nw-plot-body');
   if(!body) return;
-  if(!_lastResults||!_lastG){
+  // Pfahlfundament nutzt einen eigenen Ergebniscontainer (window._pbReport) statt _lastResults/_lastG
+  const _isPB = (typeof CALC_MODEL!=='undefined' && CALC_MODEL==='pfahlbock');
+  const _pbOK = !!(window._pbReport && window._pbReport.r);
+  if(_isPB ? !_pbOK : (!_lastResults||!_lastG)){
     body.innerHTML='<div style="padding:40px;text-align:center;font-family:var(--f-mono);font-size:11px;color:var(--xdim)">Bitte zuerst Berechnen</div>';
     document.getElementById('ov-nachweisplot').style.display='flex';
     return;
   }
-  // Modellabhängig: Block → Steckner-Bericht, Flach → Hansen-Bericht
+  // 3D-Modell-Screenshot für den Bericht erfassen (preserveDrawingBuffer:true → toDataURL zuverlässig)
+  try { window._npModelImg = (typeof renderer!=='undefined' && renderer && renderer.domElement) ? renderer.domElement.toDataURL('image/png') : null; }
+  catch(e){ window._npModelImg = null; }
+  // Modellabhängig: Block → Steckner-Bericht, Flach → Hansen-Bericht, Pfahlfundament → Mikropfahl-Bericht
   let doc;
   try {
-    doc = _lastG.isBlock
-      ? buildNachweisDoc(_lastResults, _lastG)
-      : buildNachweisDocFlach(_lastResults, _lastG);
+    doc = _isPB
+      ? buildNachweisDocPfahl(window._pbReport.r, window._pbReport.piles, window._pbReport.n)
+      : _lastG.isBlock
+        ? buildNachweisDoc(_lastResults, _lastG)
+        : buildNachweisDocFlach(_lastResults, _lastG);
   } catch(e) {
     console.error('Nachweisplot Fehler:', e);
     doc = '<div class="np-page"><div style="padding:40px;font-family:var(--f-mono);font-size:11px;color:var(--fail)">Fehler beim Erstellen des Berichts:<br>'+e.message+'</div></div>';
   }
   const main = document.getElementById('nw-plot-main');
-  if(main) main.innerHTML = '<div class="np-doc" id="nw-plot-doc">'+doc+'</div>';
+  // Detailtiefe + Abbildungen aus den Optionen (Default: detailliert, mit Abbildungen)
+  const simple = (typeof SETTINGS!=='undefined' && SETTINGS.reportDetail==='simple');
+  const nofig  = (typeof SETTINGS!=='undefined' && SETTINGS.reportFigs===false);
+  if(main) main.innerHTML = '<div class="np-doc'+(simple?' np-simple':'')+(nofig?' np-nofig':'')+'" id="nw-plot-doc">'+doc+'</div>';
+  const selD=document.getElementById('np-detail'); if(selD) selD.value = simple?'simple':'full';
+  const cbF=document.getElementById('np-figs'); if(cbF) cbF.checked = !nofig;
   // Titel dynamisch anpassen
   const titleEl = document.querySelector('.nw-plot-title');
-  if(titleEl) titleEl.textContent = _lastG.isBlock
-    ? 'Standsicherheitsnachweis — Blockfundament SIA 267'
-    : 'Standsicherheitsnachweis — Flachfundament SIA 267';
+  if(titleEl) titleEl.textContent = _isPB
+    ? 'Standsicherheitsnachweis — Pfahlfundament SIA 267'
+    : _lastG.isBlock
+      ? 'Standsicherheitsnachweis — Blockfundament SIA 267'
+      : 'Standsicherheitsnachweis — Flachfundament SIA 267';
   document.getElementById('ov-nachweisplot').style.display='flex';
   // Thumbnails nach kurzem Delay (DOM muss gerendert sein)
   setTimeout(_buildNachweisThumb, 80);
 }
 function closeNachweisplot(){
   document.getElementById('ov-nachweisplot').style.display='none';
+}
+// Berichts-Optionen: Detailtiefe (einfach/detailliert) + Abbildungen (an/aus) — reine CSS-Klassen
+// auf dem Dokument, keine Neuberechnung. In SETTINGS gemerkt.
+function _setReportDetail(v){
+  if(typeof SETTINGS!=='undefined'){ SETTINGS.reportDetail=v; if(typeof dbSet==='function') dbSet('bc_settings',SETTINGS); }
+  const d=document.getElementById('nw-plot-doc'); if(d) d.classList.toggle('np-simple', v==='simple');
+}
+function _setReportFigs(on){
+  if(typeof SETTINGS!=='undefined'){ SETTINGS.reportFigs=!!on; if(typeof dbSet==='function') dbSet('bc_settings',SETTINGS); }
+  const d=document.getElementById('nw-plot-doc'); if(d) d.classList.toggle('np-nofig', !on);
 }
 
 function _buildNachweisThumb(){
@@ -10142,7 +10271,7 @@ function _npEta(eta,inf){
 function _npRow(k,v){ return `<tr><td class="sym">${k}</td><td class="r">${v}</td></tr>`; }
 function _npPH(st,datStr){
   const firma=SETTINGS.firma?`<strong>${SETTINGS.firma}</strong> &ensp;`:'';
-  return `<div class="np-ph">${firma}${st.p_name||'–'}&ensp;·&ensp;Nr.&thinsp;${st.p_nr||'–'}<span>SIA 267:2013 &ensp;·&ensp; Steckner Blockfundament &ensp;·&ensp; ${datStr}</span></div>`;
+  return `<div class="np-ph">${firma}${st.p_name||'–'}&ensp;·&ensp;Nr.&thinsp;${st.p_nr||'–'}<span>SIA 267:2013 &ensp;·&ensp; ${(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='pfahlbock')?'Pfahlfundament (Mikropfähle)':(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='flach')?'Flachfundament (Hansen)':'Steckner Blockfundament'} &ensp;·&ensp; ${datStr}</span></div>`;
 }
 function _npSH(n,t){ return `<div class="np-sh">${n}&ensp;·&ensp;${t}</div>`; }
 function _npNwH(n,t,norm=''){
@@ -10222,6 +10351,10 @@ function buildNachweisDoc(results,G){
       'Der GZT-Nachweis lautet η = Mu/M_d ≥ 1.0 (Bezugspunkt H*: Oberkante Block). '+
       'Der GZG-Nachweis begrenzt die elastische Verdrehung: tan(α) ≤ tan(α)_zul.'+
       '</div>'+
+      (window._npModelImg?'<div class="np-fig" style="margin:6px 0 16px;text-align:center">'+
+        '<img src="'+window._npModelImg+'" style="max-width:78%;border:1px solid var(--ol);border-radius:3px"/>'+
+        '<div style="font-size:8px;color:var(--xdim);margin-top:3px">Abb. 1 — 3D-Modell des Fundaments (aktuelle Ansicht)</div>'+
+      '</div>':'')+
       '<table class="np-tbl" style="width:55%">'+
         '<tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr>'+
         '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
@@ -10360,6 +10493,7 @@ function buildNachweisDoc(results,G){
   // ────────────────────────────────────────────────────────────────
   var nwPages=results.map(function(r){
     var use_x=Math.abs(r.Hxd||0)>=Math.abs(r.Hyd||0);
+    var A_pl=use_x?B:L;   // massgebende Plattenabmessung in Lastrichtung (Gl.66 A/2-Term, u=(A−x)/2)
     var Hd=use_x?Math.abs(r.Hxd||0):Math.abs(r.Hyd||0);
     var Md_ok=use_x?Math.abs((r.Mxd||0)-(r.Hxd||0)*Hblock):Math.abs((r.Myd||0)-(r.Hyd||0)*Hblock);
     var dir=use_x?'x (quer)':'y (längs)';
@@ -10375,7 +10509,9 @@ function buildNachweisDoc(results,G){
     var Mu=r.Mu_GZT||0;
     // Charakteristische Werte (Zahlen, nicht Strings)
     var Ea_kN=Ea/gEa, Ew_kN=Ew*gEp, Ep_k_aN=Epa*gEp, Ep_k_bN=Epb*gEp;
-    var E0_k_aN=E0a*gEp, E0_k_bN=E0b*gEp;
+    // E0a/E0b aus dem Ergebnis sind bereits CHARAKTERISTISCH (f.E0_k / f.E0p_k) — nicht nochmals ×γ_Ep!
+    // Sie gehen als charakteristische Reibung R₀ = E0·tan(⅔φ) in Ew_d bzw. E'w_d ein.
+    var E0_k_aN=E0a, E0_k_bN=E0b;
     // Formatierte Strings für Anzeige
     var Ea_k=_npN(Ea_kN), Ew_k=_npN(Ew_kN), Ep_k_a=_npN(Ep_k_aN), Ep_k_b=_npN(Ep_k_bN);
     var E0_k_a=_npN(E0_k_aN), E0_k_b=_npN(E0_k_bN);
@@ -10390,7 +10526,7 @@ function buildNachweisDoc(results,G){
     var R0p_rep=E0b*Math.tan((2/3)*phi_k);
     var term1=-Ew*v;
     var term2=(Epb+R0p_rep)*vp;
-    var term3=(Ra+Rpa+Rpb)*(B/2);
+    var term3=(Ra+Rpa+Rpb)*(A_pl/2);
     var term4=Ru*(t-ue);
     var term5=Nu*u;
 
@@ -10443,16 +10579,16 @@ function buildNachweisDoc(results,G){
           calc('E_w,d = E_p,d − E_a,d + R₀,d  (Steckner Gl.43)',
             _npN(Ew+r.Ea_GZT-((r.E0a_GZT||0)*Math.tan(2/3*(r.phi_k_GZT||0))))+' − '+_npN(r.Ea_GZT)+' + R₀',
             _npN(Ew)+' kN', '(R₀ = E₀·tan(2/3·φ_k))')+
-          calc('E_0,a,d = E0,k,über / γ_Ep',
-            E0_k_a+' / '+_npN(gEp,2),
-            _npN(E0a)+' kN', '(Ruhedruck über NL, destab.)')+
+          calc('E_0,a,k  (Ruhedruck über NL, charakteristisch)',
+            '',
+            _npN(E0a)+' kN', '(wirkt via R₀ = E0·tan ⅔φ, destab. ←)')+
           '<div class="np-sh2">Unter der Nulllinie (y = '+_npN(y)+' m)</div>'+
           calc('E_p,b,d = Ep,k,unter / γ_Ep &ensp;[schichtweise integriert]',
             Ep_k_b+' / '+_npN(gEp,2),
             _npN(Epb)+' kN', '(passiv unter NL →, stabilisierend)')+
-          calc('E_0,b,d = E0,k,unter / γ_Ep',
-            E0_k_b+' / '+_npN(gEp,2),
-            _npN(E0b)+' kN', '(Ruhedruck unter NL →, stabilisierend)')+
+          calc('E'+"'"+'_0,k  (Ruhedruck unter NL, charakteristisch)',
+            '',
+            _npN(E0b)+' kN', '(wirkt via R'+"'"+'₀ = E0·tan ⅔φ, stab. →)')+
         '</div>'+
         '<div>'+
           (gztSvg?gztSvg:'')+
@@ -10496,7 +10632,7 @@ function buildNachweisDoc(results,G){
         '<div class="np-cf">     + N_u·u                            [Term 5: Sohlreaktion × Exzentrizität]</div>'+
         '<div class="np-cv">= −'+_npN(Ew)+'·'+_npN(v)+'</div>'+
         '<div class="np-cv">  + ('+_npN(Epb)+'+'+_npN(R0p_rep)+')·'+_npN(vp)+'</div>'+
-        '<div class="np-cv">  + ('+_npN(Ra)+'+'+_npN(Rpa)+'+'+_npN(Rpb)+')·'+_npN(B/2)+'</div>'+
+        '<div class="np-cv">  + ('+_npN(Ra)+'+'+_npN(Rpa)+'+'+_npN(Rpb)+')·'+_npN(A_pl/2)+'</div>'+
         '<div class="np-cv">  + '+_npN(Ru)+'·('+_npN(t)+'−'+_npN(ue)+')</div>'+
         '<div class="np-cv">  + '+_npN(Nu)+'·'+_npN(u)+'</div>'+
         '<div class="np-cv">= '+_npN(term1)+' + '+_npN(term2)+' + '+_npN(term3)+' + '+_npN(term4)+' + '+_npN(term5)+'</div>'+
@@ -10910,7 +11046,7 @@ function buildNachweisDocFlach(results, G){
         '<div class="np-nw">'+
         nwh('3.','Gleiten','SIA 267 §7.3 — GZT Typ 2, γ_G,inf='+st.lw_G_inf)+
         fml("R_gl = N_d,inf · tan(δ_Sohle) + c'_d·A",
-          (r.Nd_gl||r.Nd).toFixed(1)+"·tan("+((+st.bg_delta_sohle||0.667)*phi_d0*180/Math.PI).toFixed(1)+"°)",
+          (r.Nd_gl||r.Nd).toFixed(1)+"·tan("+((+st.bg_delta_sohle||+st.bg_delta_fac||0.667)*phi_d0*180/Math.PI).toFixed(1)+"°) + "+(r.c_d||0).toFixed(1)+"·"+A.toFixed(2),
           r.Rgl.toFixed(1),"kN")+
         fml("η = R_gl / H_d",r.Rgl.toFixed(1)+" / "+r.Hd.toFixed(1),r.etaGL.toFixed(2),"")+
         eta(r.etaGL)+
@@ -10933,7 +11069,7 @@ function buildNachweisDocFlach(results, G){
               '('+Math.abs(ex_k).toFixed(3)+'/'+G.B+')²+('+Math.abs(ey_k).toFixed(3)+'/'+G.L+')²',
               kv.toFixed(5)+'  '+(ok_k?'≤ 1/9 = 0.1111  ✓':'> 1/9 = 0.1111  ✗'),'')+
           '<table class="np-tbl">'+
-            '<tr><th>Grösse</th><th class="r">Wert [m]</th><th class="r">a = B/3 [m]</th><th class="r">η</th><th>Status</th></tr>'+
+            '<tr><th>Grösse</th><th class="r">Wert [m]</th><th class="r">e_zul = a/3 [m]</th><th class="r">η</th><th>Status</th></tr>'+
             '<tr><td>Ausmitte e_x (Typ 1)</td><td class="r">'+ex_k.toFixed(3)+'</td><td class="r">'+(G.B/3).toFixed(3)+'</td>'+
               '<td class="r '+(r.etaKx>=1?'ok':'fail')+'">'+(r.etaKx<99?r.etaKx.toFixed(2):'—')+'</td>'+
               '<td class="'+(r.etaKx>=1?'ok':'fail')+'">'+(Math.abs(ex_k)<=(G.B/3)+0.0001?'✓':'✗')+'</td></tr>'+
@@ -10951,6 +11087,31 @@ function buildNachweisDocFlach(results, G){
       :'')+
     '</div>';
   });
+
+  // ── Globale Böschungsstandsicherheit (Bishop) — eigene Seite, EINMALIG (lastfallunabhängig).
+  // Ergänzt den Grundbruch (lokaler Bruchkörper) um den globalen Gleitkreis durch die Böschung.
+  const _bish = window._flachBishop;
+  const bishPage = (_bish && _bish.ok && isFinite(_bish.eta)) ? '<div class="np-page np-pb">'+ph()+
+    ch((5+results.length)+'.','Globale Böschungsstandsicherheit (Gleitkreis)')+
+    '<div style="font-size:8.5px;color:var(--dim);line-height:1.65;margin-bottom:8px">'+
+    'Eigenständiger Nachweis <b>zusätzlich zum Grundbruch</b>: Der Grundbruch erfasst den lokalen Bruchkörper '+
+    'unmittelbar unter der Sohle (die Böschung geht dort nur über die Geländeneigungsbeiwerte ein). Hier wird '+
+    'ein grosser Gleitkreis durch die gesamte Böschung untersucht, in dem das Fundament lediglich als Auflast wirkt. '+
+    'Beide Mechanismen sind verschieden und daher getrennt nachzuweisen.'+
+    '</div>'+
+    '<div class="np-nw">'+
+      nwh('1.','Gleitkreis nach Bishop (vereinfacht)','SIA 267 — GZT')+
+      fml("η = min Σ[c'_d·b + (W − u·b)·tan φ'_d]/m_α  /  Σ W·sin α &ensp;(iterativ, m_α = cos α·(1+tan α·tan φ'_d/η))",
+          'kritischer Kreis: R = '+_bish.R.toFixed(2)+' m &ensp;·&ensp; φ′_d = φ′/γ_φ &ensp;·&ensp; c′_d = c′/γ_c',
+          _bish.eta.toFixed(2))+
+      eta(_bish.eta)+
+      (function(){ try{ return diagWrap(buildBishopSVG(_bish,true), true); }catch(e){ return ''; } })()+
+      '<div style="font-size:8px;color:var(--xdim);margin-top:3px">Freie Zentrum-Grid-Suche über das reale Geländeprofil; '+
+      'Fundamentlast als Flächenpressung (G_k + N_G)/(B·L), GW-Porendruck berücksichtigt. Ebenes 2D-Verfahren (plane strain) — '+
+      'die seitliche 3D-Stirnscherung des Bruchkörpers ist konservativ vernachlässigt. Gegen die Taylor-Geschlossenform '+
+      '(φ_u = 0) auf &lt; 2 % validiert. Bei η &lt; 1.3 vertiefte geotechnische Untersuchung (mehrere Gleitkörper, Schichtungseffekte).</div>'+
+    '</div>'+
+  '</div>' : '';
 
   // ── Inhaltsverzeichnis ─────────────────────────────────────────
   function tocRowF(num, title, sub){
@@ -10977,7 +11138,8 @@ function buildNachweisDocFlach(results, G){
       tocRowF('3.', 'Einwirkungen', false)+
       tocRowF('4.', 'Lastfallkombinationen', false)+
       lfTocRowsF+
-      tocRowF((5+nwCount)+'.', 'Ergebniszusammenfassung', false)+
+      (bishPage ? tocRowF((5+nwCount)+'.', 'Globale Böschungsstandsicherheit (Gleitkreis)', false) : '')+
+      tocRowF((5+nwCount+(bishPage?1:0))+'.', 'Ergebniszusammenfassung', false)+
     '</div>'+
   '</div>';
 
@@ -10996,8 +11158,11 @@ function buildNachweisDocFlach(results, G){
     var k=b.eta_klaf!==undefined?b.eta_klaf:Math.min(b.etaKx||99,b.etaKy||99);
     return Math.min(a, b.etaGB||99, b.etaGL||99, k);
   }, 99);
+  var _bishOK = !!(_bish && _bish.ok && isFinite(_bish.eta));
+  if(_bishOK) minEta = Math.min(minEta, _bish.eta);
+  if(_bishOK && _bish.eta < 1) allOk = false;
   var summary = '<div class="np-page">'+ph()+
-    ch((5+nwCount)+'.','Ergebniszusammenfassung')+
+    ch((5+nwCount+(bishPage?1:0))+'.','Ergebniszusammenfassung')+
     '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
     'Übersicht aller Nachweis-Ausnutzungsgrade η je Lastfall. Nachweis erbracht wenn η ≥ 1.0.'+
     '</div>'+
@@ -11007,6 +11172,9 @@ function buildNachweisDocFlach(results, G){
       sumRow('Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb, false)+
       sumRow('Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten, false)+
       sumRow('Kippnachweis — GZT Typ 1', function(r){return r.eta_klaf!==undefined ? r.eta_klaf : Math.min(r.etaKx||99,r.etaKy||99);}, NW.kippen, false)+
+      (_bishOK ? '<tr><td>Globale Böschungsstandsicherheit (Bishop)</td>'+
+        '<td class="r '+(_bish.eta>=1?'ok':'fail')+'" colspan="'+Math.max(1,results.length)+'">'+_bish.eta.toFixed(2)+
+        ' <span style="color:var(--xdim);font-size:7.5px">(lastfallunabhängig)</span></td></tr>' : '')+
     '</tbody></table>'+
     '<div class="np-verdict '+(allOk?'ok':'fail')+'">'+
       '<div class="np-verdict-v">'+(allOk?'✓  Alle massgebenden Nachweise sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt')+'</div>'+
@@ -11014,7 +11182,247 @@ function buildNachweisDocFlach(results, G){
     '</div>'+
   '</div>';
 
-  return cover + toc + page2 + page3 + nwPages.join('') + summary;
+  return cover + toc + page2 + page3 + nwPages.join('') + bishPage + summary;
+}
+
+// ════════════════════════════════════════════════════════════════
+// NACHWEISBERICHT PFAHLFUNDAMENT (Mikropfahl-Gruppe)
+// ════════════════════════════════════════════════════════════════
+function buildNachweisDocPfahl(r, piles, n){
+  const st=collectState();
+  const now=new Date(), datStr=st.p_datum||now.toLocaleDateString('de-CH');
+  const N=(v,d)=>_npN(v,d);
+  const ph=()=>_npPH(st,datStr);
+  const ch=(nn,t)=>`<div class="np-ch">${nn}&ensp;${t}</div>`;
+  const sh2=t=>`<div class="np-sh2">${t}</div>`;
+  const hr=()=>`<div class="np-hr"></div>`;
+  const fml=(f,s,res,u)=>`<div class="np-calc"><div class="np-cf">${f}</div>${s?`<div class="np-cv">= ${s}</div>`:''}<div class="np-cr">= ${res}${u?' '+u:''}</div></div>`;
+  const eta=v=>{ if(!isFinite(v)) return `<span class="np-eta ok">η = ∞ ✓</span>`; const ok=v>=1.0; return `<span class="np-eta ${ok?'ok':'fail'}">η = ${v.toFixed(2)}${ok?' ≥ 1.0 ✓':' < 1.0 ✗'}</span>`; };
+  const nwh=(nr,title,norm)=>`<div class="np-nwh"><span class="nr">${nr}</span>${title}${norm?`<span class="norm">${norm}</span>`:''}</div>`;
+  // Abbildung aus einem Diagramm-Builder (try/catch — ein Diagrammfehler bricht den Bericht nicht;
+  // .np-fig → wird vom Abbildungen-Toggle mitgeschaltet). SVG in max. 460 px Breite skaliert.
+  // wide=true → grössere viewBox; beim Einpassen in max-width 440px skaliert die SVG-Schrift HERUNTER
+  // (statt hoch wie bei den kompakten Sidebar-Diagrammen) → Diagrammtext ≈/≤ Berichttext.
+  const figFn=(fn,cap)=>{ let s=''; try{ s=fn()||''; }catch(e){ s=''; }
+    return s?`<div class="np-fig" style="margin:8px 0;text-align:center"><div style="max-width:440px;margin:0 auto">${s}</div>${cap?`<div style="font-size:8px;color:var(--xdim);margin-top:2px">${cap}</div>`:''}</div>`:''; };
+
+  // ── Geometrie/Eingaben
+  const Bb=+gi('pb_bx')||2, Lb=+gi('pb_by')||2, dB=+gi('pb_bank_d')||0.8, ue=+gi('pb_ue')||0;
+  const kx=+gi('pb_kx')||0, ky=+gi('pb_ky')||0, hk=+gi('pb_hk')||0, ex=+gi('pb_ex')||0, ey=+gi('pb_ey')||0;
+  const ax=+gi('pb_ax')||0, ay=+gi('pb_ay')||0, Lp=+gi('pb_L')||10, dG=(+gi('pb_dG')||150)/1000;
+  const gR=+gi('pb_gR')||1.4, gS=+gi('pb_gS')||1.15;
+  const cat=(typeof getMicropileSystems==='function')?getMicropileSystems():[];
+  const sys=cat[+gi('pb_sys')]||cat[0]||{grade:'',vars:[]};
+  const tdn=(sys.vars&&sys.vars[+gi('pb_var')])||(sys.vars&&sys.vars[0])||{};
+  const modelImg=window._npModelImg||null;
+  const viewImg=(typeof captureViewerWithDimPNG==='function')?captureViewerWithDimPNG():null;
+
+  const gL=r.govLoad||{}, Hd=Math.hypot(gL.Hx||0, gL.Hy||0);
+  const govF=r.govPile>=0?Math.abs((r.pileRes[r.govPile]||{}).F||0):0;
+  const govZug=r.govPile>=0 && !!(r.pileRes[r.govPile]||{}).zug;
+  const g=r.gzgFull, gv=r.gzgVar;
+  const etaInner=Math.min(r.etaSteel, r.etaKnick);
+  const allOk=isFinite(r.eta_massg) && r.eta_massg>=1.0;
+
+  // ── Deckblatt
+  const cover=`<div class="np-page np-pb">${ph()}
+    <div class="np-firma">${SETTINGS.firma||'BlockCalc SIA 267'}</div>
+    <div class="np-ct">Standsicherheitsnachweis</div>
+    <div class="np-ct" style="font-size:13px;margin-bottom:4px">Pfahlfundament · Mikropfahl-Gruppe · SIA 267:2013</div>
+    <div class="np-cs">Standsicherheit (GZT) und Gebrauchstauglichkeit (GZG) eines starren Banketts auf geneigten Mikropfählen (Mantelreibung)</div>
+    <div class="np-cblock">
+      <div class="np-cmeta">
+        <span class="k">Bauteil / Objekt</span><span class="v">${st.p_name||'–'}</span>
+        <span class="k">Fundamentbezeichnung</span><span class="v">${st.p_fundname||'–'}</span>
+        <span class="k">Projektnummer</span><span class="v">${st.p_nr||'–'}</span>
+        <span class="k">Bearbeiter</span><span class="v">${st.p_bearbeiter||SETTINGS.bearbeiter||'–'}</span>
+        <span class="k">Datum</span><span class="v">${datStr}</span>
+        <span class="k">Tragglied</span><span class="v">${(sys.grade||'')}${tdn.bez?' · '+tdn.bez:''}</span>
+      </div>
+      ${sh2('Normgrundlagen')}
+      <table class="np-tbl" style="margin-bottom:14px">
+        <tr><th>Norm</th><th>Titel</th><th>Anwendung</th></tr>
+        <tr><td>SIA 267:2013</td><td>Geotechnik</td><td>Nachweisformate GZT/GZG, Teilsicherheiten, Mantelreibung (γ_R)</td></tr>
+        <tr><td>SIA 263</td><td>Stahlbau</td><td>Knicknachweis (Knickkurve c, elastische Bettung)</td></tr>
+        <tr><td>EA-Pfähle / DIN 4128</td><td>Verpress-/Mikropfähle</td><td>Erfahrungswerte Mantelreibung q_s,k (tiefenkonstant)</td></tr>
+        <tr><td>SBB 0161.1011.0007</td><td>Fahrleitungsfundamente</td><td>GZG-Grenzwerte Schiefstellung / Horizontalverschiebung</td></tr>
+      </table>
+      ${sh2('Berechnungskonzept')}
+      <div style="font-size:8.5px;color:var(--dim);line-height:1.7;margin-bottom:14px">
+      Das starre Bankett verteilt die Mastlasten über räumliches Gruppengleichgewicht (6 Freiheitsgrade) auf die geneigten
+      Mikropfähle. Jeder Pfahl trägt primär axial (Mantelreibung; Spitzendruck bei d_G ≤ 300 mm vernachlässigt); die laterale
+      Bettung (p-y, geschichtet) liefert die Biegung. Nachgewiesen: äusserer Tragwiderstand (R_s,d), innerer Tragwiderstand
+      (Querschnitt N+M sowie Knicken SIA 263) und GZG (Schiefstellung / Verschiebung nach SBB).
+      Nachweis η = Widerstand / Einwirkung ≥ 1.0. Bei geneigtem Gelände wird die laterale Bettung talseitig abgemindert.
+      </div>
+      ${modelImg?`<div class="np-fig" style="margin:6px 0 14px;text-align:center"><img src="${modelImg}" style="max-width:74%;border:1px solid var(--ol);border-radius:3px"/><div style="font-size:8px;color:var(--xdim);margin-top:3px">Abb. 1 — 3D-Modell (aktuelle Ansicht)</div></div>`:''}
+      <table class="np-tbl" style="width:55%"><tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr><tr><td>0</td><td>${datStr}</td><td>Erstausgabe</td><td>${st.p_bearbeiter||SETTINGS.bearbeiter||''}</td></tr></table>
+    </div>
+  </div>`;
+
+  // ── Kap 1: System und Geometrie
+  const page1=`<div class="np-page np-pb">${ph()}
+    ${ch('1','System und Geometrie')}
+    <div class="np-geo">
+      ${viewImg?`<div style="width:50%;min-width:240px"><img src="${viewImg}" style="width:100%;border-radius:4px;border:0.5px solid var(--ol)"/></div>`:''}
+      <div style="flex:1">
+        ${sh2('Bankett und Fundamentkopf')}
+        <table class="np-tbl">
+          <tr><th>Grösse</th><th>Symbol</th><th class="r">Wert</th></tr>
+          <tr><td>Bankett B × L × d</td><td>B/L/d</td><td class="r">${N(Bb)} × ${N(Lb)} × ${N(dB)} m</td></tr>
+          <tr><td>Überdeckung</td><td>ü</td><td class="r">${N(ue)} m</td></tr>
+          <tr><td>Fundamentkopf B × L × H</td><td>–</td><td class="r">${N(kx)} × ${N(ky)} × ${N(hk)} m</td></tr>
+          <tr><td>Kopf-Exzentrizität</td><td>e_x / e_y</td><td class="r">${N(ex)} / ${N(ey)} m</td></tr>
+        </table>
+        ${sh2('Pfahlgruppe')}
+        <table class="np-tbl">
+          <tr><th>Grösse</th><th>Symbol</th><th class="r">Wert</th></tr>
+          <tr><td>Pfahlzahl</td><td>n</td><td class="r">${n}</td></tr>
+          <tr><td>Neigung quer / längs</td><td>α_x / α_y</td><td class="r">${N(ax)}° / ${N(ay)}°</td></tr>
+          <tr><td>Pfahllänge (Einbindung)</td><td>L</td><td class="r">${N(Lp)} m</td></tr>
+          <tr><td>Verpresskörper-Ø</td><td>d_G</td><td class="r">${(dG*1000).toFixed(0)} mm</td></tr>
+          <tr><td>Tragglied</td><td>–</td><td class="r">${(sys.grade||'')}${tdn.bez?' '+tdn.bez:''}</td></tr>
+          <tr><td>R_t,k Streckgrenzkraft</td><td>R_t,k</td><td class="r">${N(r.N_pl_k)} kN</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Kap 2: Baugrund
+  const schRows=SCHICHTEN.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name||'Schicht '+(i+1)}</td><td class="r">${N(s.phi)}</td><td class="r">${N(s.c)}</td><td class="r">${N(s.gamma)}</td><td class="r">${s.d===999?'∞':N(s.d)}</td><td class="r">${N(s.me||0)}</td></tr>`).join('');
+  const skL=r.skinLayers||[];
+  const skRows=skL.map((l,i)=>`<tr><td>${l.name||l.preset||'Schicht '+(i+1)}</td><td class="r">${N(l.z0)}–${N(l.z1)} m</td><td class="r">${l.qs}</td><td class="r">${N(l.dz)} m</td><td class="r">${N(l.dRk)}</td></tr>`).join('');
+  const page2=`<div class="np-page np-pb">${ph()}
+    ${ch('2','Baugrund')}
+    ${sh2('Bodenschichten')}
+    <table class="np-tbl" style="margin-bottom:10px">
+      <tr><th>#</th><th>Bezeichnung</th><th class="r">φ' [°]</th><th class="r">c' [kPa]</th><th class="r">γ [kN/m³]</th><th class="r">d [m]</th><th class="r">M_E [MN/m²]</th></tr>
+      ${schRows}
+    </table>
+    ${sh2('Mantelreibung q_s,k je Schicht (Umfang U = π·d_G = '+N(Math.PI*dG,3)+' m)')}
+    <table class="np-tbl">
+      <tr><th>Schicht</th><th class="r">Tiefe</th><th class="r">q_s,k [kPa]</th><th class="r">Δz [m]</th><th class="r">ΔR = q_s,k·U·Δz [kN]</th></tr>
+      ${skRows}
+      <tr class="hl"><td colspan="4"><b>Σ R_s,k (charakteristisch, η_g = ${N(r.grpEta||1,2)})</b></td><td class="r"><b>${N(r.Rskin_k)} kN</b></td></tr>
+    </table>
+    <div style="font-size:8px;color:var(--xdim);margin-top:4px">q_s,k = Erfahrungswert (EA-Pfähle / DIN 4128, Verpresspfahl, tiefenkonstant) bzw. Tabellen-/Probebelastungswert. Gruppenwirkungsgrad η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D). Spitzendruck nicht angesetzt.</div>
+  </div>`;
+
+  // ── Kap 3: Einwirkungen
+  const page3=`<div class="np-page np-pb">${ph()}
+    ${ch('3','Einwirkungen')}
+    ${sh2('Charakteristische Mastlasten (OK Kopf)')}
+    <table class="np-tbl" style="margin-bottom:10px">
+      <tr><th>Komponente</th><th>Symbol</th><th class="r">Ständig G</th><th class="r">Veränderlich W</th><th>Einheit</th></tr>
+      <tr><td>Vertikalkraft</td><td>N</td><td class="r">${N(+gi('l_NG'))}</td><td class="r">–</td><td>kN</td></tr>
+      <tr><td>Horizontalkraft quer</td><td>H_x</td><td class="r">${N(+gi('l_HGx'))}</td><td class="r">${N(+gi('l_HWx'))}</td><td>kN</td></tr>
+      <tr><td>Horizontalkraft längs</td><td>H_y</td><td class="r">${N(+gi('l_HGy'))}</td><td class="r">${N(+gi('l_HWy'))}</td><td>kN</td></tr>
+      <tr><td>Moment x-Achse</td><td>M_x</td><td class="r">${N(+gi('l_MGx'))}</td><td class="r">${N(+gi('l_MWx'))}</td><td>kNm</td></tr>
+      <tr><td>Moment y-Achse</td><td>M_y</td><td class="r">${N(+gi('l_MGy'))}</td><td class="r">${N(+gi('l_MWy'))}</td><td>kNm</td></tr>
+    </table>
+    ${sh2('Sohlkräfte UK Bankett — massgebende Kombination')}
+    <div style="font-size:8px;color:var(--xdim);margin-bottom:6px">Momenten-Transfer OK Kopf → UK Bankett: H_y→M_x, H_x→M_y (Hebel H_Kopf + Bankettdicke), inkl. Bankett-/Kopf-Eigengewicht und Kopf-Exzentrizität. ${r.ulsCombosN||0} ULS-Kombinationen (LF quer/längs × γ_G inf/sup).</div>
+    <table class="np-tbl">
+      <tr><th>Massgebend</th><th class="r">N_d [kN]</th><th class="r">H_xd [kN]</th><th class="r">H_yd [kN]</th><th class="r">|H_d| [kN]</th><th class="r">M_xd [kNm]</th><th class="r">M_yd [kNm]</th></tr>
+      <tr class="hl"><td><b>${r.govCombo||'—'}</b></td><td class="r">${N(gL.N)}</td><td class="r">${N(gL.Hx)}</td><td class="r">${N(gL.Hy)}</td><td class="r"><b>${N(Hd)}</b></td><td class="r">${N(gL.Mx)}</td><td class="r">${N(gL.My)}</td></tr>
+    </table>
+  </div>`;
+
+  // ── Kap 4: Pfahlkräfte
+  const pileRows=(r.pileRes||[]).map((p,i)=>{
+    const eg=Math.min(p.eGeo,p.eSteel);
+    const govCls=(i===r.govPile)?' class="hl"':'';
+    return `<tr${govCls}><td>P${i+1}${i===r.govPile?' <b>(massg.)</b>':''}</td><td>${(p.lf||'').replace(/\s*·.*/,'')}</td><td class="r">${N(p.F)}</td><td>${p.zug?'Zug':'Druck'}</td><td class="r">${N(p.Mp)}</td><td class="r ${eg>=1?'ok':'fail'}">${isFinite(eg)?eg.toFixed(2):'∞'}</td></tr>`;
+  }).join('');
+  const page4=`<div class="np-page np-pb">${ph()}
+    ${ch('4','Pfahlkräfte (ULS, Bemessungswerte)')}
+    <div style="font-size:8px;color:var(--xdim);margin-bottom:6px">Axialkraft je Pfahl aus dem räumlichen Gruppengleichgewicht, massgebende Kombination je Pfahl über alle ${r.ulsCombosN||0} Lastfälle (γ_G inf/sup). Vorzeichen N: + Druck / − Zug. η = min(η_Geo, η_Stahl).</div>
+    <table class="np-tbl">
+      <tr><th>Pfahl</th><th>Lastfall</th><th class="r">N [kN]</th><th>Art</th><th class="r">M [kNm]</th><th class="r">η</th></tr>
+      ${pileRows}
+    </table>
+  </div>`;
+
+  // ── Kap 5: GZT-Nachweise
+  const page5=`<div class="np-page np-pb">${ph()}
+    ${ch('5','Grenzzustand der Tragfähigkeit (GZT)')}
+    <div class="np-nw">
+      ${nwh('5.1','Äusserer Tragwiderstand — Mantelreibung','SIA 267 · EA-Pfähle')}
+      ${fml("R_s,d = R_s,k / γ_R  ·  R_s,k = Σ q_s,k · U · Δz · η_g", `${N(r.Rskin_k)} / ${N(gR,2)}`, `${N(r.Rskin_d)}`,'kN')}
+      <table class="np-tbl" style="margin:4px 0">
+        <tr><td>q_s,k Mittel ${r.qsTab?'(Tab./Erfahrung)':'(Erfahrungswert)'}</td><td class="r">${r.qsAvg} kPa</td></tr>
+        ${r.qsMax>r.qsMin+0.1?`<tr><td>q_s,k Bereich je Schicht</td><td class="r">${r.qsMin} … ${r.qsMax} kPa</td></tr>`:''}
+        <tr><td>Gruppenwirkungsgrad η_g (s̄/D = ${r.grpSd})</td><td class="r">× ${N(r.grpEta||1,2)}</td></tr>
+        <tr><td>R_s,d Druck</td><td class="r">${N(r.Rskin_d)} kN</td></tr>
+        ${r.zugFac<0.999?`<tr><td>R_s,d Zug (× ${N(r.zugFac,2)}, Herausziehen)</td><td class="r">${N(r.Rskin_dZ)} kN</td></tr>`:''}
+        <tr><td>|N|_max (P${r.govPile+1}, ${govZug?'Zug':'Druck'})</td><td class="r">${N(govF)} kN</td></tr>
+      </table>
+      ${fml("η_Geo = R_s,d / |N|_max", `${N(govZug?r.Rskin_dZ:r.Rskin_d)} / ${N(govF)}`, `${isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞'}`)}
+      ${eta(r.etaGeo)}
+      ${figFn(()=>buildPbAxialDiagram(r,n,true),'Abb. — Mantelreibungswiderstand R(z) über die Tiefe (Druck/Zug) vs. angesetzte Pfahlkräfte')}
+    </div>
+    <div class="np-nw">
+      ${nwh('5.2','Innerer Tragwiderstand — Querschnitt (N+M)','SIA 267')}
+      ${fml("|N|/R_t,d + |M|/M_Rd ≤ 1  ·  M_Rd = W_pl·f_yk/γ_s", `R_t,d = ${N(r.Rt_d)} kN · M_Rd = ${N(r.M_Rd)} kNm · M_max = ${N(r.Mmax)} kNm`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)}
+      ${eta(r.etaSteel)}
+      ${figFn(()=>buildPbSchnittSVG(r,n,true),'Abb. — Schnittgrössen massg. Pfahl: Verschiebung y, Querkraft V, Moment M über die Tiefe')}
+      ${figFn(()=>buildPbSteelDiagram(r,n,true),'Abb. — N+M-Interaktion (Betriebspunkte je Pfahl vs. Grenzlinie)')}
+    </div>
+    <div class="np-nw">
+      ${nwh('5.3','Innerer Tragwiderstand — Knicken','SIA 263, elast. Bettung')}
+      ${fml("N_cr = 2·√(k_bed·EI) · λ̄ = √(N_pl,k/N_cr) · N_b,Rd = χ·N_pl,k/γ_s", `N_cr = ${N(r.N_cr)} kN · λ̄ = ${N(r.lamBar,2)} · χ = ${N(r.chi,3)}`, `N_b,Rd = ${N(r.N_bRd)} kN`)}
+      ${fml("η_Knick = N_b,Rd / N_Ed", `${N(r.N_bRd)} / ${N(r.Ncomp)}`, `${isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞'}`)}
+      ${eta(r.etaKnick)}
+      ${figFn(()=>buildPbKnickDiagram(r,n,true),'Abb. — Knickkurve c χ(λ̄) mit Betriebspunkt; graue Punkte = übrige Katalog-Tragglieder')}
+    </div>
+    <div style="font-size:8px;color:var(--xdim);margin-top:4px">γ_R = ${N(gR,2)} (Modellwert ohne Probebelastung) · γ_s = ${N(gS,2)} · voller A_s (kein Abrostzuschlag, SIA 267) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant).</div>
+  </div>`;
+
+  // ── Kap 6: GZG
+  const page6=`<div class="np-page np-pb">${ph()}
+    ${ch('6','Gebrauchstauglichkeit (GZG) — SBB 0161.1011.0007')}
+    <div class="np-nw">
+      ${nwh('6.1','Schiefstellung und Horizontalverschiebung','SBB')}
+      <div class="np-cf" style="margin-bottom:4px">θ ≤ 1:100 (ständig+veränderlich) · 1:200 (veränderlich quer)${n<=2?' · u ≤ ±20/±10 mm':''}</div>
+      <table class="np-tbl">
+        <tr><th>Kriterium</th><th class="r">Wert</th><th class="r">Grenzwert</th><th>Status</th></tr>
+        ${g?`<tr><td>Schiefstellung θ (st+ver)</td><td class="r">${(1000*Math.max(g.tiltQuer,g.tiltLaengs)).toFixed(1)} ‰</td><td class="r">10 ‰ (1:100)</td><td class="${1000*Math.max(g.tiltQuer,g.tiltLaengs)<=10?'ok':'fail'}">${1000*Math.max(g.tiltQuer,g.tiltLaengs)<=10?'✓':'✗'}</td></tr>`:''}
+        ${gv?`<tr><td>Schiefstellung θ quer (ver)</td><td class="r">${(1000*gv.tiltQuer).toFixed(1)} ‰</td><td class="r">5 ‰ (1:200)</td><td class="${1000*gv.tiltQuer<=5?'ok':'fail'}">${1000*gv.tiltQuer<=5?'✓':'✗'}</td></tr>`:''}
+        ${(g&&n<=2)?`<tr><td>Horiz.verschiebung (st+ver)</td><td class="r">${Math.max(g.uQuer,g.uLaengs).toFixed(1)} mm</td><td class="r">20 mm</td><td class="${Math.max(g.uQuer,g.uLaengs)<=20?'ok':'fail'}">${Math.max(g.uQuer,g.uLaengs)<=20?'✓':'✗'}</td></tr>`:''}
+        ${(gv&&n<=2)?`<tr><td>Horiz.verschiebung quer (ver)</td><td class="r">${gv.uQuer.toFixed(1)} mm</td><td class="r">10 mm</td><td class="${gv.uQuer<=10?'ok':'fail'}">${gv.uQuer<=10?'✓':'✗'}</td></tr>`:''}
+      </table>
+      ${n>2?`<div style="font-size:8px;color:var(--xdim);padding:2px 0">Verschiebungslimit ±20/±10 mm gilt für 1-/2-Pfahlfundamente.</div>`:''}
+      ${eta(r.etaGZG)}
+      ${figFn(()=>buildPbSystemSVG(r,piles,n,true),'Abb. — Systemverformung quer (Schiefstellung θ + Horizontalverschiebung, überhöht)')}
+    </div>
+    <div class="np-nw">
+      ${nwh('6.2','Setzung Bankett','informativ — kein Grenzwert')}
+      ${fml("k_ax = EA·λ·tanh(λL)  (Lastübertragung t-z, Randolph)", `k_ax = ${N((r.kAx||0)/1000,1)} MN/m (Stahl allein ${N((r.kAxSteel||0)/1000,1)})`, `Setzung = ${r.settle_mm} mm`)}
+      <div style="font-size:8px;color:var(--xdim);margin-top:3px">Bankett starr angenommen (Translation + Kippen, keine Eigenbiegung). Bei dünnem/grossem Bankett gesondert prüfen.</div>
+    </div>
+  </div>`;
+
+  // ── Zusammenfassung
+  const sumRow=(label,val,gov)=>`<tr${gov?' class="hl"':''}><td>${label}</td><td class="r ${isFinite(val)?(val>=1?'ok':'fail'):'ok'}">${isFinite(val)?val.toFixed(2):'∞'}</td></tr>`;
+  const summary=`<div class="np-page">${ph()}
+    ${ch('7','Ergebniszusammenfassung')}
+    <div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">Übersicht der Nachweis-Ausnutzungsgrade η. Nachweis erbracht wenn η ≥ 1.0.</div>
+    <table class="np-tbl" style="margin-bottom:14px">
+      <thead><tr><th>Nachweis / Grenzzustand</th><th class="r">η</th></tr></thead><tbody>
+        ${sumRow('GZT — Äusserer Tragwiderstand (Mantelreibung)', r.etaGeo)}
+        ${sumRow('GZT — Innerer Tragwiderstand (Querschnitt N+M)', r.etaSteel)}
+        ${sumRow('GZT — Innerer Tragwiderstand (Knicken)', r.etaKnick)}
+        ${sumRow('GZG — Schiefstellung / Verschiebung', r.etaGZG)}
+        ${sumRow('MASSGEBEND (min)', r.eta_massg, true)}
+      </tbody>
+    </table>
+    <div class="np-verdict ${allOk?'ok':'fail'}">
+      <div class="np-verdict-v">${allOk?'✓  Alle massgebenden Nachweise sind erfüllt':'✗  Mindestens ein Nachweis ist nicht erfüllt'}</div>
+      <div class="np-verdict-s">Massgebend: η = ${isFinite(r.eta_massg)?r.eta_massg.toFixed(2):'–'} · Mikropfahl-Gruppe · SIA 267:2013 · ${datStr}</div>
+    </div>
+  </div>`;
+
+  return `<div class="np-wrap">${cover}${page1}${page2}${page3}${page4}${page5}${page6}${summary}</div>`;
 }
 
 // d/k-Anzeige der Einwirkungen und Erddruck-Spannungen — wirkt NUR auf das 3D-Modell.
@@ -13168,6 +13576,52 @@ function renderResults(res,worst,g){
       scroll.appendChild(el);
     });
   });
+
+  // ── Globale Böschungsstandsicherheit (Gleitkreis, Bishop) — NUR Flachfundament, EINMALIG
+  // (lastfallunabhängig: ständige Last als Auflast). Ergänzt den Grundbruch: dort lokaler Bruchkörper
+  // unmittelbar unter der Sohle (Böschung nur via Geländeneigungsbeiwerte), hier ein grosser Gleitkreis
+  // durch die ganze Böschung mit dem Fundament als blosse Auflast — zwei verschiedene Mechanismen.
+  // Block/Pfahlfundament bewusst AUSGENOMMEN: dort läge die Gleitfläche im Beton bzw. schnitte die
+  // Tragglieder → Lamellenverfahren (reine Bodenscheiben) nicht gültig.
+  window._flachBishop = null;   // für den Flach-Nachweisbericht (buildNachweisDocFlach)
+  if(!g.isBlock){
+    const _bTyp=(document.getElementById('bg_btyp')||{}).value||'none', _bBeta=+gi('bg_beta')||0;
+    if(_bTyp!=='none' && Math.abs(_bBeta)>0.1){
+      let bres=null;
+      try{
+        const _Np=+gi('l_NG')||0;
+        const _Gk=(g.Gk!==undefined?g.Gk:g.B*g.L*(g.Hb||0)*(+gi('g_gbeton')||24));
+        bres=bishopStability({ bx:g.B, L_fp:g.L,
+          t_bl:Math.max(0.3,(g.Hb||0)+(g.ue||0)),
+          q_block:(_Gk+_Np)/Math.max(0.09, g.B*g.L) });   // echte Flächenpressung statt t·γ_Beton
+      }catch(e){ bres=null; }
+      window._flachBishop = bres;   // → Nachweisbericht Flachfundament
+      const grp=document.createElement('div'); grp.className='lf-grp';
+      grp.textContent='Stabilität — Gelände (GZT)'; scroll.appendChild(grp);
+      const el=document.createElement('div'); el.className='nw';
+      if(bres && bres.ok && isFinite(bres.eta)){
+        const _eC=eCls(bres.eta), _bc={ok:'var(--ok)',warn:'var(--warn)',fail:'var(--fail)',dim:'var(--dim)'}[_eC];
+        let _svg=''; try{ _svg=buildBishopSVG(bres,false); }catch(e){ _svg=''; }
+        el.innerHTML=`<div class="nw-hd" onclick="this.parentElement.querySelector('.nw-bd').classList.toggle('open')">
+            <span class="nw-ttl">Globale Standsicherheit (Gleitkreis, Bishop)</span>
+            <span class="nw-eta ${_eC}">${eTxt(bres.eta)}</span>
+          </div>
+          <div class="nwbar" title="Ausnutzung 1/η = ${Math.round(100/bres.eta)}% (Marker = Grenze η=1)"><i style="width:${Math.min(100,(1/bres.eta)*66).toFixed(1)}%;background:${_bc}"></i><u></u></div>
+          <div class="nw-bd">
+            <div class="nw-formula">η = min Σ[c'_d·b + (W−u·b)·tan φ'_d]/m_α  /  Σ W·sin α  (Bishop vereinfacht, iterativ)</div>
+            <div class="nw-row"><span>η massgebender Kreis</span><span>${bres.eta.toFixed(2)}</span></div>
+            <div class="nw-row"><span>Radius R</span><span>${bres.R.toFixed(2)} m</span></div>
+            <div class="nw-row"><span>Scherfestigkeit (SIA 267)</span><span>φ′_d = φ′/γ_φ · c′_d = c′/γ_c</span></div>
+            ${_svg?`<div style="margin-top:6px">${_svg}</div>`:''}
+            <div style="font-size:8px;color:var(--xdim);margin-top:3px"><b>Ergänzt den Grundbruch</b> (dort: lokaler Bruchkörper unter der Sohle; hier: globaler Gleitkreis durch die Böschung, Fundament nur als Auflast). Freie Zentrum-Grid-Suche, Fundamentlast als Flächenpressung (G_k+N_G)/(B·L), GW-Porendruck. Ebenes 2D-Verfahren — seitliche 3D-Stirnscherung konservativ vernachlässigt; gegen Taylor φ_u=0 auf &lt;2 % validiert. Bei η &lt; 1.3 vertiefte GEO-Untersuchung.</div>
+          </div>`;
+      } else {
+        el.innerHTML=`<div class="nw-hd"><span class="nw-ttl">Globale Standsicherheit (Gleitkreis, Bishop)</span><span class="nw-eta dim">n.m.</span></div>
+          <div class="nw-bd open"><div style="font-size:9px;color:var(--warn);line-height:1.4">Die Gleitkreissuche lieferte kein gültiges Ergebnis — Böschungsgeometrie (Höhe h_β, Fusslage) und Bodenkennwerte prüfen. Globale Standsicherheit gesondert nachweisen.</div></div>`;
+      }
+      scroll.appendChild(el);
+    }
+  }
   // Nachweisplot-Button nach Berechnung einblenden
   const btnPlot = document.getElementById('btn-plot');
   if(btnPlot){
@@ -13243,6 +13697,7 @@ function _cycleWsSnap(side){
   let nxt = P.find(p=>p > cur+8); if(nxt==null) nxt=P[0];
   _wsCols[side] = _clampWsCol(side, nxt, _wsEl().offsetWidth);
   applyWorkspaceCols(); _persistWsCols();
+  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift();   // Buttons/Achsen/Modell animiert mit
   requestAnimationFrame(()=>requestAnimationFrame(resizeViewer));
 }
 // Projekt-Banner (Metadaten) vertikal aus der Topbar aus-/einklappen.
@@ -13266,8 +13721,10 @@ function toggleProjBanner(force){
 // oder auf den Toggle-Button schliessen es NICHT (dort übernimmt der eigene Handler).
 document.addEventListener('pointerdown', e=>{
   const b=document.getElementById('proj-banner'); if(!b || !b.classList.contains('open')) return;
-  const btn=document.getElementById('proj-banner-btn');
-  if(b.contains(e.target) || (btn && btn.contains(e.target))) return;
+  const btn=document.getElementById('proj-banner-btn'), roll=document.getElementById('banner-roll');
+  // Klicks im Banner, auf den Projektnamen-Toggle ODER auf die Ausroll-Pille schliessen NICHT
+  // (dort übernimmt der eigene onclick — sonst würde pointerdown zu / click wieder auf → Doppel-Toggle).
+  if(b.contains(e.target) || (btn && btn.contains(e.target)) || (roll && roll.contains(e.target))) return;
   toggleProjBanner(false);
 });
 // Ergebnis-Schublade ein-/ausfahren (≥768px). Zustand wird in SETTINGS.resDrawerOpen gemerkt.
@@ -13276,7 +13733,7 @@ function toggleResDrawer(force){
   const open = (force!==undefined) ? !!force : !ws.classList.contains('res-open');
   ws.classList.toggle('res-open', open);
   if(typeof SETTINGS!=='undefined'){ SETTINGS.resDrawerOpen=open; if(typeof dbSet==='function') dbSet('bc_settings',SETTINGS); }
-  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift(open);   // Modell aus dem verdeckten Bereich schieben
+  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift();   // Modell aus dem verdeckten Bereich schieben
   requestAnimationFrame(resizeViewer);
 }
 function _initWsResize(){
@@ -13284,13 +13741,15 @@ function _initWsResize(){
   if(typeof SETTINGS!=='undefined' && SETTINGS.wsCols){
     _wsCols.l = +SETTINGS.wsCols.l || _wsCols.l; _wsCols.r = +SETTINGS.wsCols.r || _wsCols.r;
   }
-  // Schublade: gemerkten Zustand anwenden (Default eingeklappt → Fokus auf Modellierung)
+  // Nachweis-Schublade (rechts): gemerkten Zustand anwenden (Default eingeklappt → Fokus auf Modellierung)
   const _drOpen=(typeof SETTINGS!=='undefined' && SETTINGS.resDrawerOpen===true);
   ws.classList.toggle('res-open', _drOpen);
-  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift(_drOpen);   // Start-Verschiebung passend zum Zustand
-  _updateDrawerStatus();
+  ws.classList.add('ws-noanim');   // Erstaufbau ohne Transition (kein einmaliges Control-Gleiten)
   applyWorkspaceCols();
-  window.addEventListener('resize', applyWorkspaceCols);   // Fensteränderung → Spalten neu begrenzen
+  if(typeof setViewerDrawerShift==='function') setViewerDrawerShift();   // Start-Verschiebung (Eingabe-Overlay + ggf. Nachweis)
+  setTimeout(()=>ws.classList.remove('ws-noanim'), 80);   // Guard nach Erstaufbau lösen (setTimeout: feuert auch bei RAF-Drosselung)
+  _updateDrawerStatus();
+  window.addEventListener('resize', ()=>{ applyWorkspaceCols(); if(typeof setViewerDrawerShift==='function') setViewerDrawerShift(); });
   [['ws-split-l','l'],['ws-split-r','r']].forEach(([id,side])=>{
     const h=document.getElementById(id); if(!h) return;
     let drag=false, moved=false, x0=0, w0=0;
@@ -13298,11 +13757,17 @@ function _initWsResize(){
       if(Math.abs(x-x0)>3) moved=true;
       const dir = side==='l' ? 1 : -1;
       _wsCols[side] = _clampWsCol(side, w0 + dir*(x-x0), ws.offsetWidth);
-      applyWorkspaceCols(); };
+      applyWorkspaceCols();
+      // Buttons/Achsen/Modell folgen 1:1 mit der Eingabe-Breite (Transition während .resizing aus)
+      if(side==='l' && typeof setViewerDrawerShift==='function') setViewerDrawerShift(true); };
     const up=()=>{ if(!drag) return; drag=false; h.classList.remove('drag'); ws.classList.remove('resizing');
       document.body.style.userSelect='';
       window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up);
-      if(!moved) _cycleWsSnap(side); else { _persistWsCols(); requestAnimationFrame(resizeViewer); } };
+      // Tippen (keine Bewegung) = Schnellbreiten-Wechsel Normal↔Breit (Tabellen komplett sichtbar)
+      if(!moved) _cycleWsSnap(side);
+      else { _persistWsCols();
+        if(side==='l' && typeof setViewerDrawerShift==='function') setViewerDrawerShift();   // Endstand animiert einrasten
+        requestAnimationFrame(resizeViewer); } };
     h.addEventListener('pointerdown',e=>{ if(window.innerWidth<768) return; e.preventDefault();
       drag=true; moved=false; x0=e.clientX; w0=_wsCols[side];
       h.classList.add('drag'); ws.classList.add('resizing'); document.body.style.userSelect='none';
@@ -13627,6 +14092,7 @@ function loadProj(k){
   const p=dbGet(k); if(!p) return;
   applyState(p);
   _currentProjKey = k;
+  if(typeof renderProjList==='function') renderProjList();   // Aktiv-Markierung (Rahmen/Zeile) auf das geladene Projekt aktualisieren
   // Dropdown auf p_name des geladenen Projekts setzen
   const sel=document.getElementById('proj-sel'); if(sel) sel.value=p.p_name||'';
   // Neues-Projekt-Feld ausblenden
