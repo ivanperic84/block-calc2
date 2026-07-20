@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>BlockCalc — SIA 267</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e0f13">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -758,15 +761,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 }
 
 /* ═══════════════════════════════════════════
-   PROTOKOLL
-   ═══════════════════════════════════════════ */
-#protokoll { display:none; position:fixed; inset:0; background:#f8f8f8; color:#111; z-index:70; overflow-y:auto; font-family:var(--f-mono); font-size:11px; }
-.proto-bar { position:sticky; top:0; background:#fff; border-bottom:1px solid #ddd; padding:10px 16px; display:flex; gap:8px; z-index:10; }
-.proto-body { padding:28px 32px; max-width:760px; margin:0 auto; }
-.proto-btn { height:30px; padding:0 14px; border:1px solid #ccc; border-radius:6px; background:#fff; color:#333; cursor:pointer; font-family:var(--f-mono); font-size:11px; display:inline-flex; align-items:center; }
-.proto-btn.pri { background:#111; color:#fff; border-color:#111; }
-
-/* ═══════════════════════════════════════════
    TOAST
    ═══════════════════════════════════════════ */
 .toast { position:fixed; bottom:50px; left:50%; transform:translateX(-50%); background:var(--s4); border:1px solid var(--ol2); color:var(--on2); padding:7px 18px; border-radius:20px; font-family:var(--f-ui); font-size:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35); z-index:9999; opacity:1; pointer-events:none; transition:opacity 0.25s, transform 0.25s; white-space:nowrap; }
@@ -936,9 +930,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
     <button class="btn btn-icon" onclick="saveProject()" id="btn-save" title="Projekt speichern">
       <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.5 16.5h-11a1 1 0 01-1-1v-11a1 1 0 011-1h8l3 3v9a1 1 0 01-1 1z"/><rect x="7" y="11.5" width="6" height="5"/><rect x="7" y="3.5" width="4.5" height="3"/></svg>
     </button>
-    <button class="btn btn-tonal btn-sm" onclick="showProtokoll()" id="btn-proto" style="display:none" title="Protokoll">
-      <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="12" height="14" rx="1.5"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>
-      <span class="tb-btn-lbl">Protokoll</span>
+    <button class="btn btn-icon" onclick="openBemessung()" id="btn-bemessung" title="Bemessungsdiagramm (Standardlasten)">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5v13h13"/><path d="M5.5 13.5c2.5-1 4-3.5 5-6 .8-2 1.8-3.5 4-4"/><path d="M5.5 15.5c3.5-.6 6.5-2.5 8-5 .9-1.5 1.7-2.6 3-3.2"/></svg>
     </button>
     <button class="btn btn-icon" onclick="calculate()" id="btn-calc" title="Neu berechnen" style="border-color:rgba(124,141,224,0.45);color:var(--acc)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15.5 9A5.5 5.5 0 104.8 13.5M15.5 9V5.5M15.5 9H12"/></svg>
@@ -963,7 +956,13 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         </div>
         <div id="new-proj-name-field" class="field" style="display:none"><label>Projektname</label><input id="new-proj-name" type="text" placeholder="z.B. Fahrleitungsmast FM-01" oninput="si('p_name',this.value);updateSB()"/></div>
         <div class="pb-grid2" style="margin-top:6px">
-          <div class="field pb-wide"><label>Fundamentbezeichnung</label><input id="p_fundname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="updateSB()"/></div>
+          <div class="field pb-wide"><label>Fundamentbezeichnung</label>
+            <select id="fund-sel" onchange="onFundSelChange()" style="width:100%;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:11px;cursor:pointer;outline:none">
+              <option value="__new__">+ Neues Fundament</option>
+            </select>
+            <input id="p_fundname" type="hidden" value=""/>
+          </div>
+          <div id="fund-newname-field" class="field pb-wide" style="display:none"><label>Name neues Fundament</label><input id="fund-newname" type="text" placeholder="z.B. Mast 18 — Block A" oninput="si('p_fundname',this.value);updateSB()"/></div>
           <div class="field"><label>Projektnummer</label><input id="p_nr" type="text"/></div>
           <div class="field"><label>Mast-Nr.</label><input id="p_mastnr" type="text" placeholder="M-001"/></div>
           <div class="field"><label>Datum</label><input id="p_datum" type="date"/></div>
@@ -986,6 +985,18 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       <!-- Spalte 3: Gespeicherte Projekte -->
       <div class="pb-col pb-col-proj">
         <div class="pb-col-h">Gespeicherte Projekte</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="proj-search" type="text" placeholder="Suchen (Fundament, KM, Mast-Nr., Projekt)"
+            oninput="renderProjList()"
+            style="flex:1;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:10.5px;outline:none"/>
+          <select id="proj-sort" onchange="renderProjList()" title="Sortierung"
+            style="background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:10.5px;cursor:pointer;outline:none">
+            <option value="neu">Neueste zuerst</option>
+            <option value="name">Fundamentname</option>
+            <option value="km">KM</option>
+            <option value="mast">Mast-Nr.</option>
+          </select>
+        </div>
         <div id="proj-list" class="pb-projlist"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
           <button class="btn btn-tonal btn-full btn-sm" onclick="importJSON()">
@@ -1316,6 +1327,25 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
               <div class="field"><label>γ_Ep  pass. Erddruck</label><input id="tw_Ep" type="number" value="1.40" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
             </div>
             <div class="hint" style="margin-top:4px">Lastbeiwerte (γ_G, γ_Q) werden im Tab «Lasten» unter «Lastbeiwerte» geführt.</div>
+          </div>
+        </div>
+        <!-- Auto-Dimensionierung (U1/U2): kleinste B×L mit η ≥ 1.0, Sweep über den Pure-Rechenkern -->
+        <div class="lf-card" id="dim-card" style="margin-top:6px">
+          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Dimensionierung</span>
+            <span class="mat-card-summary">B×L-Vorschlag</span>
+            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+          </div>
+          <div class="lf-card-body">
+            <div class="field"><label>B×L [m] — auto nach M_k, überschreibbar</label>
+              <input id="dim-bl" type="number" step="0.05" min="0.5" placeholder="auto"
+                onchange="_dimBLManual=this.value!==''"/></div>
+            <div class="hint" style="margin-top:4px">B×L wird aus dem <strong>resultierenden charakteristischen Moment</strong>
+              (ständig + veränderlich) vorbelegt: ≤ 80 kNm → 1.10 m · ≤ 135 → 1.20 m · ≤ 230 → 1.40 m.
+              Von Hand überschreibbar (Feld leeren = wieder automatisch). Gesucht wird die
+              <strong>kleinste Blocktiefe H</strong> mit η ≥ 1.0. Flach: kleinste B×L bis zum Limit (H fest).</div>
+            <button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="autoDimension()">Vorschlag berechnen</button>
+            <div id="dim-result" style="margin-top:8px"></div>
           </div>
         </div>
         </div><!-- /geo-standard -->
@@ -1958,6 +1988,55 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   </div>
 </div>
 
+<!-- Bemessungsdiagramm: erforderliche B×L je Standardlast (Lastniveau), Kurvenschar H_Block, 2 Böschungsneigungen -->
+<div class="overlay-panel" id="ov-bemessung" style="align-items:center;justify-content:center">
+  <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r3);padding:22px 26px;max-width:880px;width:96%;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:2px">
+      <div style="font-family:var(--f-mono);font-size:13px;font-weight:600">Bemessungsdiagramm</div>
+      <div style="font-size:10px;color:var(--dim)">Erforderliche Fundamentabmessung je Standardlast — Baugrund und Einwirkungen wie aktuell eingegeben</div>
+      <span style="flex:1"></span>
+      <button class="btn btn-tonal btn-sm" onclick="closeOverlay('ov-bemessung')">Schliessen</button>
+    </div>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:stretch;margin:12px 0 8px;padding:10px 12px;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1)">
+      <div style="min-width:220px;flex:1 1 240px">
+        <div style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:5px">Standardlasten (Lastniveaus) — Name anklicken für Werte</div>
+        <div id="bem-lvls" style="display:flex;flex-direction:column;gap:2px;max-height:150px;overflow-y:auto"></div>
+      </div>
+      <div style="flex:1 1 380px;max-width:460px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px">
+          <div class="field"><label>Bemessungsgrösse (y-Achse)</label>
+            <select id="bem-mode" onchange="_bemModeUI()" style="width:100%;background:var(--s1);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:10.5px;cursor:pointer;outline:none">
+              <option value="H">Blocktiefe H (Kurven = B×L)</option>
+              <option value="B">Seitenlänge B (Kurven = H)</option>
+            </select></div>
+          <div class="field"><label id="bem-hs-label">B×L-Kurven [m, kommagetrennt]</label>
+            <input id="bem-hs" type="text" style="font-family:var(--f-mono)"/></div>
+          <div class="field"><label>Böschung β₁ [°]</label>
+            <input id="bem-b1" type="number" step="5" value="0"/></div>
+          <div class="field"><label>Böschung β₂ [°] (leer = keine)</label>
+            <input id="bem-b2" type="number" step="5"/></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:auto;padding-top:6px">
+          <button class="btn btn-tonal btn-sm" onclick="runBemessung()" id="bem-run">Diagramm berechnen</button>
+          <button class="btn btn-tonal btn-sm" onclick="printBemessung()" id="bem-pdf" disabled title="Diagramm mit Kopf und Baugrund als PDF drucken">Drucken / PDF</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin:0 0 8px;border:1px solid var(--ol);border-radius:var(--r1);background:var(--s2)">
+      <div onclick="const b=document.getElementById('bem-soil-body');b.style.display=b.style.display==='none'?'':'none'"
+        style="padding:7px 12px;cursor:pointer;display:flex;gap:10px;align-items:baseline">
+        <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase">Baugrund</span>
+        <span id="bem-soil-sum" style="font-size:10px;color:var(--dim);font-family:var(--f-mono)"></span>
+        <span style="flex:1"></span>
+        <span style="font-size:9px;color:var(--xdim)">anklicken für Details</span>
+      </div>
+      <div id="bem-soil-body" style="display:none;padding:0 12px 10px"></div>
+    </div>
+    <div id="bem-status" class="hint" style="margin:0 0 6px"></div>
+    <div id="bem-chart"></div>
+  </div>
+</div>
+
 <!-- Projekt-Zuweisung Modal -->
 <div class="overlay-panel" id="ov-reassign" style="align-items:center;justify-content:center">
   <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r3);padding:28px 32px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.4)">
@@ -2024,6 +2103,15 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       <div style="padding:10px 14px">
         <div class="field"><label>Firma</label><input id="set-firma" type="text" placeholder=""/></div>
         <div class="field"><label>Fachingenieur</label><input id="set-bearbeiter" type="text" placeholder=""/></div>
+        <div class="field"><label>Firmenlogo (Nachweisbericht, Deckblatt)</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+            <input id="set-logo-file" type="file" accept="image/*" style="display:none" onchange="_setLogoFile(this)"/>
+            <button class="btn btn-tonal btn-sm" onclick="document.getElementById('set-logo-file').click()">Logo wählen</button>
+            <button class="btn btn-tonal btn-sm" id="set-logo-clear" style="display:none" onclick="_clearLogo()">Entfernen</button>
+            <img id="set-logo-prev" alt="" style="display:none;max-height:34px;max-width:140px;border:1px solid var(--ol);border-radius:4px;background:#fff;padding:2px"/>
+          </div>
+          <div class="hint" style="margin-top:4px">Wird verkleinert gespeichert (max. 420 px breit) und auf dem Deckblatt aller Berichte gezeigt.</div>
+        </div>
       </div>
     </div>
 
@@ -2266,6 +2354,14 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           </button>
           <input type="file" id="imp-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
         </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--ol)">
+          <div style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Komplett-Backup (alle Daten)</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-tonal btn-sm" onclick="exportFullBackup()">Backup erstellen</button>
+            <button class="btn btn-tonal btn-sm" onclick="importFullBackup()">Backup wiederherstellen</button>
+          </div>
+          <div class="hint" style="margin-top:4px">Eine Datei mit allen Projekten, Templates, Bodenprofilen, Lastniveaus, eigenen Traggliedern und Einstellungen — für Gerätewechsel und Datensicherung.</div>
+        </div>
       </div>
     </div>
 
@@ -2284,29 +2380,35 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════
-     PROTOKOLL
-     ═══════════════════════════════════════════ -->
-<div id="protokoll">
-  <div class="proto-bar">
-    <button class="proto-btn" onclick="hideProto()">← Schliessen</button>
-    <button class="proto-btn pri" onclick="exportPDF()">PDF exportieren</button>
-  </div>
-  <div class="proto-body" id="proto-body"></div>
-</div>
-
 <script>
+// Selbsttest-Modus (?selftest=1): Golden-/Analytik-Anker fahren, Draft-Save unterdrückt
+window._SELFTEST_MODE = /[?&]selftest=1/.test(location.search);
+// PWA/Offline (Feldeinsatz): Service Worker cached App-Shell + CDN-Assets (Three.js/jsPDF/Fonts).
+// Nur über http(s) — bei file://-Nutzung (Chrome-Extension-Workflow) bleibt alles wie bisher.
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 // ════════════════════════════════════════════
 // INDEXEDDB
 // ════════════════════════════════════════════
 let _store = {}, _idb = null;
+// A8: Fallback auf localStorage, wenn IndexedDB nicht verfügbar ist (Private Mode,
+// restriktive WebViews). Ganzer _store als ein JSON-Eintrag — funktional identisch,
+// nur Grössenlimit ~5 MB statt quasi unbegrenzt.
+const _LS_FALLBACK_KEY='bc_kv_fallback';
+function _lsPersist(){ if(_idb) return; try{ localStorage.setItem(_LS_FALLBACK_KEY, JSON.stringify(_store)); }catch(_){} }
 function dbGet(key){ return _store[key]; }
-function dbSet(key, val){ _store[key]=val; if(_idb){const tx=_idb.transaction('kv','readwrite');tx.objectStore('kv').put(val,key);} }
-function dbDel(key){ delete _store[key]; if(_idb){const tx=_idb.transaction('kv','readwrite');tx.objectStore('kv').delete(key);} }
+function dbSet(key, val){ _store[key]=val; if(_idb){const tx=_idb.transaction('kv','readwrite');tx.objectStore('kv').put(val,key);} else _lsPersist(); }
+function dbDel(key){ delete _store[key]; if(_idb){const tx=_idb.transaction('kv','readwrite');tx.objectStore('kv').delete(key);} else _lsPersist(); }
 function dbKeys(){ return Object.keys(_store); }
 async function dbInit(){
   return new Promise((res)=>{
-    const req=indexedDB.open('blockCalcDB',1);
+    const fallback=()=>{ _idb=null;
+      try{ const s=localStorage.getItem(_LS_FALLBACK_KEY); if(s) _store=JSON.parse(s)||{}; }catch(_){}
+      res(); };
+    let req=null;
+    try{ req=indexedDB.open('blockCalcDB',1); }catch(_){ return fallback(); }
+    if(!req) return fallback();
     req.onupgradeneeded=e=>{e.target.result.createObjectStore('kv');};
     req.onsuccess=e=>{
       _idb=e.target.result;
@@ -2318,8 +2420,38 @@ async function dbInit(){
       rV.onsuccess=()=>{vals=rV.result;done();};
       rK.onerror=rV.onerror=()=>res();
     };
-    req.onerror=()=>res();
+    req.onerror=()=>fallback();
   });
+}
+// A8: Komplett-Backup — ALLE Daten (Projekte, Templates, Bodenprofile, Lastniveaus,
+// eigene Tragglieder, Einstellungen, Entwurf) als eine Datei; Wiederherstellen merged
+// per Schlüssel (überschreibt Gleiches, löscht nichts) und lädt die App neu.
+function exportFullBackup(){
+  const data={ _type:'blockcalc-backup', _v:1, _date:new Date().toISOString(), store:{..._store} };
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='BlockCalc_Backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Backup exportiert ('+Object.keys(_store).length+' Einträge)');
+}
+function importFullBackup(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const data=JSON.parse(await f.text());
+      if(data._type!=='blockcalc-backup' || !data.store) throw new Error('Keine BlockCalc-Backup-Datei');
+      const n=Object.keys(data.store).length;
+      confirmDelete('Backup vom '+(data._date||'?').slice(0,10)+' einspielen ('+n+' Einträge)? '+
+        'Bestehende Einträge mit gleichem Schlüssel werden überschrieben, die App lädt danach neu.',
+        ()=>{ _applyFullBackup(data); });
+    }catch(err){ toast('Backup-Import: '+err.message); }
+  };
+  inp.click();
+}
+function _applyFullBackup(data, noReload){
+  Object.entries(data.store).forEach(([k,v])=>dbSet(k,v));
+  if(!noReload){ toast('Backup eingespielt — App lädt neu'); setTimeout(()=>location.reload(), 700); }
 }
 
 // ════════════════════════════════════════════
@@ -2357,6 +2489,7 @@ function loadSettings(){
   set('set-lang',    SETTINGS.lang||'de');
   set('set-firma',   SETTINGS.firma||'');
   set('set-bearbeiter', SETTINGS.bearbeiter||'');
+  if(typeof _loadLogoUI==='function') _loadLogoUI();
   set('set-gbx',  SETTINGS.gbx??1.2);
   set('set-gby',  SETTINGS.gby??1.2);
   set('set-ghb',  SETTINGS.ghb??2.2);
@@ -2539,6 +2672,46 @@ function closeOverlay(id){
   document.getElementById(id)?.classList.remove('open');
 }
 
+// ── Firmenlogo (U6): Upload → verkleinert als DataURL in SETTINGS.logo, Deckblatt der Berichte
+function _loadLogoUI(){
+  const p=document.getElementById('set-logo-prev'), c=document.getElementById('set-logo-clear');
+  const has=!!SETTINGS.logo;
+  if(p){ p.style.display=has?'':'none'; if(has) p.src=SETTINGS.logo; }
+  if(c) c.style.display=has?'':'none';
+}
+function _setLogoFile(input){
+  const f=input.files && input.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      // Verkleinern (max 420×160 px) — hält bc_settings klein, reicht fürs Deckblatt
+      const sc=Math.min(1, 420/img.width, 160/img.height);
+      const cv=document.createElement('canvas');
+      cv.width=Math.max(1,Math.round(img.width*sc)); cv.height=Math.max(1,Math.round(img.height*sc));
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      SETTINGS.logo=cv.toDataURL('image/png');
+      dbSet('bc_settings',SETTINGS);
+      _loadLogoUI(); toast('Logo gespeichert');
+    };
+    img.onerror=()=>toast('Bild konnte nicht gelesen werden');
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(f);
+  input.value='';
+}
+function _clearLogo(){
+  delete SETTINGS.logo;
+  dbSet('bc_settings',SETTINGS);
+  _loadLogoUI(); toast('Logo entfernt');
+}
+// Deckblatt-Baustein für alle drei Berichte
+function _npLogo(){
+  return SETTINGS.logo
+    ? '<div style="text-align:right;margin-bottom:6px"><img src="'+SETTINGS.logo+'" alt="" style="max-height:52px;max-width:210px"/></div>'
+    : '';
+}
+
 function toggleTheme(isLight){
   SETTINGS.theme = isLight ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', SETTINGS.theme);
@@ -2546,6 +2719,7 @@ function toggleTheme(isLight){
   try { localStorage.setItem('bc_theme', SETTINGS.theme); } catch(e) {}
   if(typeof scene !== 'undefined' && scene)
     scene.background = new THREE.Color(isLight ? 0xe8e8ee : 0x090a0d);
+  if(typeof invalidateViewer==='function') invalidateViewer();
 }
 
 // ════════════════════════════════════════════
@@ -2729,6 +2903,7 @@ function applyGridStyle(){
   const C=vizStyle();
   g.visible = (typeof showGrid==='undefined' || showGrid!==false) && C.gridShow!==false;
   if(C.gridCol!=null){ (Array.isArray(g.material)?g.material:[g.material]).forEach(m=>{ if(m&&m.color) m.color.setHex(C.gridCol); }); }
+  if(typeof invalidateViewer==='function') invalidateViewer();
 }
 let showPfahlKeil=false;  // Bodenpressung-Keile (Block-/Pfahlkeil + Schattenband) — Start aus
 let _stressHidden=null;
@@ -2803,7 +2978,8 @@ function _updateDirtyUI(){
   btn.classList.toggle('dirty', _dirty);
   btn.title=(_currentProjKey?'Speichern (überschreibt geladenes Fundament)':'Speichern (neues Fundament — Banner öffnet sich)')+(_dirty?' · ungespeicherte Änderungen':'');
 }
-function _saveDraft(){ try{ dbSet('bc_draft',{ st:_histSnap(), ts:Date.now(), projKey:_currentProjKey, savedSnap:_savedSnap }); }catch(_){} }
+function _saveDraft(){ if(window._SELFTEST_MODE) return; /* Selbsttest darf den echten Arbeitsstand nie überschreiben */
+  try{ dbSet('bc_draft',{ st:_histSnap(), ts:Date.now(), projKey:_currentProjKey, savedSnap:_savedSnap }); }catch(_){} }
 function _restoreDraft(){
   let d; try{ d=dbGet('bc_draft'); }catch(_){ return false; }
   if(!d || !d.st) return false;
@@ -3074,8 +3250,14 @@ function initViewer(){
 
   applyCameraMode(); applyGridStyle();   // gespeicherten Kamera-/Raster-Stil (SETTINGS.viz) anwenden
   rebuildScene();
-  (function loop(){requestAnimationFrame(loop);renderer.render(scene,camera);_vlUpdate();})();
+  // Render-on-Demand: nur rendern, wenn sich Kamera/Szene geändert hat (_renderDirty).
+  // Spart auf Feldgeräten (Android) massiv Akku — vorher lief renderer.render 60×/s im Leerlauf.
+  (function loop(){requestAnimationFrame(loop);
+    if(_renderDirty){ _renderDirty=false; renderer.render(scene,camera); _vlUpdate(); }})();
 }
+
+let _renderDirty = true;                              // erster Frame rendert immer
+function invalidateViewer(){ _renderDirty = true; }   // von moveCam/rebuildScene/... gesetzt
 
 function moveCam(){const{t,p,r}=sph; const b=_camTarget||{x:0,y:0,z:0};
   // Blickpunkt inkl. manuellem Pan-Versatz — Kamera + Blickpunkt bleiben am Modell (Orbit-Drehpunkt zentral)
@@ -3091,7 +3273,8 @@ function moveCam(){const{t,p,r}=sph; const b=_camTarget||{x:0,y:0,z:0};
   if(Math.abs(_drawerShiftCur)>0.5 && W>0){ camera.setViewOffset(W,H,_drawerShiftCur,0,W,H); }
   else if(camera.view && camera.view.enabled){ camera.clearViewOffset(); }
   else { camera.updateProjectionMatrix(); }
-  camera.lookAt(T.x,T.y,T.z);}
+  camera.lookAt(T.x,T.y,T.z);
+  invalidateViewer();}
 // Manueller Pan (Mittlere Maustaste / Zwei-Finger): Blickpunkt entlang Bildschirm-x/-y verschieben
 function _panCamera(dx,dy){
   const{t,p,r}=sph, b=_camTarget||{x:0,y:0,z:0};
@@ -3135,18 +3318,6 @@ function setViewerDrawerShift(immediate){
 // Kamerafahrt abbrechen (wenn der Nutzer selbst dreht/zoomt) — optional Target zurück auf Ursprung
 function _cancelCamFly(resetTarget){ if(_camRAF){ cancelAnimationFrame(_camRAF); _camRAF=null; }
   if(resetTarget && _camTarget) _camTarget.set(0,0,0); }
-// Sanfte Kamerafahrt: Blickpunkt → toT und Zoom → toR (ease-in-out cubic)
-function _animateCamTo(toT, toR, ms){
-  if(_camRAF) cancelAnimationFrame(_camRAF);
-  const fromT=_camTarget.clone(), fromR=sph.r, t0=performance.now(), dur=ms||520;
-  const ease=x=>x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
-  (function step(){
-    const k=Math.min(1,(performance.now()-t0)/dur), e=ease(k);   // eigene Zeitbasis (RAF-Timestamp unzuverlässig headless)
-    _camTarget.set(fromT.x+(toT.x-fromT.x)*e, fromT.y+(toT.y-fromT.y)*e, fromT.z+(toT.z-fromT.z)*e);
-    sph.r=fromR+(toR-fromR)*e; moveCam();
-    _camRAF = k<1 ? requestAnimationFrame(step) : null;
-  })();
-}
 // ── Bauteil-Fokus: Highlight durch AUSGRAUEN der übrigen Bauteile (kein Pulsieren) ──────────
 // Feld → Komponente (Bauteil). Solange ein Feld eines Bauteils aktiv ist, bleibt dieses normal,
 // die übrigen werden ausgegraut; die Kamera rahmt den Fundamentkörper (Pfähle dürfen abschneiden).
@@ -3439,6 +3610,7 @@ function buildPfahlbockViz(){
 }
 
 function rebuildScene(){
+  invalidateViewer();   // Szene ändert sich → nächster Frame rendert (Render-on-Demand)
   const bx=+gi('g_bx'),by=+gi('g_by'),hb=+gi('g_hblock');
   const kx=+gi('g_kx'),ky=+gi('g_ky'),hk=+gi('g_hkopf');
   _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf innerhalb Blockkante halten
@@ -3958,33 +4130,6 @@ function buildStress(){
   lbls.push(...makeFin(fA, -hSign, y_nl3, y_okb, ea_nl, ea_okb, cEa, 0.50)); // Ea über NL
   lbls.push(...makeFin(fA, -hSign, y_uk,  y_nl3, ep_uk, ep_nl,  cEp, 0.30)); // E'p unter NL
 
-  // ── Seitliche Erddrücke (±z Flächen, Ruhedruck E0 über volle Tiefe) ──
-  // Diese Flächen (Stirnseiten senkrecht zur Last) tragen Ruhedruck in Z-Richtung.
-  const fZ= L/2;  // +z Fläche
-  function makeFin_z(face_z, dir_z, y_bot, y_top, sig_bot, sig_top, hexCol, alpha){
-    const wb=sig_bot*sc*dir_z, wt=sig_top*sc*dir_z, hB=B/2;
-    const v=new Float32Array([
-      -hB,y_top,face_z, hB,y_top,face_z, hB,y_bot,face_z, -hB,y_bot,face_z,
-      -hB,y_top,face_z+wt, hB,y_top,face_z+wt, hB,y_bot,face_z+wb, -hB,y_bot,face_z+wb,
-    ]);
-    const ix=[0,1,5,0,5,4, 1,2,6,1,6,5, 2,3,7,2,7,6, 3,0,4,3,4,7, 4,5,6,4,6,7];
-    const geo=new THREE.BufferGeometry();
-    geo.setAttribute('position',new THREE.BufferAttribute(v,3));
-    geo.setIndex(ix); geo.computeVertexNormals();
-    grp.add(new THREE.Mesh(geo,new THREE.MeshLambertMaterial(
-      {color:new THREE.Color(hexCol),transparent:true,opacity:alpha,side:THREE.DoubleSide})));
-    // Umriss
-    grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0,y_top,face_z+wt),new THREE.Vector3(0,y_bot,face_z+wb),
-      new THREE.Vector3(0,y_bot,face_z),   new THREE.Vector3(0,y_top,face_z),
-      new THREE.Vector3(0,y_top,face_z+wt),
-    ]),new THREE.LineBasicMaterial({color:new THREE.Color(hexCol),opacity:0.75,transparent:true})));
-    // Eckpunkt-Labels (Mitte in X)
-    return [
-      {x:0, y:y_top, sig:sig_top, col:hexCol, z:face_z+wt+(dir_z>0?0.06:-0.06)},
-      {x:0, y:y_bot, sig:sig_bot, col:hexCol, z:face_z+wb+(dir_z>0?0.06:-0.06)},
-    ];
-  }
   // E0 auf ±z-Flächen: nicht dargestellt (Steckner-Berechnung ist 2D in x-Richtung)
 
   // ── Drehpunkt (Nulllinie als Punkt + Kreuzmarker) ─────────────────
@@ -4053,6 +4198,7 @@ function toggleGrid(){
   showGrid=!showGrid;
   document.getElementById('vc-grid').classList.toggle('on',showGrid);
   const g=scene.getObjectByName('grid'); if(g) g.visible=showGrid;
+  invalidateViewer();
 }
 function togglePfahlViz(){
   showPfahl=!showPfahl;
@@ -4130,7 +4276,7 @@ function _updateSicherungBtn(){
   }
 }
 function toggleDim(){showDim=!showDim;document.getElementById('vc-dim').classList.toggle('on',showDim);rebuildScene();}
-function toggleText(){showText=!showText;document.getElementById('vc-txt').classList.toggle('on',showText);}
+function toggleText(){showText=!showText;document.getElementById('vc-txt').classList.toggle('on',showText);invalidateViewer();}
 function toggleLabels(){showLabels=!showLabels;document.getElementById('vc-lbl').classList.toggle('on',showLabels);rebuildScene();}
 function toggleLyr(){showLyr=!showLyr;document.getElementById('vc-lyr').classList.toggle('on',showLyr);rebuildScene();}
 
@@ -5001,15 +5147,6 @@ function removeLF(i){
   confirmDelete(`Lastfall «${name}» entfernen?`, () => { LF.splice(i, 1); renderLF(); scheduleCalc(); });
 }
 
-// ── Breite Eingabe-Spalte (für Tabellen/Matrix)
-let _inpWide = false;
-function toggleInpWide(btn){
-  _inpWide = !_inpWide;
-  document.querySelector('.workspace').classList.toggle('inp-wide', _inpWide);
-  document.querySelectorAll('.btn-expand-inp').forEach(b => {
-    b.textContent = _inpWide ? '✕' : '⤢';
-  });
-}
 
 function buildLFMatrix(){
   const cols = LF_COMP_DEFS;
@@ -5435,11 +5572,6 @@ const BG_FIELDS = ['bg_phi','bg_c','bg_gamma','bg_gamma2','bg_qu','bg_me','bg_c1
 function getBGTemplates(){ return dbGet('bc_bg_tpls')||[]; }
 function saveBGTemplates(arr){ dbSet('bc_bg_tpls', arr); }
 
-function collectBGState(){
-  const st={};
-  BG_FIELDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
-  return st;
-}
 function applyBGState(st){
   BG_FIELDS.forEach(f=>{const el=document.getElementById(f);if(el&&st[f]!==undefined)el.value=st[f];});
 }
@@ -5462,14 +5594,6 @@ function saveBGTemplate(){
   }, 50);
 }
 
-function deleteBGTemplate(id, e){
-  e.stopPropagation();
-  if(!confirm('Bodenprofil löschen?')) return;
-  saveBGTemplates(getBGTemplates().filter(t=>t.id!==id));
-  renderBGTplDropdown();
-}
-
-function renderBGTemplates(){ renderBGTplTable(); } // Compat-Alias
 function renderBGTplDropdown(){ renderBGTplTable(); } // Compat-Alias
 
 function renderBGTplTable(){
@@ -5539,13 +5663,6 @@ function deleteBGTpl(id){
   saveBGTemplates(getBGTemplates().filter(t=>t.id!==id));
   renderBGTplTable();
   renderSchichten();
-}
-
-function loadBGTemplate(id){
-  const tpl = getBGTemplates().find(t=>t.id===id);
-  if(!tpl) return;
-  applyBGState(tpl.data);
-  toast('Bodenprofil geladen: '+tpl.name);
 }
 
 // ════════════════════════════════════════════
@@ -5986,32 +6103,6 @@ function buildPbKnickDiagram(r, n, wide){
    <text x="${(x0+6).toFixed(1)}" y="${(padT-2+ph*0.5).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--dim)" transform="rotate(-90 ${(x0-18).toFixed(1)} ${(padT+ph*0.5).toFixed(1)})">χ</text>
    <text x="${(VB-padR-2).toFixed(1)}" y="${(y0-3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">λ̄</text>
    </svg>`;
-}
-
-// GZG: Ausnutzung je Kriterium (Wert/Grenzwert) vs. 100%-Linie
-function buildPbGZGDiagram(r, n, wide){
-  const g=r.gzgFull, gv=r.gzgVar; if(!g) return '';
-  const items=[];
-  const tSV=1000*Math.max(g.tiltQuer,g.tiltLaengs);
-  items.push({lbl:'θ st+ver', util:tSV/10, txt:tSV.toFixed(1)+'/10‰'});
-  if(gv){ const tq=1000*gv.tiltQuer; items.push({lbl:'θ quer ver', util:tq/5, txt:tq.toFixed(1)+'/5‰'}); }
-  if(n<=2){ const uSV=Math.max(g.uQuer,g.uLaengs); items.push({lbl:'u st+ver', util:uSV/20, txt:uSV.toFixed(1)+'/20mm'});
-    if(gv) items.push({lbl:'u quer ver', util:gv.uQuer/10, txt:gv.uQuer.toFixed(1)+'/10mm'}); }
-  const np=items.length;
-  const VB=wide?620:248, padL=70, padR=66, padTop=24, rowH=wide?24:19, padBot=26;
-  const HB=padTop+np*rowH+padBot, x0=padL, xW=VB-padL-padR;
-  const X=u=>x0+Math.min(1.15,u)/1.15*xW, xLim=X(1);
-  let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
-   <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
-   <text x="6" y="13" font-family="var(--f-mono)" font-size="8.5" letter-spacing=".05em" fill="var(--dim)">GZG-AUSNUTZUNG — Wert / Grenzwert</text>
-   <line x1="${xLim.toFixed(1)}" y1="${padTop-3}" x2="${xLim.toFixed(1)}" y2="${HB-padBot+3}" stroke="var(--fail)" stroke-width="1" stroke-dasharray="3,2"/>
-   <text x="${xLim.toFixed(1)}" y="${HB-padBot+15}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--fail)">Grenze</text>`;
-  items.forEach((it,i)=>{ const y=padTop+i*rowH+rowH*0.5;
-    const col=it.util<=0.667?'var(--ok)':it.util<=1.0?'var(--warn)':'var(--fail)';
-    s+=`<text x="2" y="${(y+3).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--dim)">${it.lbl}</text>
-        <rect x="${x0}" y="${(y-rowH*0.31).toFixed(1)}" width="${Math.max(1,X(it.util)-x0).toFixed(1)}" height="${(rowH*0.62).toFixed(1)}" rx="2" fill="${col}" fill-opacity="0.85"/>
-        <text x="${(VB-padR+4).toFixed(1)}" y="${(y+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="var(--xdim)">${it.txt}</text>`; });
-  return s+`</svg>`;
 }
 
 // Schnittgrössen des massgebenden Pfahls: Verformung y(z) | Querkraft V(z) | Moment M(z)
@@ -7165,20 +7256,6 @@ function _updatePfahlGeomHint(){
 // d, e oder h_s geändert → α wird aus Geometrie abgeleitet
 function onPfahlGeomD(){     _updatePfahlGeomHint(); }
 function onPfahlGeomE(){     _updatePfahlGeomHint(); }
-function onPfahlGeomAlpha(){ _updatePfahlGeomHint(); }
-
-
-function syncPfahlFromSchicht(){
-  const s = SCHICHTEN[0];
-  if(!s) return;
-  si('pfahl_phi',   s.phi);
-  si('pfahl_c',     s.c);
-  si('pfahl_gamma', s.gamma);
-  si('pfahl_me',    s.me ?? 30);
-  const hint = document.getElementById('pfahl-soil-hint');
-  if(hint) hint.textContent = `Aus Schicht 1 (${s.name || 'Schicht 1'}) übernommen.`;
-  calcPfahlsicherung();
-}
 
 // Passiver Erddruckbeiwert bei geneigtem Gelände (Rankine) — für Pfähle, die in eine
 // abfallende Böschung hinein widerstehen. β = Böschungsmagnitude [°]. Reduziert sich für
@@ -8989,17 +9066,6 @@ function initSicherung(){
   _updateKeilBtnVis();
 }
 
-// ════════════════════════════════════════════
-// Coulomb passiver Erddruckbeiwert Kph mit Wandreibung δ
-// δ_p = -0.5·φ_k (neg. Wandreibung passiv) → reduziert Kp; nach Steckner (1989)
-function coulombKph(phi, delta) {
-  const cd = Math.cos(delta), c2p = Math.cos(phi)**2;
-  const sq = Math.sin(phi + delta) * Math.sin(phi) / cd;
-  if(sq <= 0 || cd <= 0) return c2p / cd;
-  const denom = cd * (1 - Math.sqrt(sq))**2;
-  return denom > 0.001 ? c2p / denom * Math.abs(cd) : c2p;
-}
-
 let _calcFlashT=null;
 function _flashCalc(){ const el=document.getElementById('sb-calc'); if(!el) return; el.style.opacity='1'; clearTimeout(_calcFlashT); _calcFlashT=setTimeout(()=>{el.style.opacity='0';}, 650); }
 function calculate(){
@@ -9027,12 +9093,46 @@ function _plausCheck(){
   bar.style.display='';
   bar.innerHTML=w.map(([s,m])=>`<div class="plaus-item plaus-${s}">${m}</div>`).join('');
 }
-function _doCalculate(){
+// ── A1: Eingabepaket für den Block/Flach-Rechenkern ─────────────────────────────
+// Snapshot ALLER Feldwerte, die _doCalculate liest — der Kern konsumiert dann das
+// Paket statt des DOM (lokal geschattetes gi). Programmatischer Aufruf (Sweeps,
+// Dimensionierung, Tests): _doCalculate({...collectCalcInputs(), raw:{...überschrieben},
+// _pure:true}) → liefert {results, worst, G} OHNE UI-Seiteneffekte.
+// Noch DOM-gebunden (Inkrement 2): tiefe Helfer intEarthPress/sigVeffTo/avgSigV/
+// gwDepth (bg_gw/bg_gwt), govSoilHansen & Co. (SCHICHTEN global) sowie getGF (lw_G/lw_Q)
+// — für Geometrie-Sweeps konstant und daher unkritisch.
+const _CALC_FIELDS = ['g_bx','g_by','g_hblock','g_uberd','g_kx','g_ky','g_hkopf','g_ex','g_ey',
+  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_delta_fac','bg_delta_sohle',
+  'tw_phi','tw_c','tw_Ea','tw_Ep',
+  'l_NG','l_HGx','l_HGy','l_HWx','l_HWy','l_MGx','l_MGy','l_MWx','l_MWy',
+  'lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_inf','lw_G_eig','lw_G_gzg','lw_Q_gzg',
+  'pfahl_dex','pfahl_dex_seite'];
+function collectCalcInputs(){
+  _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf klemmen VOR dem Snapshot
+  const raw={};
+  _CALC_FIELDS.forEach(id=>{ raw[id]=gi(id); });
+  let c1auto=null;
+  try{ if(typeof c1AutoValue==='function') c1auto=c1AutoValue().c1_eff; }catch(_){ }
+  return {
+    raw,
+    uberd_on: _uberdOn(),
+    kopf_in_gk: document.getElementById('kopf_in_gk')?.checked !== false,
+    c1_manual: (typeof _c1Manual!=='undefined' && _c1Manual),
+    c1_auto_eff: c1auto,
+    LF: LF,
+    _pure: false
+  };
+}
+
+function _doCalculate(inp){
+  const P = inp || collectCalcInputs();
+  // Lokales gi: liest den Snapshot statt des DOM — der GESAMTE Kern (inkl. der nested
+  // computeGZT_dir/Combo-Closures) wird damit über das Eingabepaket parametrisierbar.
+  const gi = id => (P.raw && P.raw[id] !== undefined) ? P.raw[id] : '0';
   const B=+gi('g_bx'), L=+gi('g_by'), Hb=+gi('g_hblock');
-  const ue=_uberdOn()?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung ab OK Block (optional, Schalter)
+  const ue=P.uberd_on?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung ab OK Block (optional, Schalter)
   const t=Hb+ue;                                    // effektive Einbindetiefe
   const Bk=+gi('g_kx'), Lk=+gi('g_ky'), Hk=+gi('g_hkopf');
-  _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf innerhalb Blockkante halten
   const exk=+gi('g_ex'), eyk=+gi('g_ey'), gb=+gi('g_gbeton');
   const qu=+gi('bg_qu');
   const gph=+gi('tw_phi'), gc_=+gi('tw_c');
@@ -9069,11 +9169,11 @@ function _doCalculate(){
   const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1);  // MN/m³ (Steckner-Anteil, Fallback)
   // C₁: im Auto-Modus den vollen 3-Zonen-Blend live nehmen (folgt β/B/t/φ) und das
   // Feld nachführen; im manuellen Modus (_c1Manual) den Feldwert verwenden.
-  const _c1m = (typeof _c1Manual !== 'undefined' && _c1Manual);
+  const _c1m = P.c1_manual;
   const C1_val = _c1m
     ? Math.max(1, +gi('bg_c1') || C1_auto)
-    : Math.max(1, (typeof c1AutoValue === 'function' ? c1AutoValue().c1_eff : C1_auto));
-  if(!_c1m){
+    : Math.max(1, (P.c1_auto_eff != null ? P.c1_auto_eff : C1_auto));
+  if(!_c1m && !P._pure){
     const _c1El = document.getElementById('bg_c1');
     if(_c1El && Math.abs((+_c1El.value || 0) - C1_val) > 0.05) _c1El.value = C1_val.toFixed(1);
   }
@@ -9095,7 +9195,7 @@ function _doCalculate(){
   const V_block = B*L*Hb;
   const V_kopf  = Bk*Lk*Hk;
   // Kopfgewicht in G_k einschliessen? (Option B: DP2a-Kompatibilität = ausschalten)
-  const _inclKopf = document.getElementById('kopf_in_gk')?.checked !== false;
+  const _inclKopf = P.kopf_in_gk;
   // Überdeckung: Betonkopf durch Erde + seitliche Auffüllung
   const G_ue = ue>0
     ? (_inclKopf ? Bk*Lk*ue*gb : 0) + (B*L - Bk*Lk)*ue*gauf
@@ -9160,7 +9260,7 @@ function _doCalculate(){
   const _gQ1    = +gi('lw_Q1')     || 1.50;  // Typ 1 veränderlich
   const _gG2inf = +gi('lw_G_inf')  || 1.00;  // Typ 2 inf (Gleiten, günstiger N)
 
-  const results = LF.map(lf=>{
+  const results = (P.LF||LF).map(lf=>{
     const c = lf.comp;
     const NG_lf  = c.NG  ? NG  : 0;
     const HGx_lf = c.HGx ? HGx : 0;
@@ -9196,9 +9296,16 @@ function _doCalculate(){
     const Md_ext_y = gG*MGy_lf + gW*MWy_lf + Nd_mast*exk + gG*My_auf_k;
 
     // ── 1. SOHLSPANNUNGEN (beide Modelle gleich)
-    const s0=Nd/A, smx=Mxd/Wx_, smy=Myd/Wy_;
+    // Achsbezogene Momente für Sohldruck + Ausmitte: eine Horizontalkraft in x erzeugt ein
+    // Moment um die y-Achse (→ Ausmitte in x, Kante B), eine Kraft in y ein Moment um die
+    // x-Achse (→ Ausmitte in y, Kante L). Mxd/Myd (oben) folgen der Lastrichtungs-Konvention
+    // für Block-GZT/3D/Bericht — hier daher eigene, korrekt gepaarte Achsmomente
+    // (behebt: Last in x erzeugte fälschlich Ausmitte in y).
+    const M_ax = Hyd*arm + gG*MGx_lf + gW*MWx_lf + Nd_mast*eyk + gG*Mx_auf_k;  // um x-Achse → Ausmitte y
+    const M_ay = Hxd*arm + gG*MGy_lf + gW*MWy_lf + Nd_mast*exk + gG*My_auf_k;  // um y-Achse → Ausmitte x
+    const s0=Nd/A, smx=M_ax/Wx_, smy=M_ay/Wy_;
     const smax=s0+smx+smy, smin=s0-smx-smy;
-    const ex_=Myd/Nd, ey_=Mxd/Nd;
+    const ex_=M_ay/Nd, ey_=M_ax/Nd;
     const kB=B/6, kL=L/6, inKern=Math.abs(ex_)<=kB && Math.abs(ey_)<=kL;
     const etaSIG = qu/(smax>0.001?smax:0.001);
 
@@ -9213,9 +9320,13 @@ function _doCalculate(){
     const iq=Math.max(0,1-0.7*al)**5;
     const ig=Math.max(0,1-al)**5;
 
-    // Effektive Fläche (Meyerhof)
+    // Effektive Fläche (Meyerhof) — Be/Le = effektive Abmessung in x bzw. y
     const Be=Math.max(0.1,B-2*Math.abs(ex_));
     const Le=Math.max(0.1,L-2*Math.abs(ey_));
+    // Bruchmechanik-Breite: kleinere effektive Abmessung (Hansen B'), grössere = L'
+    // (Nγ-Term + Formbeiwerte über B'/L' ≤ 1 — richtungsunabhängig, egal ob Ausmitte in x oder y)
+    const B_eff=Math.min(Be,Le), L_eff=Math.max(Be,Le);
+    const rBL = L_eff>0.01 ? B_eff/L_eff : 1;
     const q0=gs*t;
 
     // ── 2. GRUNDBRUCH
@@ -9224,10 +9335,10 @@ function _doCalculate(){
       // Steckner: Grundbruchwiderstand = Sohle (Hansen) + Anteil Mantelreibung
       // Sohle wie Hansen, aber mit Steckner-Erhöhung durch Einbindung
       // Tiefenbeiwerte sq, sc, sg nach Brinch Hansen (SIA 267 Tab. 3.1)
-      const sq = 1 + (Be/Le)*Math.sin(phi_d);
-      const sg = 1 - 0.3*(Be/Le);
+      const sq = 1 + rBL*Math.sin(phi_d);
+      const sg = 1 - 0.3*rBL;
       const sc = sq - (1-sq)/(Nc*Math.tan(phi_d)||1);
-      const Rd_sohle = (c_d*Nc*ic*sc*gb_c + q0*Nq*iq*sq*gb_q + 0.5*gs_b*Be*Ng*ig*sg*gb_g);
+      const Rd_sohle = (c_d*Nc*ic*sc*gb_c + q0*Nq*iq*sq*gb_q + 0.5*gs_b*B_eff*Ng*ig*sg*gb_g);
       // Steckner-Zusatz: Mantelreibungsanteil (umgerechnet auf Flächenspannung)
       const Rd_mantel = Tf_total / A;
       Rd = Rd_sohle + Rd_mantel;
@@ -9235,18 +9346,18 @@ function _doCalculate(){
     } else {
       // Flach (Hansen) — Starre Methode SIA 267 mit Form- und Tiefenbeiwerten
       // Formbeiwerte (Vesic/Hansen, rechteckig)
-      const sqq = 1 + (Le>0.01?Be/Le:1)*Math.tan(phi_d);
-      const scc = phi_d>0.001 ? sqq-(1-sqq)/(Nc*Math.tan(phi_d)) : 1+0.2*(Be/Math.max(Le,0.01));
-      const sgg = Math.max(0.6, 1-0.4*(Le>0.01?Be/Le:1));
+      const sqq = 1 + rBL*Math.tan(phi_d);
+      const scc = phi_d>0.001 ? sqq-(1-sqq)/(Nc*Math.tan(phi_d)) : 1+0.2*rBL;
+      const sgg = Math.max(0.6, 1-0.4*rBL);
       // Tiefenbeiwerte (Hansen) — nur Beton (eingebettet); bei Stahl dq≈1 (t<<B)
       let dc_f=1, dq_f=1;
       const useDepth = FLACH_MAT!=='stahl' && t>0.05;
       if(useDepth){
-        const tr=Math.min(t/Be, 1.0);  // begrenzt auf 1 (Hansen)
+        const tr=Math.min(t/B_eff, 1.0);  // begrenzt auf 1 (Hansen), über B'
         dq_f = phi_d>0.001 ? 1+2*Math.tan(phi_d)*(1-Math.sin(phi_d))**2*Math.atan(tr) : 1;
         dc_f = phi_d>0.001 ? dq_f-(1-dq_f)/(Nc*Math.tan(phi_d)) : 1+0.4*tr;
       }
-      Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b*Be*Ng*ig*sgg*gb_g;
+      Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b*B_eff*Ng*ig*sgg*gb_g;
       etaGB = Rd / (smax>0 ? smax : 0.001);
     }
 
@@ -9279,8 +9390,9 @@ function _doCalculate(){
     const Nd_kipp  = _gG1inf*NG_lf + Math.min(gG_eig, _gG1inf)*Gk + _gG1inf*N_auf_k;
     const Hxd_kipp = _gG1sup*HGx_lf + _gQ1*HWx_lf;
     const Hyd_kipp = _gG1sup*HGy_lf + _gQ1*HWy_lf;
-    const Mxd_kipp = Hxd_kipp*arm + _gG1sup*MGx_lf + _gQ1*MWx_lf + Nd_kipp*eyk + _gG1sup*Mx_auf_k;
-    const Myd_kipp = Hyd_kipp*arm + _gG1sup*MGy_lf + _gQ1*MWy_lf + Nd_kipp*exk + _gG1sup*My_auf_k;
+    // Achsbezogen: Kraft in x → Moment um y-Achse (Ausmitte x), Kraft in y → Moment um x-Achse (Ausmitte y)
+    const Mxd_kipp = Hyd_kipp*arm + _gG1sup*MGx_lf + _gQ1*MWx_lf + Nd_kipp*eyk + _gG1sup*Mx_auf_k;  // um x → Ausmitte y
+    const Myd_kipp = Hxd_kipp*arm + _gG1sup*MGy_lf + _gQ1*MWy_lf + Nd_kipp*exk + _gG1sup*My_auf_k;  // um y → Ausmitte x
     const ex_kipp  = Myd_kipp / Math.max(0.001, Nd_kipp);
     const ey_kipp  = Mxd_kipp / Math.max(0.001, Nd_kipp);
     const etaKx=kB/Math.max(0.001,Math.abs(ex_kipp));
@@ -9740,35 +9852,421 @@ function _doCalculate(){
   const _relevantEtas = r => isBlock
     ? [r.etaGZT, r.etaGZG]
     : [r.etaSIG, r.etaGB, r.etaGL];
-  if(!results.length) return;
+  if(!results.length) return null;
   const worst = results.reduce((a, b) => {
     const ma = Math.min(..._relevantEtas(a).filter(isFinite));
     const mb = Math.min(..._relevantEtas(b).filter(isFinite));
     return mb < ma ? b : a;
   });
-  lastRes={smax:worst.smax, smin:worst.smin};
-  renderResults(results, worst, {B,L,Hb:t,qu,beta_deg,btyp,isBlock,uberd:+gi('g_uberd'),
+  const G = {B,L,Hb:t,qu,beta_deg,btyp,isBlock,uberd:+gi('g_uberd'),
     ue: ue, Bk:+gi('g_kx')||B, Hkopf:+gi('g_hkopf')||0,
     Gk, gb, gauf,
     G_platte: B*L*Hb*gb,
-    G_hinterfuel: ue>0 ? B*L*ue*gauf : 0});
+    G_hinterfuel: ue>0 ? B*L*ue*gauf : 0};
 
-  // Bemessungswerte in Flachfundament-Panel anzeigen
-  if(!isBlock){
-    // Tragfähigkeitsbeiwerte aus worst-LF (phi_d identisch für alle LF)
-    const _sv = v => (v !== undefined && isFinite(v)) ? v : '—';
-    const _set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
-    _set('disp-phi-d', (phi_d * 180 / Math.PI).toFixed(1) + '°');
-    _set('disp-c-d',   c_d.toFixed(1) + ' kPa');
-    _set('disp-Nq',    _sv(worst.Nq.toFixed(2)));
-    _set('disp-Ng',    _sv(worst.Ng.toFixed(2)));
-    _set('disp-Nc',    _sv(worst.Nc.toFixed(2)));
+  // ── UI-Seiteneffekte nur im Normalbetrieb (nicht bei _pure-Aufrufen aus Sweeps/Tests)
+  if(!P._pure){
+    lastRes={smax:worst.smax, smin:worst.smin};
+    renderResults(results, worst, G);
+
+    // Bemessungswerte in Flachfundament-Panel anzeigen
+    if(!isBlock){
+      // Tragfähigkeitsbeiwerte aus worst-LF (phi_d identisch für alle LF)
+      const _sv = v => (v !== undefined && isFinite(v)) ? v : '—';
+      const _set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+      _set('disp-phi-d', (phi_d * 180 / Math.PI).toFixed(1) + '°');
+      _set('disp-c-d',   c_d.toFixed(1) + ' kPa');
+      _set('disp-Nq',    _sv(worst.Nq.toFixed(2)));
+      _set('disp-Ng',    _sv(worst.Ng.toFixed(2)));
+      _set('disp-Nc',    _sv(worst.Nc.toFixed(2)));
+    }
+
+    rebuildScene();   // Einwirkungs-Pfeile + alle Layer nach Neuberechnung aktualisieren
+    updateSB();
+    // Pfahlsicherung neu berechnen (verwendet _lastResults)
+    if(CALC_MODEL === 'block') calcPfahlsicherung();
+  }
+  return {results, worst, G};
+}
+
+// ── U1/U2: Auto-Dimensionierung + Sensitivität (Sweep über den Pure-Rechenkern) ────────
+// Kleinste B×L (Raster 0.05 m, Seitenverhältnis fest, H_Block fest) mit η ≥ 1.0 über die
+// massgebenden Nachweise. C₁ (Auto-Modus) bleibt beim Sweep auf dem Startwert eingefroren
+// (leichte Näherung) — nach «Übernehmen» rechnet die App exakt und zeigt das echte η.
+function _dimEtaMin(r){
+  const w=r.worst;
+  const es = r.G.isBlock ? [w.etaGZT, w.etaGZG] : [w.etaGB, w.etaGL, w.eta_klaf, w.etaSIG];
+  const f = es.filter(isFinite);
+  return f.length ? Math.min(...f) : Infinity;
+}
+function _dimGovName(r){
+  const w=r.worst, e=_dimEtaMin(r);
+  const map = r.G.isBlock
+    ? [[w.etaGZT,'GZT Standsicherheit'],[w.etaGZG,'GZG Schiefstellung']]
+    : [[w.etaGB,'Grundbruch'],[w.etaGL,'Gleiten'],[w.eta_klaf,'Kippen'],[w.etaSIG,'Sohlspannung']];
+  const hit = map.find(([v])=>isFinite(v) && Math.abs(v-e)<1e-9);
+  return hit ? hit[1] : '–';
+}
+function autoDimension(){
+  const out=document.getElementById('dim-result'); if(!out) return;
+  if(CALC_MODEL==='pfahlbock'){ out.innerHTML='<div class="hint">Nur für Block-/Flachfundament (Pfahlfundament: Pfahllänge/-zahl massgebend).</div>'; return; }
+  out.innerHTML='<div class="hint">Berechne Vorschlag…</div>';
+  setTimeout(()=>{ try{ _autoDimensionRun(out); }catch(e){ out.innerHTML='<div class="hint">Dimensionierung fehlgeschlagen: '+(e&&e.message||e)+'</div>'; } }, 30);
+}
+// Staffel B×L aus resultierendem charakteristischem Moment (ständig + veränderlich),
+// SBB-Praxis: bis 80 kNm → 1.10 m · bis 135 → 1.20 m · bis 230 → 1.40 m
+const _DIM_BL_STAFFEL=[[80,1.10],[135,1.20],[230,1.40]];
+let _dimBLManual=false;   // true = Nutzer hat das B×L-Feld von Hand gesetzt (leeren = wieder auto)
+function _autoDimensionRun(out){
+  const base=collectCalcInputs();
+  const step=0.05;
+  const snap=v=>+(Math.round(v/step)*step).toFixed(2);
+  // Resultierendes charakteristisches Moment aus den Mastlasten (MG + MW, quer/längs vektoriell)
+  const MresK=Math.hypot((+base.raw.l_MGx||0)+(+base.raw.l_MWx||0), (+base.raw.l_MGy||0)+(+base.raw.l_MWy||0));
+  const stf=_DIM_BL_STAFFEL.find(([m])=>MresK<=m+1e-9);
+  const blAuto=stf?stf[1]:_DIM_BL_STAFFEL[_DIM_BL_STAFFEL.length-1][1];   // über Staffel → 1.40 + Hinweis
+  const blField=document.getElementById('dim-bl');
+  if(!_dimBLManual || !blField.value){ blField.value=blAuto.toFixed(2); _dimBLManual=false; }
+  const blLim=snap(Math.max(0.5, +blField.value||blAuto));
+  const Bk_=+base.raw.g_kx||0, Lk_=+base.raw.g_ky||0;
+  const fmt=v=>v.toFixed(2), fe=e=>!isFinite(e)?'n.m.':e.toFixed(2);
+  const row=(l,v,c)=>`<div style="display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10.5px;padding:2px 0"><span style="color:var(--dim)">${l}</span><span style="color:${c||'var(--on2)'}">${v}</span></div>`;
+  let html='';
+
+  if(CALC_MODEL==='block'){
+    // ── BLOCK: B×L fest auf dem Limit — bemessen wird NUR die Blocktiefe H (Nutzerwunsch Jul 2026)
+    if(blLim < Math.max(Bk_, Lk_)-1e-9){
+      out.innerHTML='<div class="hint">B×L-Limit ('+fmt(blLim)+' m) ist kleiner als der Fundamentkopf ('+fmt(Math.max(Bk_,Lk_))+' m) — Limit erhöhen.</div>';
+      return;
+    }
+    const calcH=H=>{
+      const Hs=snap(H);
+      const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(blLim), g_by:String(blLim), g_hblock:String(Hs) }, _pure:true });
+      return { H:Hs, eta:_dimEtaMin(r), gov:_dimGovName(r) };
+    };
+    // Aktuell = echte eingegebene Geometrie (unverändert)
+    const cur=_doCalculate({ ...base, _pure:true });
+    const curEta=_dimEtaMin(cur), curGov=_dimGovName(cur);
+    const B0=+base.raw.g_bx||0, L0=+base.raw.g_by||0, H0=+base.raw.g_hblock||0;
+    // Tiefen-Scan: kleinstes H mit η ≥ 1.0
+    const Hmin=0.8, Hmax=4.5;
+    let found=null, below=null;
+    for(let H=Hmin; H<=Hmax+1e-9; H+=step){
+      const c=calcH(H);
+      if(c.eta>=1.0){ found=c; break; }
+      below=c;
+    }
+    html+=row('M_res,k (MG+MW)', MresK.toFixed(1)+' kNm → B×L '+fmt(blLim)+' m'+(_dimBLManual?' (Hand)':' (Staffel)'),
+              'var(--on2)');
+    if(!stf && !_dimBLManual)
+      html+='<div class="hint" style="margin:2px 0 4px;color:var(--fail)">M_res,k über der Staffel (230 kNm) — B×L 1.40 angesetzt, ggf. von Hand erhöhen.</div>';
+    html+=row('Aktuell  '+fmt(B0)+'×'+fmt(L0)+' m · H '+fmt(H0)+' m', 'η = '+fe(curEta)+' ('+curGov+')',
+              curEta>=1?'var(--ok)':'var(--fail)');
+    if(found){
+      const above=calcH(found.H+step);
+      html+=row('Vorschlag '+fmt(blLim)+'×'+fmt(blLim)+' m · H '+fmt(found.H)+' m', 'η = '+fe(found.eta)+' ('+found.gov+')','var(--ok)');
+      if(below) html+=row('Sensitivität H −0.05 m ('+fmt(below.H)+')','η = '+fe(below.eta),'var(--fail)');
+      html+=row('Sensitivität H +0.05 m ('+fmt(above.H)+')','η = '+fe(above.eta),'var(--ok)');
+      html+=`<button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="_dimApply(${blLim},${blLim},${found.H})">Übernehmen (${fmt(blLim)} × ${fmt(blLim)} · H ${fmt(found.H)} m)</button>`;
+      html+='<div class="hint" style="margin-top:4px">Nach Übernehmen rechnet die App exakt (C₁ live) — massgebende Ampel prüfen.</div>';
+    } else {
+      html+='<div class="hint" style="margin-top:4px">Keine Lösung bis H = '+fmt(Hmax)+' m bei B×L = '+fmt(blLim)+' m — Limit erhöhen oder Boden/Lasten prüfen.</div>';
+    }
+    out.innerHTML=html;
+    return;
   }
 
-  rebuildScene();   // Einwirkungs-Pfeile + alle Layer nach Neuberechnung aktualisieren
-  updateSB();
-  // Pfahlsicherung neu berechnen (verwendet _lastResults)
-  if(CALC_MODEL === 'block') calcPfahlsicherung();
+  // ── FLACH: kleinste B×L (Seitenverhältnis fest, H fest) — begrenzt auf das Limit
+  const B0=+base.raw.g_bx||1, L0=+base.raw.g_by||1;
+  const ratio=(B0>0.01)?Math.max(0.2,Math.min(5,L0/B0)):1;
+  const Bmax=blLim;
+  const Bmin=Math.max(0.5, Math.ceil(Math.max(Bk_, Lk_/ratio)/step)*step || 0.5);
+  const calc=B=>{
+    const Bs=snap(B), Ls=snap(B*ratio);
+    const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(Bs), g_by:String(Ls) }, _pure:true });
+    return { B:Bs, L:Ls, eta:_dimEtaMin(r), gov:_dimGovName(r) };
+  };
+  const cur=calc(B0);
+  let found=null, below=null;
+  for(let B=Bmin; B<=Bmax+1e-9; B+=step){
+    const c=calc(B);
+    if(c.eta>=1.0){ found=c; break; }
+    below=c;
+  }
+  html+=row('Aktuell  B×L '+fmt(cur.B)+'×'+fmt(cur.L)+' m', 'η = '+fe(cur.eta)+' ('+cur.gov+')',
+            cur.eta>=1?'var(--ok)':'var(--fail)');
+  if(found){
+    const above=calc(found.B+step);
+    html+=row('Vorschlag B×L '+fmt(found.B)+'×'+fmt(found.L)+' m', 'η = '+fe(found.eta)+' ('+found.gov+')','var(--ok)');
+    if(below) html+=row('Sensitivität −0.05 m ('+fmt(below.B)+'×'+fmt(below.L)+')','η = '+fe(below.eta),'var(--fail)');
+    html+=row('Sensitivität +0.05 m ('+fmt(above.B)+'×'+fmt(above.L)+')','η = '+fe(above.eta),'var(--ok)');
+    html+=`<button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="_dimApply(${found.B},${found.L})">Übernehmen (${fmt(found.B)} × ${fmt(found.L)} m)</button>`;
+    html+='<div class="hint" style="margin-top:4px">Nach Übernehmen rechnet die App exakt (C₁ live) — massgebende Ampel prüfen.</div>';
+  } else {
+    html+='<div class="hint" style="margin-top:4px">Keine Lösung mit B×L ≤ '+fmt(Bmax)+' m — Limit erhöhen (Feld oben) oder Blockfundament wählen.</div>';
+  }
+  out.innerHTML=html;
+}
+function _dimApply(B,L,H){
+  const set=(id,v)=>{ si(id, v.toFixed(2)); const r=document.getElementById(id+'_r'); if(r) r.value=v; };
+  set('g_bx',B); set('g_by',L);
+  if(H!==undefined) set('g_hblock',H);
+  calculate();
+  if(typeof formatMeterInputs==='function') formatMeterInputs();
+  toast('Geometrie übernommen: '+B.toFixed(2)+' × '+L.toFixed(2)+(H!==undefined?' · H '+H.toFixed(2):'')+' m');
+}
+
+// ── Bemessungsdiagramm (Nutzerwunsch Jul 2026): erforderliche B×L je STANDARDLAST
+// (Lastniveau = Masttyp, Einwirkungen konstant), Kurvenschar H_Block, zwei wählbare
+// Böschungsneigungen (β₁ durchgezogen, β₂ gestrichelt). Je Punkt werden Lasten/H/β
+// temporär in die Felder geschrieben → collectCalcInputs (C₁-Blend wie die App) →
+// B-Scan über den Pure-Kern; danach wird der Originalzustand wiederhergestellt.
+const _BEM_FIELDS=['l_NG','l_HGx','l_HGy','l_MGx','l_MGy','l_HWx','l_HWy','l_MWx','l_MWy','g_hblock','g_bx','g_by','bg_beta','bg_btyp'];
+let _bemLast=null;   // letztes Diagramm {svg, meta} für Drucken/PDF
+function openBemessung(){
+  if(CALC_MODEL==='pfahlbock'){ toast('Bemessungsdiagramm: nur Block-/Flachfundament'); return; }
+  const box=document.getElementById('bem-lvls');
+  if(!LOAD_LVLS.length){
+    box.innerHTML='<div class="hint" style="margin:0">Keine Lastniveaus gespeichert — im Tab «Lasten» unter «Lastniveaus» die Standardlasten der Masttypen hinterlegen.</div>';
+  } else {
+    // Zeile je Lastniveau: Checkbox + klickbarer Name → klappt die Lastwerte auf
+    box.innerHTML=LOAD_LVLS.map((ll,i)=>{
+      const mres=Math.hypot((ll.MGx||0)+(ll.MWx||0),(ll.MGy||0)+(ll.MWy||0));
+      return `<div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--on2)">
+          <input type="checkbox" class="bem-lvl-cb" data-i="${i}" checked style="accent-color:var(--acc)">
+          <span style="cursor:pointer" onclick="const d=document.getElementById('bem-lvl-d${i}');d.style.display=d.style.display==='none'?'':'none'">
+            <span style="color:var(--xdim)">▸</span> ${ll.name||('Niveau '+(i+1))}</span>
+        </div>
+        <div id="bem-lvl-d${i}" style="display:none;font-family:var(--f-mono);font-size:9.5px;color:var(--dim);padding:2px 0 4px 24px;line-height:1.7">
+          N_G ${ll.NG} kN · H_G ${ll.HGx}/${ll.HGy} kN · M_G ${ll.MGx}/${ll.MGy} kNm<br>
+          H_W ${ll.HWx}/${ll.HWy} kN · M_W ${ll.MWx}/${ll.MWy} kNm · <span style="color:var(--on2)">M_res,k ${mres.toFixed(1)} kNm</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // Baugrund-Zusammenfassung + Details
+  const gw=gi('bg_gw'), btyp=gi('bg_btyp'), beta=+gi('bg_beta')||0;
+  document.getElementById('bem-soil-sum').textContent=
+    SCHICHTEN.length+' Schicht'+(SCHICHTEN.length!==1?'en':'')+' · φ′ '+SCHICHTEN.map(s=>s.phi+'°').join('/')
+    +' · GW '+(gw?gw+' m':'—')+' · β '+((btyp!=='none'&&Math.abs(beta)>0.1)?beta+'°':'—');
+  document.getElementById('bem-soil-body').innerHTML=_bemSoilHTML();
+  // Modus + Kurvenwerte vorbelegen (Default: Blocktiefe H mit B×L-Staffelwerten)
+  _bemModeUI();
+  si('bem-b1','0');
+  const bCur=+gi('bg_beta')||0;
+  si('bem-b2', (bCur!==0 && gi('bg_btyp')!=='none') ? String(bCur) : '');
+  document.getElementById('bem-status').textContent='';
+  document.getElementById('bem-chart').innerHTML='';
+  _bemLast=null; document.getElementById('bem-pdf').disabled=true;
+  document.getElementById('ov-bemessung').classList.add('open');
+}
+// Modus-Umschaltung y-Achse: H (Kurven = B×L, Staffelwerte) oder B (Kurven = H_Block)
+function _bemModeUI(){
+  const mode=(document.getElementById('bem-mode')||{}).value||'H';
+  const lbl=document.getElementById('bem-hs-label');
+  if(mode==='H'){
+    if(lbl) lbl.textContent='B×L-Kurven [m, kommagetrennt]';
+    si('bem-hs', _DIM_BL_STAFFEL.map(([,b])=>b.toFixed(2)).join(', '));
+  } else {
+    if(lbl) lbl.textContent='H_Block-Kurven [m, kommagetrennt]';
+    const H0=+gi('g_hblock')||2.2;
+    si('bem-hs',[Math.max(0.8,H0-0.5),H0,H0+0.5,H0+1.0].map(v=>v.toFixed(1)).join(', '));
+  }
+}
+// Baugrund-Detailtabelle fürs Overlay + den Druckkopf
+function _bemSoilHTML(){
+  const th='padding:3px 8px;text-align:left;font-size:8px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap';
+  const td='padding:3px 8px;color:var(--on2)';
+  const rows=SCHICHTEN.map((s,i)=>`<tr>
+    <td style="${td}">${i+1}</td><td style="${td}">${s.name||'—'}</td>
+    <td style="${td}">${s.d===999?'∞':s.d}</td><td style="${td}">${s.phi}</td>
+    <td style="${td}">${s.c}</td><td style="${td}">${s.gamma} / ${s.gamma2}</td>
+    <td style="${td}">${s.me??'—'}</td></tr>`).join('');
+  const gw=gi('bg_gw'), btyp=gi('bg_btyp'), beta=+gi('bg_beta')||0, bh=gi('bg_bhoehe');
+  return `<table style="border-collapse:collapse;font-family:var(--f-mono);font-size:9.5px;width:100%">
+    <thead><tr><th style="${th}">Nr</th><th style="${th}">Schicht</th><th style="${th}">d [m]</th>
+      <th style="${th}">φ′ [°]</th><th style="${th}">c′ [kPa]</th><th style="${th}">γ/γ′ [kN/m³]</th>
+      <th style="${th}">M_E [MN/m²]</th></tr></thead><tbody>${rows}</tbody></table>
+    <div style="font-family:var(--f-mono);font-size:9.5px;color:var(--dim);margin-top:6px">
+      Grundwasser: ${gw?gw+' m u. GOK':'keines'} · Gelände: ${(btyp!=='none'&&Math.abs(beta)>0.1)?(btyp+' β = '+beta+'° · h_β = '+(bh||'—')+' m'):'eben'}
+      · γ_φ ${gi('tw_phi')} · γ_c ${gi('tw_c')} · γ_Ep ${gi('tw_Ep')}</div>`;
+}
+async function runBemessung(){
+  const status=document.getElementById('bem-status'), chart=document.getElementById('bem-chart');
+  const mode=(document.getElementById('bem-mode')||{}).value||'H';   // 'H' = Blocktiefe (Kurven B×L) · 'B' = Seitenlänge (Kurven H)
+  const lvls=[...document.querySelectorAll('.bem-lvl-cb:checked')].map(cb=>LOAD_LVLS[+cb.dataset.i]).filter(Boolean);
+  if(!lvls.length){ status.textContent='Mindestens ein Lastniveau auswählen.'; return; }
+  const curveVals=(gi('bem-hs')||'').split(',').map(s=>+s.trim()).filter(v=>isFinite(v)&&v>0.3).slice(0,5);
+  if(!curveVals.length){ status.textContent='Kurvenwerte prüfen (z. B. '+(mode==='H'?'1.10, 1.20, 1.40':'1.8, 2.2, 2.7')+').'; return; }
+  const b1=+gi('bem-b1')||0;
+  const b2raw=(document.getElementById('bem-b2').value||'').trim();
+  const betas=[b1]; if(b2raw!=='' && isFinite(+b2raw) && +b2raw!==b1) betas.push(+b2raw);
+  // Lastniveaus nach resultierendem Moment sortieren (x-Achse aufsteigend)
+  const mRes=ll=>Math.hypot((ll.MGx||0)+(ll.MWx||0),(ll.MGy||0)+(ll.MWy||0));
+  lvls.sort((a,b)=>mRes(a)-mRes(b));
+  // Originalzustand sichern
+  const bak={}; _BEM_FIELDS.forEach(id=>bak[id]=gi(id));
+  const btn=document.getElementById('bem-run'); btn.disabled=true;
+  const step=0.05, Bmax=3.6, Hmin=0.8, Hmax=4.5;
+  const ratio=(()=>{ const B0=+gi('g_bx')||1, L0=+gi('g_by')||1; return B0>0.01?Math.max(0.2,Math.min(5,L0/B0)):1; })();
+  const Bk_=+gi('g_kx')||0, Lk_=+gi('g_ky')||0;
+  const BminG=Math.max(0.5, Math.ceil(Math.max(Bk_, Lk_/ratio)/step)*step||0.5);
+  const snap=v=>+(Math.round(v/step)*step).toFixed(2);
+  const setLoads=ll=>{ si('l_NG',ll.NG); si('l_HGx',ll.HGx); si('l_HGy',ll.HGy);
+    si('l_MGx',ll.MGx); si('l_MGy',ll.MGy);
+    si('l_HWx',ll.HWx); si('l_HWy',ll.HWy); si('l_MWx',ll.MWx); si('l_MWy',ll.MWy); };
+  try{
+    const series=[];   // {label, beta, pts:[{name, val|null}]}
+    let done=0, total=betas.length*curveVals.length;
+    for(const beta of betas){
+      for(const cv of curveVals){
+        status.textContent='Berechne Kurve '+(++done)+' / '+total+'  ('+(mode==='H'?'B×L = '+cv.toFixed(2):'H = '+cv.toFixed(2))+' m, β = '+beta+'°)…';
+        await new Promise(r=>setTimeout(r,10));   // UI-Repaint zwischen Kurven
+        // Kurven-Zustand in die Felder schreiben (C₁/Kombis exakt wie die App)
+        si('bg_beta',String(beta));
+        const bt=document.getElementById('bg_btyp'); if(bt) bt.value = Math.abs(beta)>0.1?'boeschung':'none';
+        if(mode==='H'){ si('g_bx',String(cv)); si('g_by',String(cv)); }
+        else          { si('g_hblock',String(cv)); }
+        const pts=[]; let start=(mode==='H')?Hmin:BminG;
+        for(const ll of lvls){
+          setLoads(ll);
+          const base=collectCalcInputs();
+          let found=null;
+          if(mode==='H'){
+            // y = kleinste Blocktiefe H bei festem B×L=cv
+            if(cv < Math.max(Bk_,Lk_)-1e-9){ found=null; }   // Kopf passt nicht in dieses B×L
+            else for(let H=start; H<=Hmax+1e-9; H+=step){
+              const Hs=snap(H);
+              const r=_doCalculate({ ...base, raw:{ ...base.raw, g_hblock:String(Hs) }, _pure:true });
+              if(r && _dimEtaMin(r)>=1.0){ found=Hs; break; }
+            }
+          } else {
+            // y = kleinste Seitenlänge B bei festem H=cv
+            for(let B=start; B<=Bmax+1e-9; B+=step){
+              const Bs=snap(B), Ls=snap(B*ratio);
+              const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(Bs), g_by:String(Ls) }, _pure:true });
+              if(r && _dimEtaMin(r)>=1.0){ found=Bs; break; }
+            }
+          }
+          pts.push({ name:ll.name||'?', val:found });
+          if(found!=null) start=Math.max((mode==='H')?Hmin:BminG, found-2*step);   // monoton in der Lastfolge
+        }
+        series.push({ label:(mode==='H'?'B×L '+cv.toFixed(2):'H '+cv.toFixed(2)), beta, pts });
+      }
+    }
+    const meta={ mode, ratio, betas,
+      ylabel: mode==='H' ? 'H erforderlich [m]' : 'B erforderlich [m]',
+      ymissing: mode==='H' ? 'H = '+Hmax.toFixed(1) : 'B = '+Bmax.toFixed(1),
+      title: mode==='H'
+        ? 'erforderliche Blocktiefe H (B×L fest) · η ≥ 1.0'
+        : 'erforderliche Abmessung B (L = '+ratio.toFixed(2)+'·B) · η ≥ 1.0' };
+    const svg=buildBemessungSVG(series, lvls.map(l=>l.name||'?'), meta);
+    chart.innerHTML=svg;
+    _bemLast={ svg, meta, soil:_bemSoilHTML() };
+    document.getElementById('bem-pdf').disabled=false;
+    status.textContent='';
+  } catch(e){
+    status.textContent='Diagramm fehlgeschlagen: '+(e&&e.message||e);
+  } finally {
+    // Originalzustand wiederherstellen
+    _BEM_FIELDS.forEach(id=>{ si(id,bak[id]); const r=document.getElementById(id+'_r'); if(r) r.value=bak[id]; });
+    btn.disabled=false;
+    calculate();
+  }
+}
+function buildBemessungSVG(series, names, meta){
+  const n=names.length, betas=meta.betas;
+  const VB=760, HB=430, padL=64, padR=124, padT=40, padB=86;
+  const pw=VB-padL-padR, phh=HB-padT-padB;
+  const X=i=>padL + (n>1 ? i/(n-1)*pw : pw/2);
+  // y-Bereich aus den Daten
+  let lo=Infinity, hi=-Infinity;
+  series.forEach(s=>s.pts.forEach(p=>{ if(p.val!=null){ lo=Math.min(lo,p.val); hi=Math.max(hi,p.val); } }));
+  if(!isFinite(lo)){ lo=0.5; hi=2.0; }
+  lo=Math.max(0, Math.floor((lo-0.15)/0.25)*0.25); hi=Math.ceil((hi+0.15)/0.25)*0.25;
+  if(hi-lo<0.4) hi=lo+0.4;
+  const Y=v=>padT + phh*(1-(v-lo)/(hi-lo));
+  const cols=['var(--acc)','var(--on2)','var(--dim)','var(--warn)','var(--xdim)'];
+  let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block;background:var(--s2);border:1px solid var(--ol);border-radius:6px">
+    <text x="14" y="20" font-family="var(--f-mono)" font-size="10" letter-spacing=".06em" fill="var(--dim)">BEMESSUNGSDIAGRAMM — ${meta.title}</text>`;
+  // y-Gitter + Achse
+  for(let v=lo; v<=hi+1e-9; v+=0.25){
+    const y=Y(v);
+    s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${VB-padR}" y2="${y.toFixed(1)}" stroke="var(--ol)" stroke-width="0.6"/>
+        <text x="${padL-8}" y="${(y+3).toFixed(1)}" font-family="var(--f-mono)" font-size="8.5" text-anchor="end" fill="var(--dim)">${v.toFixed(2)}</text>`;
+  }
+  s+=`<text x="16" y="${(padT+phh/2).toFixed(1)}" font-family="var(--f-mono)" font-size="8.5" fill="var(--dim)" transform="rotate(-90 16 ${(padT+phh/2).toFixed(1)})" text-anchor="middle">${meta.ylabel}</text>`;
+  // x-Labels (Lastniveau-Namen, schräg)
+  names.forEach((nm,i)=>{
+    const x=X(i);
+    s+=`<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${(padT+phh).toFixed(1)}" stroke="var(--ol)" stroke-width="0.6" stroke-dasharray="2,3"/>
+        <text x="${x.toFixed(1)}" y="${(padT+phh+14).toFixed(1)}" font-family="var(--f-mono)" font-size="8.5" fill="var(--on2)" text-anchor="end" transform="rotate(-28 ${x.toFixed(1)} ${(padT+phh+14).toFixed(1)})">${nm}</text>`;
+  });
+  // Kurven: Farbe je Kurvenwert, Strichart je β (β₁ durchgezogen, β₂ gestrichelt)
+  const labels=[...new Set(series.map(sr=>sr.label))];
+  series.forEach(sr=>{
+    const col=cols[labels.indexOf(sr.label)%cols.length];
+    const dash=sr.beta===betas[0]?'':'6,4';
+    const segs=[]; let seg=[];
+    sr.pts.forEach((p,i)=>{ if(p.val!=null) seg.push([X(i),Y(p.val)]); else { if(seg.length) segs.push(seg); seg=[]; } });
+    if(seg.length) segs.push(seg);
+    segs.forEach(sg=>{
+      s+=`<polyline points="${sg.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ')}" fill="none" stroke="${col}" stroke-width="1.6"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+      sg.forEach(q=>{ s+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="${col}"/>`; });
+    });
+    // fehlende Punkte markieren (keine Lösung im Suchbereich)
+    sr.pts.forEach((p,i)=>{ if(p.val==null)
+      s+=`<text x="${X(i).toFixed(1)}" y="${(padT+10).toFixed(1)}" font-family="var(--f-mono)" font-size="9" fill="var(--fail)" text-anchor="middle">×</text>`; });
+    // Kurvenlabel am rechten Ende
+    const last=[...sr.pts].reverse().find(p=>p.val!=null);
+    if(last){ const i=sr.pts.lastIndexOf(last);
+      s+=`<text x="${(X(i)+8).toFixed(1)}" y="${(Y(last.val)+3).toFixed(1)}" font-family="var(--f-mono)" font-size="8.5" fill="${col}">${sr.label}${betas.length>1?(sr.beta===betas[0]?'':' · β'+sr.beta+'°'):''}</text>`; }
+  });
+  // Legende + Fussnote
+  const leg=betas.length>1?`β₁ = ${betas[0]}° durchgezogen · β₂ = ${betas[1]}° gestrichelt · `:`β = ${betas[0]}° · `;
+  s+=`<text x="${padL}" y="${(HB-34).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--dim)">${leg}Kurven = ${meta.mode==='H'?'B×L (fest)':'H_Block'} · × = keine Lösung bis ${meta.ymissing} m</text>
+      <text x="${padL}" y="${(HB-22).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--xdim)">Baugrund, Kopf, ü, Teilsicherheiten wie aktuelle Eingabe · Modell: ${CALC_MODEL==='block'?'Blockfundament (Steckner)':'Flachfundament (Hansen)'} · Raster 0.05 m</text>
+      <text x="${padL}" y="${(HB-10).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--xdim)">${CALC_MODEL==='block'?'Block-GZG kollabiert modellbedingt ab β ≈ −30° (Steckner Gl.4)':'Globale Böschungsstandsicherheit (Gleitkreis) bei β ≠ 0 separat prüfen'}</text>`;
+  return s+'</svg>';
+}
+// Druck/PDF: eigenes Druckfenster mit Kopf (Firma/Projekt), Baugrund und dem Diagramm.
+// CSS-Variablen der App werden für den Druck durch feste Hell-Farben ersetzt.
+function printBemessung(){
+  if(!_bemLast){ toast('Zuerst Diagramm berechnen'); return; }
+  const PRINT_COLORS={ 'var(--acc)':'#4a5cb8', 'var(--on2)':'#33363f', 'var(--on)':'#111319',
+    'var(--dim)':'#70727e', 'var(--xdim)':'#9a9ca6', 'var(--warn)':'#d9822b', 'var(--fail)':'#a02020',
+    'var(--ok)':'#2f9e54', 'var(--ol)':'#c9c9d4', 'var(--s1)':'#ffffff', 'var(--s2)':'#ffffff',
+    'var(--f-mono)':"'DM Mono',ui-monospace,monospace" };
+  const fix=html=>{ let h=html; Object.entries(PRINT_COLORS).forEach(([k,v])=>{ h=h.split(k).join(v); }); return h; };
+  const st=collectState();
+  const now=new Date().toLocaleDateString('de-CH');
+  const w=window.open('','_blank');
+  if(!w){ toast('Popup blockiert — Druckfenster zulassen'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Bemessungsdiagramm — BlockCalc</title>
+    <style>
+      body{ font-family:'DM Mono',ui-monospace,monospace; color:#111; margin:26px 30px; }
+      .hd{ display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:6px; }
+      .hd .t{ font-size:16px; font-weight:600; }
+      .meta{ font-size:10px; color:#555; margin-bottom:14px; line-height:1.7; }
+      .sh{ font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:#888; margin:14px 0 4px; }
+      table{ border-collapse:collapse; font-size:9.5px; }
+      th,td{ padding:3px 10px 3px 0; text-align:left; }
+      th{ font-size:8px; letter-spacing:0.06em; text-transform:uppercase; color:#888; border-bottom:1px solid #ccc; }
+      svg{ width:100%; max-width:960px; }
+      @media print { body{ margin:10mm; } }
+    </style></head><body>
+    <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (Hansen / SIA 267)'}</span>
+      <span style="font-size:11px">${(SETTINGS.firma||'BlockCalc')}</span></div>
+    <div class="meta">Projekt: ${st.p_name||'–'} · Fundament: ${st.p_fundname||'–'} · Nr. ${st.p_nr||'–'} ·
+      Bearbeiter: ${st.p_bearbeiter||SETTINGS.bearbeiter||'–'} · ${now}</div>
+    <div class="sh">Baugrund und Parameter</div>
+    ${fix(_bemLast.soil)}
+    <div class="sh" style="margin-top:16px">Diagramm</div>
+    ${fix(_bemLast.svg)}
+    <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 150); };<\/script>
+    </body></html>`);
+  w.document.close();
 }
 
 // ════════════════════════════════════════════
@@ -10180,85 +10678,6 @@ function captureViewerWithDimPNG(){
   } catch(e){ return captureViewerPNG(); }
 }
 
-// ── System-Querschnitt SVG
-function buildSystemSVG(G){
-  const W=300, H=400;
-  const mL=70, mR=50, mT=50, mB=40;
-  const t=G.Hb, ue=G.ue||0, B=G.B;
-  const Hblock=t-ue, Hk=G.Hkopf||0, Bk=G.Bk||B;
-  // Masslinien-Bereich links = mL, Fundament in der Mitte
-  const drawH=H-mT-mB, drawW=W-mL-mR;
-  // Gesamte Höhe des Schnitts = Hk (über GOK) + t (unter GOK)
-  const totalH=Hk+t;
-  const pxM=drawH/Math.max(totalH,0.5);
-  const cx=mL+drawW/2;
-  const gokY=mT+Hk*pxM;           // GOK-Linie
-  const okbY=gokY+ue*pxM;          // OK-Block = GOK - ü
-  const ukY=gokY+t*pxM;            // UK/Sohle
-  const headT=gokY-Hk*pxM;        // Oberkante Kopf
-  const blockL=cx-B/2*pxM*1.2, blockR=cx+B/2*pxM*1.2;
-  const kopfL=cx-Bk/2*pxM*1.2, kopfR=cx+Bk/2*pxM*1.2;
-  // Soil layer colours (alternating grays)
-  const soilCols=['var(--s3,#c8b89a)','var(--s4,#b0a088)','var(--s3,#c8b89a)','var(--s4,#b0a088)'];
-  let soilBands='';
-  let zCur=0;
-  SCHICHTEN.forEach((s,i)=>{
-    const thick=s.d===999?t-zCur:Math.min(s.d,t-zCur);
-    if(thick<=0) return;
-    const y1=gokY+zCur*pxM, y2=gokY+(zCur+thick)*pxM;
-    soilBands+=`<rect x="${mL}" y="${y1.toFixed(1)}" width="${drawW}" height="${(y2-y1).toFixed(1)}" fill="${soilCols[i%2]}" opacity="0.35"/>`;
-    soilBands+=`<text x="${cx+B/2*pxM*1.2+6}" y="${((y1+y2)/2+3).toFixed(1)}" font-size="7" fill="var(--xdim)" font-family="monospace">φ=${s.phi}° γ=${s.gamma}</text>`;
-    zCur+=thick;
-  });
-  // Hatch for overburden
-  let hatch='';
-  if(ue>0.01){
-    const hy1=okbY, hy2=gokY;
-    hatch=`<rect x="${blockL.toFixed(1)}" y="${hy1.toFixed(1)}" width="${(blockR-blockL).toFixed(1)}" height="${(hy2-hy1).toFixed(1)}" fill="url(#hatch)" opacity="0.6"/>`;
-  }
-  // Helper: dimension line
-  const dim=(x1,y1,x2,y2,lbl,off=0)=>{
-    const mx=(x1+x2)/2+off, my=(y1+y2)/2;
-    const isV=Math.abs(x1-x2)<2;
-    const tx=isV?mx-4:mx, ty=isV?my:my-4;
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--xdim)" stroke-width="0.8" stroke-dasharray="3,2"/>
-    <text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="7" fill="var(--xdim)" font-family="monospace" text-anchor="${isV?'end':'middle'}">${lbl}</text>`;
-  };
-  // Dimension lines
-  const dims=[
-    dim(mL-28,okbY,mL-28,ukY,`H=${Hblock.toFixed(2)}m`,-2),
-    dim(mL-14,gokY,mL-14,okbY,`ü=${ue.toFixed(2)}m`,-2),
-    dim(blockL,H-mB+14,blockR,H-mB+14,`B=${B.toFixed(2)}m`),
-    dim(mL-42,headT,mL-42,ukY,`t=${t.toFixed(2)}m`,-2),
-  ].join('');
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-      <line x1="0" y1="0" x2="0" y2="6" stroke="var(--dim)" stroke-width="0.8"/>
-    </pattern>
-  </defs>
-  <!-- Soil bands -->
-  ${soilBands}
-  <!-- GOK line -->
-  <line x1="${mL}" y1="${gokY.toFixed(1)}" x2="${W-mR}" y2="${gokY.toFixed(1)}" stroke="var(--on2)" stroke-width="1.2"/>
-  <text x="${W-mR+3}" y="${(gokY+4).toFixed(1)}" font-size="7.5" fill="var(--dim)" font-family="monospace">GOK</text>
-  <!-- Overburden hatch -->
-  ${hatch}
-  <!-- Block -->
-  <rect x="${blockL.toFixed(1)}" y="${okbY.toFixed(1)}" width="${(blockR-blockL).toFixed(1)}" height="${(ukY-okbY).toFixed(1)}" fill="var(--s3,#d0ccc8)" stroke="var(--on2)" stroke-width="1.2" opacity="0.85"/>
-  ${Hk>0.01?`<rect x="${kopfL.toFixed(1)}" y="${headT.toFixed(1)}" width="${(kopfR-kopfL).toFixed(1)}" height="${(gokY-headT+ue*pxM).toFixed(1)}" fill="var(--s3,#d0ccc8)" stroke="var(--on2)" stroke-width="1.2" opacity="0.85"/>
-  <line x1="${mL}" y1="${gokY.toFixed(1)}" x2="${kopfL.toFixed(1)}" y2="${gokY.toFixed(1)}" stroke="var(--on2)" stroke-width="1.2"/>
-  <line x1="${kopfR.toFixed(1)}" y1="${gokY.toFixed(1)}" x2="${W-mR}" y2="${gokY.toFixed(1)}" stroke="var(--on2)" stroke-width="1.2"/>`:''}
-  <!-- UK line -->
-  <line x1="${mL}" y1="${ukY.toFixed(1)}" x2="${W-mR}" y2="${ukY.toFixed(1)}" stroke="var(--dim)" stroke-width="0.8" stroke-dasharray="5,3"/>
-  <text x="${W-mR+3}" y="${(ukY+4).toFixed(1)}" font-size="7" fill="var(--xdim)" font-family="monospace">UK</text>
-  <!-- Labels -->
-  <text x="${(cx).toFixed(1)}" y="${((okbY+ukY)/2+3).toFixed(1)}" font-size="8" fill="var(--on2)" font-family="monospace" text-anchor="middle" font-weight="600">${B.toFixed(2)}×${B.toFixed(2)}</text>
-  <!-- Dimension lines -->
-  ${dims}
-</svg>`;
-}
-
 // ── Dokument-Hilfsfunktionen
 function _npN(v,d=2){ return (v==null||!isFinite(v))?'–':v.toFixed(d); }
 function _npDeg(r){ return (r*180/Math.PI).toFixed(1)+'°'; }
@@ -10268,17 +10687,9 @@ function _npEta(eta,inf){
   const ok=eta>=1.0;
   return `<span class="np-eta ${ok?'ok':'fail'}">${ok?'✓':'✗'}&ensp;η = ${_npN(eta)}&ensp;${ok?'Erfüllt':'Nicht erfüllt'}</span>`;
 }
-function _npRow(k,v){ return `<tr><td class="sym">${k}</td><td class="r">${v}</td></tr>`; }
 function _npPH(st,datStr){
   const firma=SETTINGS.firma?`<strong>${SETTINGS.firma}</strong> &ensp;`:'';
   return `<div class="np-ph">${firma}${st.p_name||'–'}&ensp;·&ensp;Nr.&thinsp;${st.p_nr||'–'}<span>SIA 267:2013 &ensp;·&ensp; ${(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='pfahlbock')?'Pfahlfundament (Mikropfähle)':(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='flach')?'Flachfundament (Hansen)':'Steckner Blockfundament'} &ensp;·&ensp; ${datStr}</span></div>`;
-}
-function _npSH(n,t){ return `<div class="np-sh">${n}&ensp;·&ensp;${t}</div>`; }
-function _npNwH(n,t,norm=''){
-  return `<div class="np-nwh"><span class="nr">${n}</span>&ensp;${t}${norm?`<span class="norm">${norm}</span>`:''}</div>`;
-}
-function _npFml(txt, res=''){
-  return `<div class="np-fml">${txt}${res?`<span class="np-res">→ ${res}</span>`:''}</div>`;
 }
 
 // ── Vollständiges Standsicherheitsdokument aufbauen
@@ -10309,9 +10720,6 @@ function buildNachweisDoc(results,G){
   function def(k,desc,v,u){
     return '<div class="np-def"><span class="dk">'+k+'</span><span class="ds">'+desc+'</span><span class="dv">'+v+(u?'&ensp;'+u:'')+'</span></div>';
   }
-  // Tabellen-Hilfzeile
-  function tr2(k,v,cls){return '<tr><td class="sym">'+k+'</td><td class="r '+(cls||'')+'">'+v+'</td></tr>';}
-
   var r0=results[0]||{};
   var phi_k_rad=r0.phi_k_GZT||0;
   var phi_d_rad=r0.phi_d||0;
@@ -10320,7 +10728,7 @@ function buildNachweisDoc(results,G){
   // ────────────────────────────────────────────────────────────────
   // TITELBLATT
   // ────────────────────────────────────────────────────────────────
-  var cover='<div class="np-page np-pb">'+ph()+
+  var cover='<div class="np-page np-pb">'+ph()+_npLogo()+
     '<div class="np-firma">'+(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
     '<div class="np-ct">Standsicherheitsnachweis</div>'+
     '<div class="np-ct" style="font-size:13px;margin-bottom:4px">Blockfundament nach Steckner (1989) / SIA 267:2013</div>'+
@@ -10862,7 +11270,7 @@ function buildNachweisDocFlach(results, G){
   }
 
   // ── Titelblatt ─────────────────────────────────────────────────
-  var cover = '<div class="np-page np-pb">'+ph()+
+  var cover = '<div class="np-page np-pb">'+ph()+_npLogo()+
     '<div class="np-firma">'+(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
     '<div class="np-ct">Standsicherheitsnachweis</div>'+
     '<div class="np-ct" style="font-size:13px;margin-bottom:4px">'+mat+' · Starre Methode · SIA 267:2013</div>'+
@@ -11225,7 +11633,7 @@ function buildNachweisDocPfahl(r, piles, n){
   const allOk=isFinite(r.eta_massg) && r.eta_massg>=1.0;
 
   // ── Deckblatt
-  const cover=`<div class="np-page np-pb">${ph()}
+  const cover=`<div class="np-page np-pb">${ph()}${_npLogo()}
     <div class="np-firma">${SETTINGS.firma||'BlockCalc SIA 267'}</div>
     <div class="np-ct">Standsicherheitsnachweis</div>
     <div class="np-ct" style="font-size:13px;margin-bottom:4px">Pfahlfundament · Mikropfahl-Gruppe · SIA 267:2013</div>
@@ -12117,420 +12525,6 @@ function buildPfahlSystemSVG(params, wide=false){
   <!-- Werte -->
   <text x="${PAD_L}" y="${H_VB-7}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">
     H_u,k=${Hu_1k?.toFixed(1)??'—'}kN · H_u,d=${Hu_1.toFixed(1)}kN · δ=${delta_gruppe_mm.toFixed(1)}mm · ${neig_mm_m.toFixed(1)}mm/m · α_lat=${alpha_lat.toFixed(2)}
-  </text>
-</svg>`;
-}
-
-function buildOverlapSVG(params, wide=false){
-  const {phi_deg, t_bl, G_ue, G_bx, d_abst, B_pf, L_emb, e_h, d_ex,
-         d_krit_ov, r_overlap, f_overlap} = params;
-
-  const VB = 360, H_VB = wide ? 380 : 300;
-  const PAD_L=52, PAD_R=18, PAD_T=38, PAD_B=52;
-
-  // Meter-Extents der Zeichnung
-  const x_min = -(G_bx + 0.4);
-  const x_max = Math.max(d_abst + B_pf*2 + 0.3, d_krit_ov + 0.5);
-  const y_min = -(Math.max(e_h, 0) + 0.4);
-  const y_max = Math.max(L_emb, t_bl) + 0.5;
-
-  const pw = VB - PAD_L - PAD_R;
-  const ph = H_VB - PAD_T - PAD_B;
-  const sx = pw / (x_max - x_min);
-  const sy = ph / (y_max - y_min);
-  const sc = Math.min(sx, sy);
-
-  // Pixel-Koordinaten (Ursprung: GOK, Blockfläche rechts = x=0)
-  const px = x => PAD_L + (x - x_min) * sc;
-  const py = y => PAD_T + (y - y_min) * sc;
-
-  const _lt = (typeof SETTINGS !== 'undefined') && SETTINGS.theme === 'light';
-  const c_s2  = _lt ? '#ffffff'  : '#15161a';
-  const c_ol  = _lt ? '#d0d0da'  : '#353740';
-  const c_on2 = _lt ? '#3a3c48'  : '#b8bac4';
-  const c_dim = _lt ? '#70727e'  : '#787a84';
-  const c_xdim= _lt ? '#9a9caa'  : '#4e5058';
-  const c_acc = '#7c8de0';
-  const c_ep  = '#ffaa44';
-  const c_fail= '#cf7070';
-  const c_ok  = '#6fcf8e';
-  const c_warn= '#c9a84c';
-
-  // Schlüsselkoordinaten
-  const gok_y   = py(0);
-  const blk_l   = px(-G_bx);
-  const blk_r   = px(0);
-  const blk_t   = py(G_ue);     // OK Block (ü unter GOK)
-  const blk_b   = py(t_bl);     // UK Block (Sohle)
-  const pile_cx = px(d_abst);
-  const pile_l  = px(d_abst - B_pf/2);
-  const pile_r  = px(d_abst + B_pf/2);
-  const pile_t  = py(-e_h);
-  const pile_b  = py(L_emb);
-  const wd_tip  = px(d_krit_ov); // Spitze Rankine-Keil bei GOK
-
-  // Rankine-Gleitfläche: von (0, t_bl) nach (d_krit_ov, 0)
-  // Keil-Dreieck: (blk_r, blk_t) → (blk_r, blk_b) → (wd_tip, gok_y)
-  const wedgePts = `${blk_r},${blk_t} ${blk_r},${blk_b} ${wd_tip},${gok_y}`;
-
-  // Broms-Einflusszone: Breite ≈ 3×B vor Pfahlachse (passive Seite = weg von Block)
-  const broms_zone_r = px(d_abst + 3*B_pf);
-  const broms_zone_l = pile_l;
-
-  // Überlappungszone: zwischen Blockfläche (x=0) und Pfahl (x=d_abst)
-  // Nur wenn Pfahl innerhalb Bruchkeil liegt (d < d_krit)
-  const ov_l = blk_r;
-  const ov_r = Math.min(pile_r, wd_tip);
-  const ov_t = gok_y;
-  const ov_b = Math.min(pile_b, blk_b);
-  const showOv = r_overlap > 0.02 && ov_r > ov_l;
-
-  // Aushub-Linie
-  const excLine = d_ex > 0.05 ? `
-    <line x1="${blk_r}" y1="${py(d_ex)}" x2="${px(x_max)}" y2="${py(d_ex)}"
-      stroke="${c_fail}" stroke-width="0.9" stroke-dasharray="4,2"/>
-    <text x="${px(x_max)-2}" y="${py(d_ex)-3}" font-family="'DM Mono',monospace" font-size="7"
-      fill="${c_fail}" text-anchor="end">d_ex=${d_ex.toFixed(1)}m</text>` : '';
-
-  // Winkel der Gleitfläche von Horizontal: arctan(t_bl/d_krit)
-  const alpha_wedge = Math.round(Math.atan2(t_bl, d_krit_ov) * 180/Math.PI);
-
-  const fOvCol = r_overlap > 0.15 ? c_warn : r_overlap > 0.02 ? c_ep : c_ok;
-  const fOvTxt = r_overlap < 0.02
-    ? 'Pfahl ausserhalb Keil'
-    : `Schatten bis z=${(params.z_ov ?? 0).toFixed(1)}m`;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${H_VB}"
-    width="100%" style="max-width:${wide?460:320}px;display:block">
-  <rect width="${VB}" height="${H_VB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
-
-  <!-- Titel -->
-  <text x="${VB/2}" y="14" font-family="'DM Mono',monospace" font-size="8" letter-spacing=".08em"
-    text-anchor="middle" fill="${c_dim}">BRUCHKÖRPER — BLOCK / PFAHL</text>
-  <text x="${VB/2}" y="26" font-family="'DM Mono',monospace" font-size="7.5"
-    text-anchor="middle" fill="${c_dim}">φ=${phi_deg}° · d=${d_abst.toFixed(1)} m · d_krit=${d_krit_ov.toFixed(1)} m</text>
-
-  <!-- Boden-Füllung -->
-  <rect x="${PAD_L}" y="${gok_y}" width="${pw}" height="${py(y_max)-gok_y}"
-    fill="${c_dim}" fill-opacity="0.06"/>
-
-  <!-- Rankine Passiv-Keil (Block) -->
-  <polygon points="${wedgePts}"
-    fill="${c_ep}" fill-opacity="0.22" stroke="${c_ep}" stroke-width="1.2" stroke-dasharray="5,3"/>
-
-  <!-- Gleitflächen-Linie mit Winkel-Label -->
-  <line x1="${blk_r}" y1="${blk_b}" x2="${wd_tip}" y2="${gok_y}"
-    stroke="${c_ep}" stroke-width="1.8"/>
-  <text x="${blk_r + (wd_tip-blk_r)*0.42 + 6}" y="${gok_y + (blk_b-gok_y)*0.42 - 5}"
-    font-family="'DM Mono',monospace" font-size="8" fill="${c_ep}">${alpha_wedge}°</text>
-
-  <!-- Broms Einflusszone (passive Seite des Pfahls) -->
-  <rect x="${broms_zone_l}" y="${gok_y}" width="${broms_zone_r - broms_zone_l}" height="${pile_b - gok_y}"
-    fill="${c_acc}" fill-opacity="0.18" stroke="${c_acc}" stroke-width="0.8" stroke-dasharray="3,2"/>
-  <text x="${(broms_zone_l+broms_zone_r)/2}" y="${gok_y + (pile_b-gok_y)*0.85}"
-    font-family="'DM Mono',monospace" font-size="7" fill="${c_acc}" text-anchor="middle">3·B</text>
-
-  <!-- Überlappungszone -->
-  ${showOv ? `<rect x="${ov_l}" y="${ov_t}" width="${ov_r-ov_l}" height="${ov_b-ov_t}"
-    fill="${c_fail}" fill-opacity="${Math.min(0.38, 0.12 + r_overlap*0.3)}"
-    stroke="${c_fail}" stroke-width="0.8" stroke-dasharray="2,1.5"/>
-  <!-- Schraffur-Linien -->
-  ${Array.from({length: Math.ceil((ov_b-ov_t+(ov_r-ov_l))/8)}, (_,i) => {
-    const off = i * 8;
-    const x1 = ov_l, y1 = ov_t + off, x2 = ov_l + off, y2 = ov_t;
-    const cx1 = Math.max(ov_l, Math.min(ov_r, x1)), cy1 = Math.max(ov_t, Math.min(ov_b, y1));
-    const cx2 = Math.max(ov_l, Math.min(ov_r, x2)), cy2 = Math.max(ov_t, Math.min(ov_b, y2));
-    return cx1!==cx2||cy1!==cy2
-      ? `<line x1="${cx1}" y1="${cy1}" x2="${cx2}" y2="${cy2}" stroke="${c_fail}" stroke-width="0.6" opacity="0.5"/>`
-      : '';
-  }).join('')}` : ''}
-
-  <!-- Block -->
-  <rect x="${blk_l}" y="${blk_t}" width="${blk_r-blk_l}" height="${blk_b-blk_t}"
-    fill="${c_acc}" fill-opacity="0.80" stroke="${c_acc}" stroke-width="1.2" rx="1"/>
-  <text x="${(blk_l+blk_r)/2}" y="${(blk_t+blk_b)/2 + 4}"
-    font-family="'DM Mono',monospace" font-size="7.5" fill="white" text-anchor="middle">Block</text>
-
-  <!-- Überdeckung -->
-  ${G_ue > 0.05 ? `<rect x="${blk_l}" y="${gok_y}" width="${blk_r-blk_l}" height="${blk_t-gok_y}"
-    fill="${c_dim}" fill-opacity="0.22" stroke="${c_dim}" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <text x="${(blk_l+blk_r)/2}" y="${gok_y + (blk_t-gok_y)/2 + 3}"
-    font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="middle">ü=${G_ue.toFixed(2)}m</text>` : ''}
-
-  <!-- Pfahl -->
-  <rect x="${pile_l}" y="${pile_t}" width="${pile_r-pile_l}" height="${pile_b-pile_t}"
-    fill="${c_acc}" fill-opacity="0.75" stroke="${c_acc}" stroke-width="1.2" rx="1"/>
-
-  <!-- GOK-Linie -->
-  <line x1="${PAD_L - 5}" y1="${gok_y}" x2="${VB-PAD_R+3}" y2="${gok_y}"
-    stroke="${c_on2}" stroke-width="1"/>
-  <text x="${PAD_L-7}" y="${gok_y - 3}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_on2}" text-anchor="end">GOK</text>
-
-  <!-- Aushub -->
-  ${excLine}
-
-  <!-- Tiefenmass t (links vom Block) -->
-  <line x1="${blk_l-10}" y1="${gok_y}" x2="${blk_l-10}" y2="${blk_b}"
-    stroke="${c_on2}" stroke-width="0.8"/>
-  <line x1="${blk_l-14}" y1="${gok_y}" x2="${blk_l-6}" y2="${gok_y}" stroke="${c_on2}" stroke-width="0.8"/>
-  <line x1="${blk_l-14}" y1="${blk_b}" x2="${blk_l-6}" y2="${blk_b}" stroke="${c_on2}" stroke-width="0.8"/>
-  <text x="${blk_l-14}" y="${(gok_y+blk_b)/2 + 3}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_on2}" text-anchor="end">t=${t_bl.toFixed(1)}m</text>
-
-  <!-- Dimension d (oben) -->
-  <line x1="${blk_r}" y1="${gok_y-14}" x2="${pile_cx}" y2="${gok_y-14}"
-    stroke="${c_on2}" stroke-width="0.8"/>
-  <line x1="${blk_r}"  y1="${gok_y-18}" x2="${blk_r}"  y2="${gok_y-10}" stroke="${c_on2}" stroke-width="0.8"/>
-  <line x1="${pile_cx}" y1="${gok_y-18}" x2="${pile_cx}" y2="${gok_y-10}" stroke="${c_on2}" stroke-width="0.8"/>
-  <text x="${(blk_r+pile_cx)/2}" y="${gok_y-17}" font-family="'DM Mono',monospace" font-size="7.5"
-    fill="${c_on2}" text-anchor="middle">d=${d_abst.toFixed(1)}m</text>
-
-  <!-- d_krit Markierung (gepunktet bis Spitze Keil) -->
-  <line x1="${blk_r}" y1="${H_VB-PAD_B+18}" x2="${wd_tip}" y2="${H_VB-PAD_B+18}"
-    stroke="${c_ep}" stroke-width="0.9" stroke-dasharray="4,2"/>
-  <line x1="${blk_r}"   y1="${H_VB-PAD_B+14}" x2="${blk_r}"   y2="${H_VB-PAD_B+22}" stroke="${c_ep}" stroke-width="0.8"/>
-  <line x1="${wd_tip}" y1="${H_VB-PAD_B+14}" x2="${wd_tip}" y2="${H_VB-PAD_B+22}" stroke="${c_ep}" stroke-width="0.8"/>
-  <text x="${(blk_r+wd_tip)/2}" y="${H_VB-PAD_B+13}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_ep}" text-anchor="middle">d_krit=${d_krit_ov.toFixed(1)}m</text>
-
-  <!-- f_overlap Box -->
-  <rect x="${VB-PAD_R-88}" y="${PAD_T+4}" width="84" height="30" rx="3"
-    fill="${r_overlap>0.02?'rgba(201,168,76,0.10)':'rgba(111,207,142,0.10)'}"
-    stroke="${fOvCol}" stroke-width="0.8"/>
-  <text x="${VB-PAD_R-46}" y="${PAD_T+16}" font-family="'DM Mono',monospace" font-size="9"
-    text-anchor="middle" font-weight="500" fill="${fOvCol}">f_ov = ${f_overlap.toFixed(2)}</text>
-  <text x="${VB-PAD_R-46}" y="${PAD_T+27}" font-family="'DM Mono',monospace" font-size="7"
-    text-anchor="middle" fill="${c_dim}">${fOvTxt}</text>
-
-  <!-- Legende -->
-  <rect x="${PAD_L}"     y="${H_VB-PAD_B+28}" width="7" height="7" fill="${c_ep}"   fill-opacity="0.4" stroke="${c_ep}"   stroke-width="0.7"/>
-  <text x="${PAD_L+10}"  y="${H_VB-PAD_B+35}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Rankine (Block)</text>
-  <rect x="${PAD_L+90}"  y="${H_VB-PAD_B+28}" width="7" height="7" fill="${c_acc}"  fill-opacity="0.4" stroke="${c_acc}"  stroke-width="0.7"/>
-  <text x="${PAD_L+100}" y="${H_VB-PAD_B+35}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Broms (Pfahl)</text>
-  ${showOv ? `<rect x="${PAD_L+188}" y="${H_VB-PAD_B+28}" width="7" height="7" fill="${c_fail}" fill-opacity="0.4" stroke="${c_fail}" stroke-width="0.7"/>
-  <text x="${PAD_L+198}" y="${H_VB-PAD_B+35}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_fail}">Überlappung</text>` : ''}
-</svg>`;
-}
-
-function buildPfahlErddruckSVG(params, wide=false){
-  const {phi_deg, gamma, L, L_emb, e_h, d_ex, n, typ, Hu_1, Hu_gruppe, H_d_b, H_d, f_eff,
-         eta_H, eta_V, neig_mm_m, d_mass, d_krit, s, B_pf, sB, f_gr, aL, pfahlTypLabel,
-         k_s, delta_gruppe_mm, H_pfahl_total, H_pfahl_d, dH_ep, pfaehle_im_aushub} = params;
-
-  const phi   = phi_deg * Math.PI / 180;
-  const Kp    = Math.tan(Math.PI/4 + phi/2)**2;
-  const p_max = 3 * Kp * gamma * L_emb * B_pf;
-
-  const VB = 340, H_VB = wide ? 400 : 310;
-  const PAD_L=34, PAD_R=20, PAD_T=38, PAD_B=56;
-  const pf_w  = 16;
-  const pile_x = PAD_L + pf_w/2 + 10;
-  const plot_x = pile_x + pf_w/2 + 5;
-  const plot_w = VB - PAD_R - plot_x;
-  const pile_top_y = PAD_T;
-  const pile_h     = H_VB - PAD_T - PAD_B;
-  const pile_bot_y = pile_top_y + pile_h;
-  const total_m    = L_emb + e_h + 0.01;
-  const gok_y      = pile_top_y + (e_h / total_m) * pile_h;
-  const emb_top_y  = gok_y;
-  const emb_h      = pile_bot_y - gok_y;
-
-  // Hilfsfunktionen
-  const p_px  = v  => (v / Math.max(0.1, p_max)) * plot_w * 0.85;
-  const depY  = zd => gok_y + (zd / L_emb) * emb_h;  // Tiefe → Pixel
-
-  const _lt   = SETTINGS.theme === 'light';
-  const c_acc = '#7c8de0', c_ep = '#ffaa44';
-  const c_dim = _lt?'#70727e':'#787a84', c_on2 = _lt?'#3a3c48':'#b8bac4';
-  const c_ok  = '#6fcf8e', c_fail='#cf7070', c_warn='#c9a84c';
-  const c_s2  = _lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
-  const c_xdim= _lt?'#9a9caa':'#4e5058';
-  const etaCls = e => e>=1.0?c_ok:c_fail;
-
-  // ── Berechnete Grössen für Annotationen
-  // Rotationszentrum (starrer freier Pfahl, Winkler): z_r = (2L+3e)×L / (3×(2e+L))
-  const z_r   = (2*L_emb + 3*e_h) * L_emb / (3 * (2*e_h + L_emb));
-  const nl_y  = depY(z_r);
-
-  // Resultante Ep: Schwerpunkt des Dreiecks = 2/3 der Länge
-  const z_res = 2 * L_emb / 3;
-  const res_y = depY(z_res);
-  const Ep_res_x = plot_x + p_px(3*Kp*gamma*z_res*B_pf);  // p bei z_res
-
-  // Tiefenmarkierungslinien + Tiefenskala links
-  const step = L_emb <= 2 ? 0.5 : 1.0;
-  let tickLines = '', depthScale = '';
-  for(let zd = step; zd < L_emb - 0.01; zd += step){
-    const ty = depY(zd);
-    const px_t = plot_x + p_px(3*Kp*gamma*zd*B_pf);
-    tickLines += `<line x1="${plot_x}" y1="${ty}" x2="${px_t}" y2="${ty}"
-      stroke="${c_ep}" stroke-width="0.7" opacity="0.40"/>`;
-    // Tiefenskala links vom Pfahl
-    depthScale += `<line x1="${pile_x-pf_w/2-12}" y1="${ty}" x2="${pile_x-pf_w/2-7}" y2="${ty}"
-      stroke="${c_dim}" stroke-width="0.7"/>
-    <text x="${pile_x-pf_w/2-14}" y="${ty+3}" font-family="'DM Mono',monospace" font-size="6.5"
-      fill="${c_xdim}" text-anchor="end">${zd.toFixed(zd%1?1:0)}m</text>`;
-  }
-
-  // Aushub-Zone (wenn Pfahl im Aushub: Drucknullzone von GOK bis d_ex)
-  const aushubZone = (d_ex>0.05 && pfaehle_im_aushub) ? (() => {
-    const ex_y = depY(Math.min(d_ex, L_emb));
-    return `<rect x="${plot_x}" y="${gok_y}" width="${plot_w*0.85}" height="${ex_y-gok_y}"
-      fill="${c_fail}" fill-opacity="0.08" stroke="${c_fail}" stroke-width="0.6" stroke-dasharray="2,2"/>
-    <text x="${plot_x + plot_w*0.42}" y="${(gok_y+ex_y)/2+3}" font-family="'DM Mono',monospace"
-      font-size="7" fill="${c_fail}" text-anchor="middle">p=0 (Aushub)</text>
-    <line x1="${pile_x-pf_w/2-3}" y1="${ex_y}" x2="${VB-PAD_R}" y2="${ex_y}"
-      stroke="${c_fail}" stroke-width="0.9" stroke-dasharray="3,2"/>
-    <text x="${VB-PAD_R-2}" y="${ex_y-3}" font-family="'DM Mono',monospace" font-size="7"
-      fill="${c_fail}" text-anchor="end">d_ex=${d_ex.toFixed(1)}m</text>`;
-  })() : '';
-
-  // Dreieck-Polygon
-  const nSeg = 20;
-  let triPts = `${plot_x},${emb_top_y}`;
-  for(let i=0; i<=nSeg; i++){
-    const t  = i/nSeg;
-    const ty = emb_top_y + t*emb_h;
-    const tx = plot_x + p_px(3*Kp*gamma*t*L_emb*B_pf);
-    triPts += ` ${tx},${ty}`;
-  }
-  triPts += ` ${plot_x},${pile_bot_y}`;
-
-  // Pfeil-Hilfsfunktion: horizontaler Pfeil mit Spitze
-  const arrowH = (x1,x2,y,col,lbl,lblSide='right') => {
-    const dir = x2>x1?1:-1;
-    const tip = x2, tail = x1;
-    const aw=6, ah=4;
-    const lblX = lblSide==='right' ? Math.max(x1,x2)+4 : Math.min(x1,x2)-4;
-    const anchor = lblSide==='right' ? 'start' : 'end';
-    return `<line x1="${tail}" y1="${y}" x2="${tip-dir*aw}" y2="${y}"
-        stroke="${col}" stroke-width="1.4"/>
-      <polygon points="${tip},${y} ${tip-dir*aw},${y-ah} ${tip-dir*aw},${y+ah}"
-        fill="${col}"/>
-      <text x="${lblX}" y="${y+3.5}" font-family="'DM Mono',monospace" font-size="7.5"
-        fill="${col}" text-anchor="${anchor}">${lbl}</text>`;
-  };
-
-  // η-Boxen
-  const etaBox = (lbl,val,x,y,w=90) => {
-    const cls = isFinite(val)?etaCls(val):c_dim;
-    const txt = isFinite(val)?`η = ${val.toFixed(2)}`:'n.m.';
-    return `<rect x="${x}" y="${y}" width="${w}" height="18" rx="3"
-        fill="${cls}" fill-opacity="0.15" stroke="${cls}" stroke-width="0.8"/>
-      <text x="${x+w/2}" y="${y+12}" font-family="'DM Mono',monospace" font-size="8.5"
-        fill="${cls}" text-anchor="middle">${lbl}  ${txt}</text>`;
-  };
-
-  // H_pfahl Pfeil (horizontal, auf Pfahlkopfhöhe, von links kommend)
-  const h_arrow_x1 = PAD_L - 2;
-  const h_arrow_x2 = pile_x - pf_w/2;
-  const h_arrow_y  = e_h>0.1 ? gok_y - (e_h/(total_m))*pile_h*0.5 : gok_y - 8;
-  const H_lbl = `H=${(H_pfahl_total??H_d).toFixed(1)}kN`;
-
-  // Resultante-Pfeil (Ep-Widerstand, zeigt nach links = entgegen H)
-  const ep_arr_x1 = Ep_res_x + 28;
-  const ep_arr_x2 = plot_x + 2;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${H_VB}"
-    width="100%" style="max-width:${wide?440:290}px;display:block">
-  <rect width="${VB}" height="${H_VB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
-
-  <!-- Titel -->
-  <text x="${VB/2}" y="15" font-family="'DM Mono',monospace" font-size="8" letter-spacing=".07em"
-    text-anchor="middle" fill="${c_dim}">ERDDRUCKVERTEILUNG — BROMS PASSIV</text>
-  <text x="${VB/2}" y="26" font-family="'DM Mono',monospace" font-size="7.5"
-    text-anchor="middle" fill="${c_dim}">${n}× ${typ}  ·  L=${L_emb.toFixed(1)}m  ·  φ=${phi_deg}°  ·  γ=${gamma} kN/m³</text>
-
-  <!-- Boden-Hintergrund -->
-  <rect x="${PAD_L}" y="${gok_y}" width="${VB-PAD_L-PAD_R}" height="${pile_bot_y-gok_y}"
-    fill="${c_dim}" fill-opacity="0.05"/>
-
-  <!-- Aushub-Zone -->
-  ${aushubZone}
-
-  <!-- p(z)-Dreieck -->
-  <polygon points="${triPts}" fill="${c_ep}" fill-opacity="0.32" stroke="${c_ep}" stroke-width="1"/>
-  ${tickLines}
-
-  <!-- p-Wert Labels an Tiefenlinien -->
-  ${(() => {
-    let out='';
-    for(let zd=step; zd<L_emb-0.01; zd+=step){
-      const pv = 3*Kp*gamma*zd*B_pf;
-      const tx = plot_x + p_px(pv) + 3;
-      const ty = depY(zd);
-      out += `<text x="${tx}" y="${ty-2}" font-family="'DM Mono',monospace" font-size="6.5"
-        fill="${c_ep}" opacity="0.8">${pv.toFixed(0)}</text>`;
-    }
-    return out;
-  })()}
-
-  <!-- p_max Label -->
-  <text x="${plot_x+p_px(p_max)+4}" y="${pile_bot_y-4}" font-family="'DM Mono',monospace"
-    font-size="7.5" fill="${c_ep}">${p_max.toFixed(0)} kPa</text>
-
-  <!-- Kp + Formel -->
-  <text x="${VB-PAD_R}" y="${emb_top_y-5}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_dim}" text-anchor="end">Kp=${Kp.toFixed(2)} · 3·Kp·γ·z·B</text>
-
-  <!-- Pfahl-Körper -->
-  <rect x="${pile_x-pf_w/2}" y="${pile_top_y}" width="${pf_w}" height="${pile_h}"
-    fill="${c_acc}" fill-opacity="0.28" stroke="${c_acc}" stroke-width="1"/>
-
-  <!-- GOK-Linie -->
-  <line x1="${PAD_L-6}" y1="${gok_y}" x2="${VB-PAD_R+3}" y2="${gok_y}"
-    stroke="${c_dim}" stroke-width="0.9" stroke-dasharray="3,2"/>
-  <text x="${PAD_L-8}" y="${gok_y+3.5}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_dim}" text-anchor="end">GOK</text>
-
-  <!-- Tiefenskala links -->
-  ${depthScale}
-
-  <!-- e-Bemaßung -->
-  ${e_h>0.05 ? `
-  <line x1="${pile_x-pf_w/2-14}" y1="${pile_top_y}" x2="${pile_x-pf_w/2-14}" y2="${gok_y}"
-    stroke="${c_on2}" stroke-width="0.7"/>
-  <line x1="${pile_x-pf_w/2-18}" y1="${pile_top_y}" x2="${pile_x-pf_w/2-10}" y2="${pile_top_y}"
-    stroke="${c_on2}" stroke-width="0.7"/>
-  <line x1="${pile_x-pf_w/2-18}" y1="${gok_y}" x2="${pile_x-pf_w/2-10}" y2="${gok_y}"
-    stroke="${c_on2}" stroke-width="0.7"/>
-  <text x="${pile_x-pf_w/2-20}" y="${(pile_top_y+gok_y)/2+3}" font-family="'DM Mono',monospace"
-    font-size="7" fill="${c_on2}" text-anchor="end">e=${e_h.toFixed(1)}m</text>` : ''}
-
-  <!-- L-Bemaßung -->
-  <line x1="${pile_x-pf_w/2-14}" y1="${emb_top_y}" x2="${pile_x-pf_w/2-14}" y2="${pile_bot_y}"
-    stroke="${c_on2}" stroke-width="0.8"/>
-  <line x1="${pile_x-pf_w/2-18}" y1="${emb_top_y}" x2="${pile_x-pf_w/2-10}" y2="${emb_top_y}"
-    stroke="${c_on2}" stroke-width="0.7"/>
-  <line x1="${pile_x-pf_w/2-18}" y1="${pile_bot_y}" x2="${pile_x-pf_w/2-10}" y2="${pile_bot_y}"
-    stroke="${c_on2}" stroke-width="0.7"/>
-  <text x="${pile_x-pf_w/2-20}" y="${(emb_top_y+pile_bot_y)/2+3}" font-family="'DM Mono',monospace"
-    font-size="7.5" fill="${c_on2}" text-anchor="end">L=${L_emb.toFixed(1)}m</text>
-
-  <!-- ── H_pfahl Pfeil (Einwirkung) -->
-  ${arrowH(h_arrow_x1, h_arrow_x2+pf_w/2, h_arrow_y, c_acc, H_lbl, 'right')}
-
-  <!-- ── Rotationszentrum / Nulllinie -->
-  <line x1="${pile_x-pf_w/2-4}" y1="${nl_y}" x2="${pile_x+pf_w/2+4}" y2="${nl_y}"
-    stroke="${c_ok}" stroke-width="1.2" stroke-dasharray="4,2"/>
-  <circle cx="${pile_x}" cy="${nl_y}" r="3.5" fill="none" stroke="${c_ok}" stroke-width="1.2"/>
-  <text x="${pile_x+pf_w/2+7}" y="${nl_y+3.5}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_ok}">NL  z=${z_r.toFixed(2)}m</text>
-
-  <!-- ── Resultante Ep (Widerstand) -->
-  <line x1="${ep_arr_x1}" y1="${res_y}" x2="${ep_arr_x2+6}" y2="${res_y}"
-    stroke="${c_ep}" stroke-width="1.4"/>
-  <polygon points="${ep_arr_x2+6},${res_y} ${ep_arr_x2+12},${res_y-4} ${ep_arr_x2+12},${res_y+4}"
-    fill="${c_ep}"/>
-  <text x="${ep_arr_x1+4}" y="${res_y-4}" font-family="'DM Mono',monospace" font-size="7"
-    fill="${c_ep}">H_u,1=${Hu_1.toFixed(1)}kN</text>
-  <text x="${ep_arr_x1+4}" y="${res_y+10}" font-family="'DM Mono',monospace" font-size="6.5"
-    fill="${c_ep}" opacity="0.7">z=${z_res.toFixed(2)}m</text>
-
-  <!-- Werte-Zeile -->
-  <text x="${PAD_L}" y="${H_VB-8}" font-family="'DM Mono',monospace" font-size="7" fill="${c_dim}">
-    H_u,Gr=${Hu_gruppe.toFixed(1)}kN · δ=${delta_gruppe_mm.toFixed(1)}mm · ${neig_mm_m.toFixed(1)}mm/m · λL=${aL.toFixed(1)} (${pfahlTypLabel})
   </text>
 </svg>`;
 }
@@ -13816,7 +13810,6 @@ function toggleGZTExpand(evt, key){
     else if(data.fn === 'buildPbSystemSVG')    newSvg = buildPbSystemSVG(data.R, data.piles, data.n, _gztExpanded);
     else if(data.fn === 'buildPbSteelDiagram') newSvg = buildPbSteelDiagram(data.R, data.n, _gztExpanded);
     else if(data.fn === 'buildPbKnickDiagram') newSvg = buildPbKnickDiagram(data.R, data.n, _gztExpanded);
-    else if(data.fn === 'buildPbGZGDiagram')   newSvg = buildPbGZGDiagram(data.R, data.n, _gztExpanded);
     else                                       newSvg = buildGZTDiagram(data.R, data.G, _gztExpanded, false);
     div.innerHTML = '';
     if(btnExp){ btnExp.textContent = _gztExpanded ? '✕' : '⤢'; div.appendChild(btnExp); }
@@ -13900,6 +13893,9 @@ function applyState(st){
   rebuildScene();
   _checkTWOverrides();
   formatMeterInputs(); // m-Felder nach Laden auf 2 Dezimalstellen
+  // Projekt-/Fundament-Dropdown mit dem geladenen Stand synchron halten
+  if(st.p_name!==undefined){ const psel=document.getElementById('proj-sel'); if(psel) psel.value=st.p_name||''; }
+  if(typeof renderFundSel==='function') renderFundSel();
   scheduleCalc(150); // Ergebnis nach Laden neu berechnen
 }
 let _currentProjKey = null; // gesetzt beim Laden eines Projekts
@@ -13914,9 +13910,18 @@ function saveProject(){
     updateSaveBtnTitle(); _markSaved();
     toast('Gespeichert: '+st.p_name+(st.p_fundname?' · '+st.p_fundname:'')); return;
   }
-  // Kein Projekt geladen → Projekt-Banner öffnen (Verwaltung liegt jetzt oben)
-  toggleProjBanner(true);
-  toast('Projekt auswählen und Speichern drücken');
+  // Kein Fundament geladen → als neue Position in der Liste anlegen (gleiche Validierung
+  // wie „+ Neues Fundament speichern"): Projekt gewählt + Fundamentname vorhanden → speichern,
+  // sonst öffnet saveNewEntry das Banner und markiert das fehlende Pflichtfeld.
+  const projSelVal=(document.getElementById('proj-sel')||{}).value||'';
+  const fundname=(document.getElementById('p_fundname')?.value||'').trim();
+  if(!projSelVal && !fundname){
+    // gar nichts eingegeben → Banner öffnen und zum Ausfüllen auffordern
+    toggleProjBanner(true);
+    toast('Projekt und Fundamentname eingeben, dann speichern');
+    return;
+  }
+  saveNewEntry();
 }
 
 function doSaveDlg(){
@@ -13975,7 +13980,62 @@ function onProjSelChange(){
     if(nf) nf.style.display='none';
     si('p_name','');
   }
+  renderFundSel();   // Fundament-Auswahl auf das gewählte Projekt filtern
   updateSB();
+}
+// Fundament-Dropdown mit den Fundamenten des gewählten Projekts füllen (analog proj-sel)
+function renderFundSel(){
+  const sel=document.getElementById('fund-sel'); if(!sel) return;
+  const projName=((document.getElementById('proj-sel')||{}).value)||'';
+  sel.innerHTML='';
+  const hasProj = projName && projName!=='__new__';
+  if(hasProj){
+    const keys=dbKeys().filter(k=>k.startsWith('proj_')).sort().reverse();
+    keys.forEach(k=>{
+      const p=dbGet(k); if(!p || (p.p_name||'')!==projName) return;
+      const opt=document.createElement('option');
+      opt.value=k; opt.textContent=p.p_fundname||'(ohne Name)';
+      sel.add(opt);
+    });
+  }
+  const newOpt=document.createElement('option');
+  newOpt.value='__new__'; newOpt.textContent='+ Neues Fundament';
+  sel.add(newOpt);
+  // Auswahl: geladenes Fundament falls in diesem Projekt, sonst „neu"
+  if(_currentProjKey && sel.querySelector('option[value="'+_currentProjKey+'"]')) sel.value=_currentProjKey;
+  else sel.value='__new__';
+  const nf=document.getElementById('fund-newname-field');
+  if(nf) nf.style.display = (sel.value==='__new__') ? '' : 'none';
+}
+function onFundSelChange(){
+  const sel=document.getElementById('fund-sel'); if(!sel) return;
+  const val=sel.value;
+  const nf=document.getElementById('fund-newname-field');
+  if(val==='__new__'){
+    // Neues Fundament im aktuellen Projekt: Key lösen, Name leeren, Namensfeld zeigen
+    if(nf) nf.style.display='';
+    _currentProjKey=null;
+    si('p_fundname','');
+    const nn=document.getElementById('fund-newname'); if(nn) nn.value='';
+    updateSaveBtnTitle(); updateSB();
+    if(nn) setTimeout(()=>{ try{ nn.focus(); }catch(_){} }, 0);
+  } else if(val){
+    if(nf) nf.style.display='none';
+    loadProj(val);   // bestehendes Fundament laden
+  }
+}
+// Projektnamen nachträglich ändern: benennt ALLE Fundamente dieses Projekts um
+function renameProjGroup(oldName,newName){
+  newName=(newName||'').trim();
+  if(!newName || newName===oldName){ renderProjList(); return; }
+  dbKeys().filter(k=>k.startsWith('proj_')).forEach(k=>{
+    const p=dbGet(k); if(p && (p.p_name||'—')===oldName){ p.p_name=newName; dbSet(k,p); }
+  });
+  if(_currentProjKey){ const cp=dbGet(_currentProjKey); if(cp) si('p_name', cp.p_name||''); }
+  renderProjList();
+  const psel=document.getElementById('proj-sel'); if(psel) psel.value=newName;
+  renderFundSel(); updateSB();
+  toast('Projekt umbenannt: '+newName);
 }
 // Pflichtfeld markieren: Banner öffnen, Feld fokussieren + kurz rot umranden
 function _flagField(id){
@@ -13997,20 +14057,24 @@ function saveNewEntry(){
   } else {
     toast('Projekt auswählen'); _flagField('proj-sel'); return;
   }
-  if(!fundname){ toast('Fundamentbezeichnung eingeben'); _flagField('p_fundname'); return; }
+  if(!fundname){
+    const fs=document.getElementById('fund-sel'); if(fs){ fs.value='__new__'; onFundSelChange(); }
+    toast('Fundamentbezeichnung eingeben'); _flagField('fund-newname'); return;
+  }
   si('p_name', projName);
   const k='proj_'+Date.now();
   const st=collectState(); st._k=k; st._d=new Date().toLocaleDateString('de-CH');
   dbSet(k,st);
   _currentProjKey=k;
-  renderProjList(); // ruft intern renderProjSel() auf
-  // Dropdown auf gespeichertes Projekt setzen
+  renderProjList(); // baut proj-sel-Optionen (inkl. neuem Projektnamen) + renderFundSel()
+  // Erst JETZT (Option existiert) das Projekt selektieren, dann Fundament-Liste passend filtern
   const sel=document.getElementById('proj-sel');
   if(sel) sel.value=projName;
+  renderFundSel();
   // Neues-Projekt-Feld ausblenden
   const nf=document.getElementById('new-proj-name-field');
   if(nf) nf.style.display='none';
-  updateSaveBtnTitle(); _markSaved();
+  updateSaveBtnTitle(); _markSaved(); updateSB();
   toast('Gespeichert: '+projName+' · '+fundname);
 }
 function renderProjList(){
@@ -14019,16 +14083,34 @@ function renderProjList(){
   const keys=dbKeys().filter(k=>k.startsWith('proj_')).sort().reverse();
   if(!keys.length){
     list.innerHTML='<div style="color:var(--xdim);font-size:9.5px;font-family:var(--f-mono);padding:8px 0">Keine gespeicherten Projekte</div>';
+    renderFundSel();
     return;
   }
+  // Suche + Sortierung (U5)
+  const q=((document.getElementById('proj-search')||{}).value||'').trim().toLowerCase();
+  const sortBy=((document.getElementById('proj-sort')||{}).value)||'neu';
+  const match=p=>!q || [p.p_fundname,p.p_km,p.p_mastnr,p.p_name,p.p_bemerk]
+    .some(v=>(v||'').toLowerCase().includes(q));
+  const cmp={
+    name:(a,b)=>(a.p.p_fundname||'').localeCompare(b.p.p_fundname||'', 'de', {numeric:true}),
+    km:  (a,b)=>(a.p.p_km||'').localeCompare(b.p.p_km||'', 'de', {numeric:true}),
+    mast:(a,b)=>(a.p.p_mastnr||'').localeCompare(b.p.p_mastnr||'', 'de', {numeric:true}),
+  }[sortBy];   // 'neu' = Key-Reihenfolge (Timestamp absteigend) beibehalten
   // Gruppieren nach Projektname (p_name)
   const groups={};
   keys.forEach(k=>{
     const p=dbGet(k);
+    if(!match(p)) return;
     const grpKey=p.p_name||'—';
     if(!groups[grpKey]) groups[grpKey]={name:grpKey, entries:[]};
     groups[grpKey].entries.push({k,p});
   });
+  Object.values(groups).forEach(g=>{ if(cmp) g.entries.sort(cmp); });
+  if(!Object.keys(groups).length){
+    list.innerHTML='<div style="color:var(--xdim);font-size:9.5px;font-family:var(--f-mono);padding:8px 0">Keine Treffer für «'+q+'»</div>';
+    renderFundSel();
+    return;
+  }
 
   Object.values(groups).forEach((grp,gi)=>{
     const grpId='pg_'+gi;
@@ -14036,7 +14118,7 @@ function renderProjList(){
     card.className='lf-card open';
     card.innerHTML=`
       <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
-        <span style="font-weight:500;font-size:11px">${grp.name||'Projekt'}</span>
+        <span class="proj-grp-name" contenteditable="true" spellcheck="false" title="Klicken zum Umbenennen des Projekts" style="font-weight:500;font-size:11px;outline:none;cursor:text;border-radius:3px;padding:1px 3px">${grp.name||'Projekt'}</span>
         <span style="flex:1"></span>
         <span style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);margin-right:6px">${grp.entries.length} Fundament${grp.entries.length!==1?'e':''}</span>
         <svg class="lf-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M6 8l4 4 4-4"/></svg>
@@ -14057,6 +14139,14 @@ function renderProjList(){
         </table>
       </div>`;
     list.appendChild(card);
+    // Projektname inline umbenennbar (benennt alle Fundamente der Gruppe um)
+    const nameEl=card.querySelector('.proj-grp-name');
+    if(nameEl){
+      const _old=grp.name;
+      nameEl.addEventListener('click',e=>e.stopPropagation());
+      nameEl.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); nameEl.blur(); } });
+      nameEl.addEventListener('blur',()=>renameProjGroup(_old, nameEl.textContent));
+    }
     const tbody=card.querySelector('#'+grpId);
     if(grp.entries.some(e=>e.k===_currentProjKey)){
       card.style.borderColor='var(--acc)'; card.style.boxShadow='0 0 0 1.5px var(--acc)';
@@ -14087,14 +14177,16 @@ function renderProjList(){
       tbody.appendChild(tr);
     });
   });
+  renderFundSel();   // Fundament-Dropdown mit der aktuellen Auswahl synchron halten
 }
 function loadProj(k){
   const p=dbGet(k); if(!p) return;
   applyState(p);
   _currentProjKey = k;
-  if(typeof renderProjList==='function') renderProjList();   // Aktiv-Markierung (Rahmen/Zeile) auf das geladene Projekt aktualisieren
-  // Dropdown auf p_name des geladenen Projekts setzen
+  if(typeof renderProjList==='function') renderProjList();   // baut proj-sel-Optionen + Aktiv-Markierung
+  // Erst nach renderProjList (Option existiert) selektieren, dann Fundament-Liste passend filtern
   const sel=document.getElementById('proj-sel'); if(sel) sel.value=p.p_name||'';
+  renderFundSel();
   // Neues-Projekt-Feld ausblenden
   const nf=document.getElementById('new-proj-name-field'); if(nf) nf.style.display='none';
   updateSB(); updateSaveBtnTitle();
@@ -14113,7 +14205,6 @@ function delProj(k){
     dbDel(k); renderProjList(); updateSaveBtnTitle();
   });
 }
-function newProject(){ document.getElementById('ov-reset').classList.add('open'); }
 function importJSON(){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
   inp.onchange=async e=>{
@@ -14284,90 +14375,6 @@ function doReassign(){
   toast('Verschoben zu Projekt: '+(newName||'(kein)'));
 }
 
-// ── Export als JSON ─────────────────────────────────────────────────
-function exportProjJSON(k){
-  const p=dbGet(k); if(!p) return;
-  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=(p.p_name||'fundament').replace(/[^a-zA-Z0-9_-]/g,'_')+'.json';
-  a.click(); URL.revokeObjectURL(a.href);
-}
-
-// ── Export als PDF (jsPDF) ──────────────────────────────────────────
-function exportProjPDF(k){
-  const p=dbGet(k); if(!p) return;
-  try {
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'p',unit:'mm',format:'a4'});
-    const m=14, lh=6, W=182;
-    let y=m;
-    const ln=(txt,sz,bold)=>{
-      doc.setFontSize(sz||9); doc.setFont('helvetica',bold?'bold':'normal');
-      doc.text(String(txt),m,y); y+=lh;
-    };
-    const row=(lbl,val)=>{ doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.text(lbl+':',m,y);
-      doc.setFont('helvetica','normal'); doc.text(String(val||'—'),m+46,y); y+=5; };
-    ln('BlockCalc — Fundamentnachweis SIA 267',13,true); y+=2;
-    ln('─'.repeat(60),8); y+=1;
-    ln((p.p_name||'Fundament')+(p.p_mastnr?' · Mast '+p.p_mastnr:'')+(p.p_km?' · km '+p.p_km:''),10,true); y+=2;
-    row('Projekt-Nr.',p.p_nr); row('Bearbeiter',p.p_bearbeiter); row('Datum',p.p_datum); row('Bemerkung',p.p_bemerk);
-    y+=3; ln('Geometrie',9,true); y+=1;
-    row('B × L × H_Block [m]',(p.g_bx||'?')+'×'+(p.g_by||'?')+'×'+(p.g_hblock||'?'));
-    row('Überdeckung ü [m]',p.g_uberd); row('B_Kopf × L_Kopf × H_Kopf [m]',(p.g_kx||'?')+'×'+(p.g_ky||'?')+'×'+(p.g_hkopf||'?'));
-    y+=3; ln('Boden',9,true); y+=1;
-    row("φ' [°]",p.bg_phi); row("c' [kPa]",p.bg_c); row('γ [kN/m³]',p.bg_gamma);
-    y+=3; ln('Gespeichert',8); ln(p._d||'',8);
-    doc.save((p.p_name||'fundament').replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf');
-  } catch(e){ toast('PDF-Export: jsPDF nicht verfügbar'); }
-}
-
-// ════════════════════════════════════════════
-// PROTOKOLL & PDF
-// ════════════════════════════════════════════
-function showProtokoll(){calculate();const st=collectState();document.getElementById('proto-body').innerHTML=buildProto(st);document.getElementById('protokoll').style.display='block';}
-function hideProto(){document.getElementById('protokoll').style.display='none';}
-
-function buildProto(s){
-  const now=new Date().toLocaleDateString('de-CH');
-  const ptbl=rows=>`<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:14px">${rows.map(([k,v])=>`<tr><td style="padding:3px 10px;background:#f5f5f5;color:#555;width:46%">${k}</td><td style="padding:3px 10px">${v}</td></tr>`).join('')}</table>`;
-  const ph=t=>`<h3 style="font-size:11px;font-weight:600;margin:18px 0 5px;padding-bottom:3px;border-bottom:1px solid #ddd">${t}</h3>`;
-  return `<div style="font-family:'DM Mono',monospace;font-size:10.5px;line-height:1.85;color:#111">
-  <div style="display:flex;justify-content:space-between;padding-bottom:12px;margin-bottom:18px;border-bottom:2px solid #111">
-    <div><div style="font-size:18px;font-weight:600">Blockfundament</div>
-    <div style="font-size:9px;color:#666;margin-top:2px">Standsicherheitsnachweis · SIA 267 · Steckner</div></div>
-    <div style="text-align:right;font-size:10px;color:#444;line-height:1.7">
-      <div style="font-weight:600">${s.p_name}</div><div>Nr. ${s.p_nr}</div><div>${s.p_bearbeiter}</div><div>${now}</div>
-    </div>
-  </div>
-  ${ph('1. Geometrie')}${ptbl([['Block B × L × H',`${s.g_bx} × ${s.g_by} × ${s.g_hblock} m`],['Kopf B × L × H',`${s.g_kx} × ${s.g_ky} × ${s.g_hkopf} m`],['Versatz e_x / e_y',`${s.g_ex} / ${s.g_ey} m`]])}
-  ${ph('2. Baugrundkennwerte')}${ptbl([["φ'",`${s.bg_phi}°`],["c'",`${s.bg_c} kPa`],['γ',`${s.bg_gamma} kN/m³`],['q_u',`${s.bg_qu} kPa`],['γ_G/γ_Q/γ_φ/γ_c',`${s.lw_G??s.tw_G}/${s.lw_Q??s.tw_Q}/${s.tw_phi}/${s.tw_c}`]])}
-  ${ph('3. Lasten')}${ptbl([['N_G',`${s.l_NG} kN`],['H_Gx/H_Gy',`${s.l_HGx}/${s.l_HGy} kN`],['M_Gx/M_Gy',`${s.l_MGx}/${s.l_MGy} kNm`],['H_Wx/H_Wy',`${s.l_HWx}/${s.l_HWy} kN`],['M_Wx/M_Wy',`${s.l_MWx}/${s.l_MWy} kNm`]])}
-  ${lastRes?ph('4. Massgebende Ergebnisse')+ptbl([['σ_max',lastRes.smax.toFixed(1)+' kPa'],['σ_min',lastRes.smin.toFixed(1)+' kPa']]):''}
-  <div style="margin-top:40px;border-top:1px solid #ddd;padding-top:6px;font-size:8px;color:#aaa">BlockCalc v1.0 · SIA 267 · ${now}</div></div>`;
-}
-
-async function exportPDF(){
-  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'});
-  const st=collectState(),now=new Date().toLocaleDateString('de-CH');
-  doc.setFont('courier');let y=18;
-  const ln=(t,sz=9,b=false)=>{if(y>274){doc.addPage();y=18;}doc.setFontSize(sz);doc.setFont('courier',b?'bold':'normal');doc.text(t,18,y);y+=sz*0.42+1.8;};
-  const sep=()=>{doc.setDrawColor(190);doc.setLineWidth(0.2);doc.line(18,y,192,y);y+=4;};
-  ln('BLOCKFUNDAMENT — STANDSICHERHEITSNACHWEIS SIA 267',12,true);ln('Steckner',8);sep();
-  ln(`Projekt: ${st.p_name}   Nr.: ${st.p_nr}   ${st.p_bearbeiter}`,9,true);ln(now,7);sep();
-  ln('1. GEOMETRIE',9,true);
-  ln(`Block: ${st.g_bx}×${st.g_by}×${st.g_hblock}m   Kopf: ${st.g_kx}×${st.g_ky}×${st.g_hkopf}m   Versatz: ${st.g_ex}/${st.g_ey}m`);sep();
-  ln('2. BAUGRUNDKENNWERTE',9,true);
-  ln(`phi=${st.bg_phi}°  c=${st.bg_c}kPa  g=${st.bg_gamma}kN/m3  qu=${st.bg_qu}kPa`);
-  ln(`gG=${st.lw_G??st.tw_G}  gQ=${st.lw_Q??st.tw_Q}  g_phi=${st.tw_phi}  g_c=${st.tw_c}`);sep();
-  ln('3. LASTEN',9,true);
-  ln(`NG=${st.l_NG}kN  HGx=${st.l_HGx}  HGy=${st.l_HGy}  MGx=${st.l_MGx}kNm  MGy=${st.l_MGy}kNm`);
-  ln(`HWx=${st.l_HWx}  HWy=${st.l_HWy}  MWx=${st.l_MWx}kNm  MWy=${st.l_MWy}kNm`);sep();
-  if(lastRes){ln('4. NACHWEISE',9,true);ln(`sigma_max=${lastRes.smax.toFixed(1)}kPa  sigma_min=${lastRes.smin.toFixed(1)}kPa`);sep();}
-  ln('BlockCalc v1.0 · '+now,7);
-  doc.save(`${st.p_name||'Blockfundament'}_SIA267.pdf`);
-}
-
 // ════════════════════════════════════════════
 // MOBILE NAVIGATION
 // ════════════════════════════════════════════
@@ -14391,6 +14398,7 @@ function resizeViewer(){
   // Sofort neu zeichnen: nach setSize ist der WebGL-Buffer geleert; ohne synchrones Render zeigt der
   // Compositor während einer CSS-Transition (Splitter-Ziehen / Banner-Ausrollen) einen schwarzen Frame.
   try{ if(scene && camera) renderer.render(scene, camera); }catch(e){}
+  if(typeof invalidateViewer==='function') invalidateViewer();   // Labels im nächsten Frame nachführen
 }
 
 function mobSwitch(view){
@@ -14464,6 +14472,125 @@ function toast(msg){
 }
 
 // ════════════════════════════════════════════
+// SELBSTTEST (?selftest=1) — Golden-/Analytik-Anker
+// Schützt die Norm-Verankerung: analytische Referenzen (Hetényi, Gruppengleichgewicht,
+// Mantelreibung) + eingefrorene Golden-Werte eines vollständig expliziten Zustands.
+// Draft-Save ist im Selbsttest unterdrückt (echter Arbeitsstand bleibt unberührt).
+// ════════════════════════════════════════════
+const _ST_STATE = {"AUFLASTEN":"[]","FLACH_MAT":"beton","LF":"[{\"name\":\"LF 1 — GZT (quer)\",\"preset\":\"quer\",\"gG\":1.35,\"gW\":1.5,\"nw\":\"gzt\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}},{\"name\":\"LF 2 — GZG (quer)\",\"preset\":\"quer\",\"gG\":1,\"gW\":1,\"nw\":\"gzg\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}}]","MODEL":"block","SCHICHTEN":"[{\"phi\":30,\"c\":0,\"gamma\":20,\"gamma2\":10,\"d\":999,\"name\":\"Testboden\",\"preset\":\"custom\",\"me\":30}]","bg_beta":"0","bg_bfuss":"0.00","bg_bhoehe":"0","bg_btyp":"none","bg_c":"0","bg_c1":"155.0","bg_c1_methode":"auto","bg_delta_fac":"0.667","bg_delta_sohle":"0.667","bg_gamma":"20","bg_gamma2":"10","bg_gw":"","bg_gwt":"3.00","bg_koernig":"grob","bg_me":"30","bg_phi":"30","bg_qu":"400","flach-material":"beton","g_bx":"1.3","g_by":"1.3","g_ex":"0","g_ey":"0","g_gauf":"20","g_gbeton":"25","g_hblock":"2.7","g_hkopf":"0.6","g_kx":"0.6","g_ky":"0.6","g_uberd":"0.4","g_uberd_flach":"0.40","g_uberd_on":true,"kopf_in_gk":true,"l_HGx":"8","l_HGy":"8","l_HWx":"6","l_HWy":"6","l_MGx":"45","l_MGy":"45","l_MWx":"35","l_MWy":"35","l_NG":"50","lw_G":"1.35","lw_G1_inf":"0.80","lw_G1_sup":"1.20","lw_G_eig":"1","lw_G_gzg":"1.00","lw_G_inf":"0.8","lw_Q":"1.5","lw_Q1":"1.50","lw_Q_gzg":"1.00","p_bearbeiter":"","p_bemerk":"","p_datum":"2026-01-01","p_fundname":"Selbsttest","p_km":"","p_mastnr":"","p_name":"Selbsttest","p_nr":"","pb_L":"10.00","pb_auto":"1","pb_ax":"12","pb_ay":"12","pb_bank_d":"0.80","pb_bx":"2.00","pb_by":"2.00","pb_dG":"150","pb_ex":"0.00","pb_ey":"0.00","pb_gR":"1.40","pb_gS":"1.15","pb_hk":"1.00","pb_korr":"temp","pb_kx":"0.60","pb_ky":"0.60","pb_n":"4","pb_skinfac":"1.0","pb_sx":"1.40","pb_sy":"1.40","pb_sys":"0","pb_ue":"0.40","pb_var":"0","pb_zugfac":"1.0","pfahl_abstand":"2.50","pfahl_alpha":"2.3","pfahl_anzahl":"2","pfahl_dex":"1.8","pfahl_dex_seite":"gleis","pfahl_dk":"15","pfahl_dm":"5","pfahl_e":"0.5","pfahl_hs":"0","pfahl_l":"4.00","pfahl_laf":"1.0","pfahl_lv_mode":"auto","pfahl_s":"4.00","pfahl_stab_nrd":"0","pfahl_typ":"HEB200","pfahl_zugfest":"ja","tw_Ea":"1.35","tw_Ep":"1.4","tw_c":"1.5","tw_phi":"1.2"};
+
+function runSelfTest(){
+  const T=[];   // {name, val, exp, tol, mode:'rel'|'abs', ok}
+  const add=(name,val,exp,tol,mode)=>{
+    let ok=false;
+    if(isFinite(val)&&isFinite(exp)){
+      const d=Math.abs(val-exp);
+      ok = (mode==='abs') ? d<=tol : d<=tol*Math.max(1e-12,Math.abs(exp));
+    }
+    T.push({name,val,exp,tol,mode,ok});
+  };
+  // SETTINGS-Parameter pinnen (in-memory, nichts persistieren), danach wiederherstellen
+  const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
+              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, nw:SETTINGS.nw };
+  SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
+  try{
+    // ── T1 Hetényi: p-y-FE (bddBeamPY) gegen geschlossene Halbunendlich-Lösung y=2λ/k_w
+    (()=>{ const ks=20000,B=0.2,EI=50000;
+      const py=bddBeamPY(EI,B,0,10,1,z=>ks);
+      const kw=ks*B, lam=Math.pow(kw/(4*EI),0.25);
+      add('p-y-FE vs. Hetényi y=2λ/k_w', py?py.yHead_mm:NaN, 2*lam/kw*1000, 0.005,'rel'); })();
+    // ── T2 Gruppengleichgewicht solvePfahlbock: N=400 auf 4 Pfähle → je +100 · My=100 → ±25
+    (()=>{ const piles=[{x:-1,y:-1},{x:1,y:-1},{x:-1,y:1},{x:1,y:1}]
+        .map(p=>({x:p.x,y:p.y,axDeg:0,ayDeg:0,kAx:50000,kLat:2500}));
+      const sN=solvePfahlbock(piles,{N:400}), sM=solvePfahlbock(piles,{My:100});
+      add('Gruppe N=400 → F je Pfahl', sN?Math.max(...sN.F.map(f=>Math.abs(f-100))):NaN, 0, 1e-6,'abs');
+      add('Gruppe My=100 → |F|=25, ΣF=0', sM?Math.max(...sM.F.map(f=>Math.abs(Math.abs(f)-25)))+Math.abs(sM.F.reduce((a,b)=>a+b,0)):NaN, 0, 1e-6,'abs'); })();
+    // ── T3 Mantelreibung analytisch: Kies q_s,k=200 · π·d_G·L
+    (()=>{ const SB=SCHICHTEN;
+      SCHICHTEN=[{phi:38,c:0,gamma:20,gamma2:10.5,d:999,name:'Kies',preset:'kies',me:80}];
+      const sk=microSkinFriction(10,0.15,1.0,1.0);
+      SCHICHTEN=SB;
+      add('Mantelreibung Kies R_s,k=q_s·π·d·L', sk?sk.Rk:NaN, 200*Math.PI*0.15*10, 1e-6,'rel'); })();
+    // ── T4 Block/Steckner (Golden, kanonischer Zustand)
+    applyState(_ST_STATE); calculate();
+    (()=>{ const r=_lastResults&&_lastResults[0]||{};
+      add('Block GZT η (Steckner Gl.66)', r.etaGZT, 3.913258897661888, 1e-3,'rel');
+      add('Block M_u [kNm]',              r.Mu_GZT, 520.6590963339142, 1e-3,'rel');
+      add('Block GZG η (Schiefstellung)', r.etaGZG, 6.468974115335702, 1e-3,'rel');
+      add('Block N_d [kN]',               r.Nd,     201.215,           1e-3,'rel'); })();
+    // ── T5 Flach/Hansen (Golden, gleicher Zustand)
+    setModel('flach'); calculate();
+    (()=>{ const r=_lastResults&&_lastResults[0]||{};
+      // Golden aktualisiert Jul 2026 nach Ausmitte-Richtungsfix (LF quer → Ausmitte voll in x,
+      // Le=L): effektive Fläche kleiner, η konservativer (war 1.1119/694.73 mit dem H-Paarungs-Bug).
+      add('Flach Grundbruch η', r.etaGB, 1.0257473505222212, 1e-3,'rel');
+      add('Flach Gleiten η',    r.etaGL, 2.2126289841864333, 1e-3,'rel');
+      add('Flach R_d [kN]',     r.Rd,    640.8859641468226,  1e-3,'rel'); })();
+    // ── T6 Pfahlfundament (Golden; Result-Felder sind auf 2 Dez. gerundet → abs-Toleranz)
+    setModel('pfahlbock');
+    (()=>{ const r=window._pbReport&&window._pbReport.r||{};
+      add('Pfahl η_Geo (Mantelreibung)', r.etaGeo,   3.27, 0.015,'abs');
+      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 2.09, 0.015,'abs');
+      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 2.42, 0.015,'abs');
+      add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
+      add('Pfahl R_s,d [kN]',            r.Rskin_d,  336.6, 0.5,'abs'); })();
+    // ── T7 Bishop-Gleitkreis (Golden: Flach + Böschung β=−30°, h_β=3 m)
+    setModel('flach');
+    si('bg_beta','-30'); si('bg_bhoehe','3'); si('bg_bfuss','1.0');
+    (()=>{ const bt=document.getElementById('bg_btyp'); if(bt) bt.value='boeschung'; })();
+    calculate();
+    (()=>{ const b=window._flachBishop;
+      add('Bishop Böschung η (β=−30°)', b&&b.ok?b.eta:NaN, 0.9567555757317132, 5e-3,'rel'); })();
+  } catch(err){
+    T.push({name:'AUSNAHME: '+(err&&err.message||err), val:NaN, exp:NaN, tol:0, mode:'abs', ok:false});
+  } finally {
+    SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.pfahlRandMin=bak.pfahlRandMin;
+    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.nw=bak.nw;
+  }
+  _renderSelfTest(T);
+  return T;
+}
+function _renderSelfTest(T){
+  const nOk=T.filter(t=>t.ok).length, all=T.length, pass=nOk===all;
+  const fmt=v=>!isFinite(v)?'–':(Math.abs(v)>=100?v.toFixed(2):v.toPrecision(6));
+  let el=document.getElementById('selftest-ov');
+  if(!el){ el=document.createElement('div'); el.id='selftest-ov'; document.body.appendChild(el); }
+  el.style.cssText='position:fixed;inset:0;z-index:200;background:var(--bg);color:var(--on);overflow:auto;padding:28px 32px;font-family:var(--f-mono);font-size:11px';
+  el.innerHTML=`
+    <div style="max-width:860px;margin:0 auto">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--on);padding-bottom:10px;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;letter-spacing:0.03em">BlockCalc Selbsttest</span>
+        <span style="color:var(--dim)">Golden- und Analytik-Anker · SIA-267-Verankerung</span>
+        <span style="flex:1"></span>
+        <span style="font-weight:600;color:${pass?'var(--ok)':'var(--fail)'}">${nOk} / ${all} ${pass?'BESTANDEN':'FEHLGESCHLAGEN'}</span>
+      </div>
+      <div style="color:var(--xdim);font-size:9.5px;margin-bottom:14px">Der Selbsttest überschreibt den Auto-Entwurf nicht. Zum normalen Betrieb: Seite ohne <span style="color:var(--dim)">?selftest=1</span> laden.</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Test</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Wert</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Erwartet</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Toleranz</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Status</th>
+        </tr></thead>
+        <tbody>${T.map(t=>`<tr style="border-bottom:1px solid var(--ol)">
+          <td style="padding:5px 8px;color:var(--on2)">${t.name}</td>
+          <td style="padding:5px 8px;text-align:right">${fmt(t.val)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--dim)">${fmt(t.exp)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--xdim)">${t.mode==='rel'?(+(t.tol*100).toPrecision(2))+'%':t.tol}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:600;color:${t.ok?'var(--ok)':'var(--fail)'}">${t.ok?'OK':'ABWEICHUNG'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="margin-top:16px;color:var(--xdim);font-size:9.5px;line-height:1.7">
+        Anker: Hetényi-Halbunendlich-Balken (p-y-FE) · räumliches Gruppengleichgewicht (starres Bankett) ·
+        Mantelreibung EA-Pfähle (analytisch) · Steckner Gl. 66 / GZG Gl. 21 · Hansen-Grundbruch/Gleiten ·
+        Bishop-Gleitkreis (Taylor-validierte Suche). Golden-Werte eingefroren Jul 2026.
+      </div>
+    </div>`;
+  document.title='Selbsttest '+(pass?'OK':'FEHLER')+' · BlockCalc';
+}
+
+// ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
 document.addEventListener('keydown',e=>{
@@ -14483,6 +14610,9 @@ document.addEventListener('DOMContentLoaded',async()=>{
   // Boden-Tab korrekt sichtbar wird; pfahlbock-section bleibt korrekt in tab-geometrie.
   (()=>{ const tg=document.getElementById('tab-geometrie'), tb=document.getElementById('tab-baugrund');
     if(tg && tb && tb.parentElement===tg) tg.parentElement.insertBefore(tb, tg.nextSibling); })();
+  // Dimensionierungs-Karte gehört ans Ende von geo-standard (Markup-Verschachtelung s. o.)
+  (()=>{ const dc=document.getElementById('dim-card'), gs=document.getElementById('geo-standard');
+    if(dc && gs && dc.parentElement!==gs) gs.appendChild(dc); })();
   await dbInit();
   loadSettings();
   updateSliderRanges();
@@ -14499,9 +14629,11 @@ document.addEventListener('DOMContentLoaded',async()=>{
   formatMeterInputs(); // Felder mit Einheit m auf 2 Dezimalstellen
   if(SETTINGS.bearbeiter) si('p_bearbeiter',SETTINGS.bearbeiter);
   // Auto-Entwurf: letzten Arbeitsstand wiederherstellen (Datensicherheit nach Reload/Absturz)
-  const _restored = (typeof _restoreDraft==='function') ? _restoreDraft() : false;
+  // Im Selbsttest-Modus übersprungen (deterministischer Startzustand, Draft bleibt unberührt)
+  const _restored = (!window._SELFTEST_MODE && typeof _restoreDraft==='function') ? _restoreDraft() : false;
   if(_restored) toast('Letzter Stand wiederhergestellt');
   setTimeout(()=>{ histInit(); if(!_restored){ _savedSnap=_histSnap(); _dirty=false; _updateDirtyUI(); } _checkDirty(); }, 800);
+  if(window._SELFTEST_MODE) setTimeout(runSelfTest, 600);
 });
 </script>
 
