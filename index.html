@@ -1008,6 +1008,11 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
             Exportieren
           </button>
         </div>
+        <button class="btn btn-tonal btn-full btn-sm" style="margin-top:8px" onclick="exportFundamentliste()"
+          title="Fundamentliste des gewählten Projekts (Abmessungen + Erfüllungsgrade) als PDF drucken">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h12M4 10h12M4 15h12"/></svg>
+          Fundamentliste PDF
+        </button>
       </div>
     </div>
   </div>
@@ -3931,9 +3936,12 @@ function rebuildScene(){
     _dim3(V(bx/2,dimY,-by/2), V(bx/2,dimY,by/2), V(1,0,0), {label:`L = ${by.toFixed(2)} m`, field:'g_by'});
     // Rechts vertikal (z=0): Einbindetiefe t
     _dim3(V(bx/2,0,0), V(bx/2,-t_eff,0), V(1,0,0), {off:DIM3_OFF+0.7, label:`t = ${t_eff.toFixed(2)} m`, field:'g_hblock'});
-    // Links vertikal (z=0): ü innen (GOK → OK Block) · H_Kopf aussen (davor, Abstand zur ü-Vermassung)
+    // Links vertikal (z=0): ü innen (GOK → OK Block) · H_Kopf + H_Block aussen (gleiche Flucht, off+0.7)
     if(ue>0.01) _dim3(V(-bx/2,0,0), V(-bx/2,-ue,0), V(-1,0,0), {label:`ü = ${ue.toFixed(2)} m`, field:'g_uberd'});
     if(hk>0.05) _dim3(V(-bx/2,-ue,0), V(-bx/2,okKopf,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
+    // Blockkörperhöhe H_Block (OK Block → Sohle), gleiche Flucht wie H_Kopf → durchgehende Kette
+    // (Label „H_Block", nicht „H" — „H" ist schon der Horizontalkraft-Vektor)
+    _dim3(V(-bx/2,-ue,0), V(-bx/2,-t_eff,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Block = ${hb.toFixed(2)} m`, field:'g_hblock'});
     scene.add(dg);
   }
 
@@ -10059,7 +10067,37 @@ function openBemessung(){
   document.getElementById('bem-status').textContent='';
   document.getElementById('bem-chart').innerHTML='';
   _bemLast=null; document.getElementById('bem-pdf').disabled=true;
+  // Gespeicherte Berechnung wiederherstellen (Auswahl + Diagramm), falls vorhanden
+  _bemRestoreSaved();
   document.getElementById('ov-bemessung').classList.add('open');
+}
+// Zuletzt berechnetes Bemessungsdiagramm wiederherstellen (persistiert in dbGet('bc_bem_last')):
+// Auswahl (Lastniveaus/Modus/Kurven/β) immer, das gerenderte Diagramm nur bei passendem Modell.
+function _bemRestoreSaved(){
+  let saved=null; try{ saved=dbGet('bc_bem_last'); }catch(_){}
+  if(!saved||!saved.ui) return;
+  const u=saved.ui;
+  const modeSel=document.getElementById('bem-mode');
+  if(modeSel && u.mode){ modeSel.value=u.mode; _bemModeUI(); }
+  if(u.hs!=null) si('bem-hs', u.hs);
+  si('bem-b1', u.b1!=null?u.b1:'0');
+  const b2=document.getElementById('bem-b2'); if(b2) b2.value=u.b2||'';
+  if(Array.isArray(u.lvlNames)){
+    document.querySelectorAll('.bem-lvl-cb').forEach(cb=>{
+      const nm=(LOAD_LVLS[+cb.dataset.i]||{}).name;
+      cb.checked = u.lvlNames.includes(nm);
+    });
+  }
+  // Diagramm nur zeigen, wenn es zum aktuellen Modell passt (SVG/Tabelle sind modellspezifisch)
+  if(saved.result && saved.model===CALC_MODEL){
+    _bemLast=saved.result;
+    document.getElementById('bem-chart').innerHTML =
+      saved.result.svg + '<div style="margin-top:12px;overflow-x:auto">'+(saved.result.table||'')+'</div>';
+    document.getElementById('bem-pdf').disabled=false;
+    const d=saved.ts?new Date(saved.ts).toLocaleDateString('de-CH'):'';
+    document.getElementById('bem-status').innerHTML='<span style="color:var(--xdim)">Gespeichertes Diagramm'
+      +(d?' · '+d:'')+' — bei geänderten Lasten/Baugrund neu berechnen.</span>';
+  }
 }
 // Modus-Umschaltung y-Achse: H (Kurven = B×L, Staffelwerte) oder B (Kurven = H_Block)
 function _bemModeUI(){
@@ -10111,6 +10149,9 @@ async function runBemessung(){
   const step=0.05, Bmax=3.6, Hmin=0.8, Hmax=4.5;
   const ratio=(()=>{ const B0=+gi('g_bx')||1, L0=+gi('g_by')||1; return B0>0.01?Math.max(0.2,Math.min(5,L0/B0)):1; })();
   const Bk_=+gi('g_kx')||0, Lk_=+gi('g_ky')||0;
+  const ue_=+gi('g_uberd')||0, hkopf_=+gi('g_hkopf')||0;   // ü + Kopfhöhe konstant → Betonkubatur
+  // Betonkubatur [m³] = Fundamentkörper (B·L·H) + Kopf (Bk·Lk·(ü+H_Kopf)) — wie der Beton-Anteil von Gk
+  const betonVol=(Bv,Lv,Hv)=> Bv*Lv*Hv + Bk_*Lk_*(ue_+hkopf_);
   const BminG=Math.max(0.5, Math.ceil(Math.max(Bk_, Lk_/ratio)/step)*step||0.5);
   const snap=v=>+(Math.round(v/step)*step).toFixed(2);
   const setLoads=ll=>{ si('l_NG',ll.NG); si('l_HGx',ll.HGx); si('l_HGy',ll.HGy);
@@ -10132,27 +10173,35 @@ async function runBemessung(){
         for(const ll of lvls){
           setLoads(ll);
           const base=collectCalcInputs();
-          let found=null;
+          let found=null, foundR=null;   // foundR = Result am Treffer → massgebender Nachweis
           if(mode==='H'){
             // y = kleinste Blocktiefe H bei festem B×L=cv
             if(cv < Math.max(Bk_,Lk_)-1e-9){ found=null; }   // Kopf passt nicht in dieses B×L
             else for(let H=start; H<=Hmax+1e-9; H+=step){
               const Hs=snap(H);
               const r=_doCalculate({ ...base, raw:{ ...base.raw, g_hblock:String(Hs) }, _pure:true });
-              if(r && _dimEtaMin(r)>=1.0){ found=Hs; break; }
+              if(r && _dimEtaMin(r)>=1.0){ found=Hs; foundR=r; break; }
             }
           } else {
             // y = kleinste Seitenlänge B bei festem H=cv
             for(let B=start; B<=Bmax+1e-9; B+=step){
               const Bs=snap(B), Ls=snap(B*ratio);
               const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(Bs), g_by:String(Ls) }, _pure:true });
-              if(r && _dimEtaMin(r)>=1.0){ found=Bs; break; }
+              if(r && _dimEtaMin(r)>=1.0){ found=Bs; foundR=r; break; }
             }
           }
-          pts.push({ name:ll.name||'?', val:found });
+          // Betonkubatur am Treffer (Wirtschaftlichkeits-Richtwert)
+          let vol=null;
+          if(found!=null){
+            const Bv = mode==='H' ? cv : found;
+            const Lv = mode==='H' ? cv : snap(found*ratio);
+            const Hv = mode==='H' ? found : cv;
+            vol = betonVol(Bv, Lv, Hv);
+          }
+          pts.push({ name:ll.name||'?', val:found, gov: foundR?_dimGovName(foundR):null, vol });
           if(found!=null) start=Math.max((mode==='H')?Hmin:BminG, found-2*step);   // monoton in der Lastfolge
         }
-        series.push({ label:(mode==='H'?'B×L '+cv.toFixed(2):'H '+cv.toFixed(2)), beta, pts });
+        series.push({ label:(mode==='H'?'B×L '+cv.toFixed(2):'H '+cv.toFixed(2)), beta, cv, pts });
       }
     }
     const meta={ mode, ratio, betas,
@@ -10162,9 +10211,14 @@ async function runBemessung(){
         ? 'erforderliche Blocktiefe H (B×L fest) · η ≥ 1.0'
         : 'erforderliche Abmessung B (L = '+ratio.toFixed(2)+'·B) · η ≥ 1.0' };
     const svg=buildBemessungSVG(series, lvls.map(l=>l.name||'?'), meta);
-    chart.innerHTML=svg;
-    _bemLast={ svg, meta, soil:_bemSoilHTML() };
+    const table=_bemTableHTML(series, lvls, meta);
+    chart.innerHTML=svg+'<div style="margin-top:12px;overflow-x:auto">'+table+'</div>';
+    _bemLast={ svg, table, meta, soil:_bemSoilHTML(), grid:{ mode:meta.mode, ratio:meta.ratio, series, lvls } };
     document.getElementById('bem-pdf').disabled=false;
+    // Berechnung persistieren → beim nächsten Öffnen sofort da (keine erneute Auswahl/Klick nötig)
+    try{ dbSet('bc_bem_last', { model:CALC_MODEL, ts:Date.now(), result:_bemLast,
+      ui:{ lvlNames:lvls.map(l=>l.name||''), mode, hs:gi('bem-hs'),
+           b1:gi('bem-b1'), b2:(document.getElementById('bem-b2').value||'') } }); }catch(_){}
     status.textContent='';
   } catch(e){
     status.textContent='Diagramm fehlgeschlagen: '+(e&&e.message||e);
@@ -10174,6 +10228,58 @@ async function runBemessung(){
     btn.disabled=false;
     calculate();
   }
+}
+// Kürzel des massgebenden Nachweises (für die Wertetabelle)
+function _bemGovAbbr(g){ return ({'GZT Standsicherheit':'GZT','GZG Schiefstellung':'GZG',
+  'Grundbruch':'GB','Gleiten':'GL','Kippen':'Ki','Sohlspannung':'σ'})[g]||'–'; }
+// Wertetabelle: Lastniveau × Kurve → erf. Abmessung + massgebender Nachweis (ablesesicher, auch fürs PDF)
+function _bemTableHTML(series, lvls, meta){
+  const betas=meta.betas;
+  const mRes=ll=>Math.hypot((ll.MGx||0)+(ll.MWx||0),(ll.MGy||0)+(ll.MWy||0));
+  const th='padding:3px 9px 3px 0;border-bottom:1px solid var(--ol);color:var(--xdim);font-weight:500;font-size:8.5px;letter-spacing:.04em;text-transform:uppercase';
+  let h='<style>#bem-chart .bem-cell:hover{outline:1.5px solid var(--acc);outline-offset:-1.5px}</style>'
+    +'<table style="border-collapse:collapse;font-size:10px;font-family:var(--f-mono)"><thead><tr>'
+    +'<th style="text-align:left;'+th+'">Lastniveau</th>'
+    +'<th style="text-align:right;'+th+'">M_res,k [kNm]</th>';
+  series.forEach(sr=>{ const bl=sr.label+(betas.length>1&&sr.beta!==betas[0]?' β'+sr.beta+'°':'');
+    h+='<th style="text-align:right;'+th+'">'+bl+'</th>'; });
+  h+='</tr></thead><tbody>';
+  lvls.forEach((ll,i)=>{
+    h+='<tr><td style="padding:3px 9px 3px 0;color:var(--on2)">'+(ll.name||'?')+'</td>'
+      +'<td style="text-align:right;padding:3px 9px;color:var(--dim)">'+mRes(ll).toFixed(0)+'</td>';
+    series.forEach((sr,sIdx)=>{ const p=sr.pts[i];
+      const clickable=!!(p&&p.val!=null);
+      const cell= clickable
+        ? p.val.toFixed(2)+' <span style="color:var(--xdim)">('+_bemGovAbbr(p.gov)+')</span>'
+          +(p.vol!=null?'<div style="color:var(--dim);font-size:8.5px">'+p.vol.toFixed(1)+' m³</div>':'')
+        : '<span style="color:var(--fail)">—</span>';
+      h+='<td '+(clickable?'class="bem-cell" onclick="_bemApplyCell('+sIdx+','+i+')" title="Abmessung ins Modell übernehmen"':'')
+        +' style="text-align:right;padding:3px 9px;color:var(--on);vertical-align:top'+(clickable?';cursor:pointer':'')+'">'+cell+'</td>'; });
+    h+='</tr>';
+  });
+  h+='</tbody></table>'
+    +'<div style="font-size:8.5px;color:var(--xdim);margin-top:5px;line-height:1.6">Werte = erforderliche '
+    +(meta.mode==='H'?'Blocktiefe H':'Seitenlänge B')+' [m] (η ≥ 1.0) · Kürzel = massgebender Nachweis: '
+    +(CALC_MODEL==='block'?'GZT Standsicherheit · GZG Schiefstellung':'GB Grundbruch · GL Gleiten · Ki Kippen · σ Sohlspannung')
+    +' · <b>m³ = Betonkubatur</b> (Fundamentkörper + Kopf, Wirtschaftlichkeits-Richtwert) · <b>Zelle anklicken → Abmessung ins Modell übernehmen</b> · — keine Lösung im Suchbereich</div>';
+  return h;
+}
+// Zelle der Bemessungstabelle ins Modell übernehmen: NUR die Abmessung (Lasten/Böschung bleiben,
+// die sind je Standort/Masttyp vordefiniert und werden nicht zurückgeschrieben).
+function _bemApplyCell(sIdx, lIdx){
+  const g=_bemLast&&_bemLast.grid; if(!g) return;
+  const sr=g.series[sIdx], p=sr&&sr.pts[lIdx];
+  if(!sr||!p||p.val==null) return;
+  const setF=(id,v)=>{ si(id,String(v)); const r=document.getElementById(id+'_r'); if(r) r.value=v; };
+  // Abmessung: H-Modus → B×L fest (cv), H = gefunden · B-Modus → B = gefunden, L = B·ratio, H fest (cv)
+  let B,L,H;
+  if(g.mode==='H'){ B=sr.cv; L=sr.cv; H=p.val; }
+  else           { B=p.val; L=+(p.val*g.ratio).toFixed(2); H=sr.cv; }
+  setF('g_bx',B); setF('g_by',L); setF('g_hblock',H);
+  closeOverlay('ov-bemessung');
+  calculate();
+  toast('Abmessung übernommen — B×L '+B.toFixed(2)+'×'+L.toFixed(2)+' m · H '+H.toFixed(2)+' m'
+    +(p.vol!=null?' · '+p.vol.toFixed(1)+' m³':''));
 }
 function buildBemessungSVG(series, names, meta){
   const n=names.length, betas=meta.betas;
@@ -10264,7 +10370,98 @@ function printBemessung(){
     ${fix(_bemLast.soil)}
     <div class="sh" style="margin-top:16px">Diagramm</div>
     ${fix(_bemLast.svg)}
+    <div class="sh" style="margin-top:16px">Erforderliche Abmessungen</div>
+    ${fix(_bemLast.table||'')}
     <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 150); };<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
+// Ein Fundament rechnen (für die Fundamentliste): setzt den Zustand, liefert Abmessung + Erfüllungsgrade.
+// ACHTUNG: mutiert den Modellzustand — Aufrufer sichert/restauriert via collectState/applyState.
+function _fundEval(p){
+  applyState(p);
+  const model=CALC_MODEL, num=id=>+gi(id)||0;
+  let dims='—', etaT=null, etaG=null;
+  try{
+    if(model==='pfahlbock'){
+      if(typeof renderPfahlbock==='function') renderPfahlbock();
+      const r=(window._pbReport&&window._pbReport.r)||{};
+      const uls=[r.etaGeo,r.etaSteel,r.etaKnick].filter(isFinite);
+      etaT = uls.length?Math.min(...uls):null;
+      etaG = isFinite(r.etaGZG)?r.etaGZG:null;
+      const bx=num('pb_bx'),by=num('pb_by');
+      dims='Bankett '+bx.toFixed(2)+'×'+by.toFixed(2)+' m (Pfahlfundament)';
+    } else {
+      const res=_doCalculate({ ...collectCalcInputs(), _pure:true });
+      const w=res&&res.worst;
+      const B=num('g_bx'),L=num('g_by'),H=num('g_hblock'),ue=num('g_uberd');
+      dims=B.toFixed(2)+' × '+L.toFixed(2)+' × '+H.toFixed(2)+' m'+(ue?' · ü '+ue.toFixed(2):'');
+      if(model==='block'){ etaT=w&&isFinite(w.etaGZT)?w.etaGZT:null; etaG=w&&isFinite(w.etaGZG)?w.etaGZG:null; }
+      else { const uls=[w&&w.etaGB, w&&w.etaGL, w&&w.eta_klaf].filter(isFinite);
+             etaT = uls.length?Math.min(...uls):null; etaG=null; }   // Flach: kein GZG
+    }
+  }catch(_){ /* Ergebnis bleibt teilweise leer → in der Tabelle als „–" */ }
+  const es=[etaT,etaG].filter(v=>v!=null&&isFinite(v));
+  const etaMin = es.length?Math.min(...es):null;
+  return { model, dims, etaT, etaG, etaMin, ok: etaMin!=null && etaMin>=1 };
+}
+// Fundamentliste des gewählten Projekts als PDF: Abmessungen + Erfüllungsgrade (η) in Tabellenform.
+function exportFundamentliste(){
+  const curName=((document.getElementById('proj-sel')||{}).value||(gi('p_name')||'')).trim();
+  let entries=dbKeys().filter(k=>k.startsWith('proj_')).map(k=>({k,p:dbGet(k)})).filter(e=>e.p);
+  if(curName) entries=entries.filter(e=>(e.p.p_name||'')===curName);
+  if(!entries.length){ toast(curName?('Projekt «'+curName+'» hat keine gespeicherten Fundamente'):'Kein Projekt gewählt — zuerst speichern/laden'); return; }
+  entries.sort((a,b)=>(a.p.p_fundname||'').localeCompare(b.p.p_fundname||'','de',{numeric:true}));
+  // Aktuellen Zustand sichern, jedes Fundament rechnen, danach restaurieren
+  const backup=collectState();
+  const rows=[];
+  try{ entries.forEach(({p})=>rows.push({p, e:_fundEval(p)})); }
+  finally{ applyState(backup); calculate(); }
+  // PDF (feste Druckfarben)
+  const now=new Date().toLocaleDateString('de-CH');
+  const modelLbl={block:'Block (Steckner)',flach:'Flach (Hansen)',pfahlbock:'Pfahlfundament'};
+  const etaTxt=v=> (v==null||!isFinite(v)) ? '<span style="color:#999">–</span>'
+    : '<span style="color:'+(v>=1?'#2f9e54':'#a02020')+';font-weight:600">'+v.toFixed(2)+'</span>';
+  const nOk=rows.filter(r=>r.e.ok).length;
+  const trs=rows.map(({p,e})=>`<tr>
+      <td>${p.p_fundname||'–'}</td><td>${p.p_km||''}</td><td>${p.p_mastnr||''}</td>
+      <td>${modelLbl[e.model]||e.model||'–'}</td><td>${e.dims}</td>
+      <td style="text-align:right">${etaTxt(e.etaT)}</td>
+      <td style="text-align:right">${etaTxt(e.etaG)}</td>
+      <td style="text-align:right">${etaTxt(e.etaMin)}</td>
+      <td style="text-align:center;color:${e.ok?'#2f9e54':'#a02020'};font-weight:600">${e.ok?'erfüllt':'nicht erfüllt'}</td>
+    </tr>`).join('');
+  const w=window.open('','_blank');
+  if(!w){ toast('Popup blockiert — Druckfenster zulassen'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Fundamentliste — BlockCalc</title>
+    <style>
+      body{ font-family:'DM Mono',ui-monospace,monospace; color:#111; margin:26px 30px; }
+      .hd{ display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:6px; }
+      .hd .t{ font-size:16px; font-weight:600; }
+      .meta{ font-size:10px; color:#555; margin-bottom:16px; line-height:1.7; }
+      table{ border-collapse:collapse; width:100%; font-size:9.5px; }
+      th,td{ padding:4px 8px; text-align:left; border-bottom:1px solid #ddd; vertical-align:top; }
+      th{ font-size:8px; letter-spacing:0.06em; text-transform:uppercase; color:#888; border-bottom:1.5px solid #333; white-space:nowrap; }
+      tfoot td{ border-bottom:none; border-top:1.5px solid #333; font-size:9px; color:#555; padding-top:8px; }
+      .note{ font-size:8px; color:#888; margin-top:12px; line-height:1.6; }
+      @media print { body{ margin:10mm; } }
+    </style></head><body>
+    <div class="hd"><span class="t">Fundamentliste — Dimensionierung</span>
+      <span style="font-size:11px">${(SETTINGS.firma||'BlockCalc')}</span></div>
+    <div class="meta">Projekt: ${curName||'(alle)'} · ${rows.length} Fundament${rows.length!==1?'e':''} · ${nOk}/${rows.length} erfüllt ·
+      Bearbeiter: ${(gi('p_bearbeiter')||SETTINGS.bearbeiter||'–')} · ${now} · SIA 267</div>
+    <table>
+      <thead><tr>
+        <th>Fundament</th><th>KM</th><th>Mast-Nr.</th><th>Modell</th><th>Abmessung (B×L×H)</th>
+        <th style="text-align:right">η Tragsicherheit</th><th style="text-align:right">η Gebrauch</th>
+        <th style="text-align:right">η min</th><th style="text-align:center">Status</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+      <tfoot><tr><td colspan="9">η Tragsicherheit = massgebender GZT-Nachweis (Block: Steckner Standsicherheit · Flach: min Grundbruch/Gleiten/Kippen · Pfahl: min Mantelreibung/Stahl/Knicken) · η Gebrauch = GZG (Block/Pfahl Schiefstellung; Flach: entfällt) · η ≥ 1.0 = erfüllt.</td></tr></tfoot>
+    </table>
+    <div class="note">Werte aus der aktuell gespeicherten Geometrie, Baugrund und Einwirkung je Fundament (SIA 267). Massgebende Lastfallkombination je Nachweis. Für die vollständige Herleitung je Fundament den Nachweisbericht öffnen.</div>
+    <script>window.onload=function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
     </body></html>`);
   w.document.close();
 }
