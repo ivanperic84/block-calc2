@@ -1154,6 +1154,29 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       <!-- BAUGRUND -->
       <div id="tab-baugrund" class="tab-panel">
 
+        <!-- Geländeneigung (zuoberst — Standort-Randbedingung) -->
+        <div class="sec"><span>Standort</span></div>
+        <div class="lf-card" id="boeschung-card">
+          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Geländeneigung</span>
+            <span class="mat-card-summary" id="boe-card-summary">β = 0°</span>
+            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+          </div>
+          <div class="lf-card-body">
+            <div class="field"><label>β Geländewinkel <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_beta_r" min="-40" max="40" step="1" value="0" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_beta" type="number" value="0" step="1" min="-40" max="40" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
+            <div class="field"><label>Böschungsfuss <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bfuss_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"><input id="bg_bfuss" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"/></div></div>
+            <div class="field"><label>Böschungshöhe h_β <em>m · 0 = durchlaufend</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bhoehe_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_bhoehe" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
+            <div class="field">
+              <label>Böschungstyp</label>
+              <select id="bg_btyp" onchange="updateViewer()">
+                <option value="none">Kein Einfluss (β = 0°)</option>
+                <option value="aufgegraben">Teilweise ausgegraben</option>
+                <option value="boeschung">Angrenzende Böschung</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Bodenprofile -->
         <div class="sec"><span>Bodenprofile</span></div>
         <div class="hint" style="padding:2px 0 6px;font-size:9.5px;color:var(--xdim);font-family:var(--f-mono)">Vordefinierte Bodenkennwerte. Laden übernimmt Werte in die Felder.</div>
@@ -1279,28 +1302,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
             <div class="field" id="bg_gwt_wrap" style="opacity:0.35;pointer-events:none">
               <label>Tiefe unter GOK <em>m</em></label>
               <input id="bg_gwt" type="number" value="3.0" step="0.1" oninput="updateGWCardSummary();scheduleCalc()"/>
-            </div>
-          </div>
-        </div>
-
-        <!-- Geländeneigung -->
-        <div class="lf-card" id="boeschung-card" style="margin-top:6px">
-          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
-            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Geländeneigung</span>
-            <span class="mat-card-summary" id="boe-card-summary">β = 0°</span>
-            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
-          </div>
-          <div class="lf-card-body">
-            <div class="field"><label>β Geländewinkel <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_beta_r" min="-40" max="40" step="1" value="0" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_beta" type="number" value="0" step="1" min="-40" max="40" oninput="slSync('bg_beta',this.value);autoBtyp();updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
-            <div class="field"><label>Böschungsfuss <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bfuss_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"><input id="bg_bfuss" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bfuss',this.value);autoBtyp();scheduleCalc()"/></div></div>
-            <div class="field"><label>Böschungshöhe h_β <em>m · 0 = durchlaufend</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="bg_bhoehe_r" min="0" max="10" step="0.1" value="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"><input id="bg_bhoehe" type="number" value="0" step="0.1" min="0" oninput="slSync('bg_bhoehe',this.value);updateBoeCardSummary();updateViewer();scheduleCalc()"/></div></div>
-            <div class="field">
-              <label>Böschungstyp</label>
-              <select id="bg_btyp" onchange="updateViewer()">
-                <option value="none">Kein Einfluss (β = 0°)</option>
-                <option value="aufgegraben">Teilweise ausgegraben</option>
-                <option value="boeschung">Angrenzende Böschung</option>
-              </select>
             </div>
           </div>
         </div>
@@ -2238,6 +2239,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div><div class="toggle-label">Kippen / Ausmitte</div><div class="toggle-sub">e ≤ B/6 (Kernweite)</div></div>
           <label class="sw"><input type="checkbox" id="nw-kippen"><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Globale Standsicherheit (Bishop)</div><div class="toggle-sub">Gleitkreis · nur Flachfundament mit Böschung · Standard aus</div></div>
+          <label class="sw"><input type="checkbox" id="nw-bishop"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        </div>
         <div style="font-size:8.5px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;padding:10px 0 4px;border-bottom:1px solid var(--ol);margin-bottom:4px">Blockfundament</div>
         <div class="toggle-row nw-block-only">
           <div><div class="toggle-label">GZG Schiefstellung</div><div class="toggle-sub">tan(α) ≤ 0.005  [Steckner, C₁]</div></div>
@@ -2526,6 +2531,7 @@ function loadSettings(){
   chk('nw-kippen',  nw.kippen!==false);
   chk('nw-gzg',     nw.gzg!==false);
   chk('nw-gzt',     nw.gzt!==false);
+  chk('nw-bishop',  nw.bishop===true);   // Standard inaktiv
   // Slider-Bereiche
   const sl=SETTINGS.sl||{};
   const SLD=[['sl-gbx','gbx',1.0,2.5],['sl-gby','gby',1.0,2.5],['sl-ghb','ghb',1.4,3.6],
@@ -2636,7 +2642,8 @@ function applySettings(){
     gleiten: gc('nw-gleiten'),
     kippen:  gc('nw-kippen'),
     gzg:     gc('nw-gzg'),
-    gzt:     gc('nw-gzt')
+    gzt:     gc('nw-gzt'),
+    bishop:  gc('nw-bishop')
   };
   // GZ-Labels aus Feldern lesen
   if(!SETTINGS.gz_labels) SETTINGS.gz_labels = {};
@@ -2656,6 +2663,7 @@ function applySettings(){
   dbSet('bc_settings', SETTINGS);
   updateSliderRanges();
   if(CALC_MODEL==='pfahlbock' && typeof renderPfahlbock==='function') renderPfahlbock();
+  else if(typeof calculate==='function') calculate();   // Nachweise neu (z. B. Bishop-Toggle wirkt sofort)
   closeOverlay('ov-settings');
   toast('Einstellungen gespeichert');
 }
@@ -5806,7 +5814,11 @@ function renderPfahlbock(){
   const _slopeActive = _slBtyp!=='none' && Math.abs(_slBeta) > 0.1;
   let _bettungFac=1;
   if(_slopeActive){ const _phiSl=+gi('bg_phi')||30;
-    _bettungFac = Math.max(0.25, kpSlopeRankine(_phiSl, Math.abs(_slBeta)) / Math.max(1e-6, kpSlopeRankine(_phiSl, 0))); }
+    const _bfFull = Math.max(0.25, kpSlopeRankine(_phiSl, Math.abs(_slBeta)) / Math.max(1e-6, kpSlopeRankine(_phiSl, 0)));
+    // Höhenwirkung (Jul 2026): endliche Böschung (h_β>0) mindert die Bettungsreduktion nur über den Anteil
+    // h_β/L_Pfahl der Einbindelänge → weniger Reduktion; durchlaufend (h_β=0) = volle Reduktion (rückw.-kompat.).
+    const _hbP=Math.max(0,+gi('bg_bhoehe')||0), _frP = _hbP>0 ? Math.min(1, _hbP/Math.max(0.5,_Lfull)) : 1;
+    _bettungFac = 1 - (1 - _bfFull)*_frP; }
   const info=document.getElementById('pb_tendon_info');
   if(info) info.innerHTML=`${sys.grade} · A_s=${tdn.As} mm² · R_t,k=${micropileRtk(tdn).toFixed(0)} kN`+(tdn.Ftk?` · F_tk=${tdn.Ftk} kN`:'')
     +(_LbendMax?`<br><span style="color:var(--xdim)">gestossen: L=${_Lfull.toFixed(2)} m gesamt (N+V) · M+N über längstes Element ${Math.min(_Lfull,_LbendMax).toFixed(2)} m (Stoss = Gelenk)</span>`:'');
@@ -5926,7 +5938,7 @@ function _renderPfahlbockResultsRight(r, piles, n){
   scroll.style.display=''; scroll.innerHTML=_pbResultHTML(r, piles, n);
   const pill=document.getElementById('overall-pill');
   if(pill){ const e=r&&isFinite(r.eta_massg)?r.eta_massg:0;
-    if(e<1.0){ pill.className='pill pill-f'; pill.textContent='Nicht erfüllt'; }
+    if(_etaRound(e)<1.0){ pill.className='pill pill-f'; pill.textContent='Nicht erfüllt'; }
     else if(r&&r.slopeActive){ pill.className='pill pill-w'; pill.textContent='Prüfen'; }   // Böschung: globale Standsicherheit offen → nicht blind „Erfüllt"
     else { pill.className='pill pill-ok'; pill.textContent='Erfüllt'; } }
   if(typeof _updateDrawerStatus==='function') _updateDrawerStatus();
@@ -6356,7 +6368,7 @@ function _pbResultHTML(r, piles, n){
       </div></div>
 
     ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.4;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
-      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>, global konservativ) → Verformung/Moment ungünstiger.</div>`:''}
+      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>${(+gi('bg_bhoehe')||0)>0.05?`, h<sub>β</sub>-abgemildert`:``}) → Verformung/Moment ungünstiger. Globale Standsicherheit (Gleitkreis) separat.</div>`:''}
 
     ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
 
@@ -6481,10 +6493,17 @@ function setModel(m, silent){
   const isBlock = m==='block';
   // Frisches Flachfundament (noch kein eigener Geometrie-Slot) → als Stahl-Basisplatte vorbelegen:
   // d=0.09 m, kein Kopf (H_Kopf=0), Material Stahl (γ 78.5). Nutzer-Default.
+  // B/L-Slider-Bereich modellabhängig (VOR dem Setzen der Werte, sonst clampt der Slider):
+  //   Block 1.0–2.5 m · Flach 1.5–3.0 m.
+  { const bxr=document.getElementById('g_bx_r'), byr=document.getElementById('g_by_r');
+    const lo = isBlock ? '1.0' : '1.5', hi = isBlock ? '2.5' : '3.0';
+    if(bxr){ bxr.min=lo; bxr.max=hi; } if(byr){ byr.min=lo; byr.max=hi; } }
   if(m==='flach' && !_applyingState && !window._SELFTEST_MODE && !_geom.flach && _prevModel!=='flach'){
     si('g_hblock','0.09'); { const hr=document.getElementById('g_hblock_r'); if(hr) hr.value='0.09'; }
     si('g_hkopf','0'); si('g_kx','0'); si('g_ky','0');
     si('g_gbeton','78.5');
+    si('g_bx','1.50'); { const r=document.getElementById('g_bx_r'); if(r) r.value='1.50'; }
+    si('g_by','3.00'); { const r=document.getElementById('g_by_r'); if(r) r.value='3.00'; }
     FLACH_MAT='stahl'; const ms=document.getElementById('flach-material'); if(ms) ms.value='stahl';
   }
   // Geometry section header
@@ -6752,9 +6771,17 @@ function renderLoadLvls(){
 // ── Steckner 1989, Gl.3/4: C₁ aus φ_k und Einbindetiefe t
 // C = {4 + 0.6·(φ−20)} · 10⁴ · t/2 · (1 + β_p/40)  [kN/m³]
 // β_p < 0: abfallendes Gelände (Gl.4); β_p ≥ 0: eben/ansteigend → Gl.3 (β=0)
-function c1Steckner(phi_k_deg, t, beta_deg) {
+function c1Steckner(phi_k_deg, t, beta_deg, hbeta) {
   const C_base = (4 + 0.6 * (phi_k_deg - 20)) * 1e4 * (t / 2); // [kN/m³]
-  const beta_fac = (beta_deg < 0) ? (1 + beta_deg / 40) : 1.0;
+  // Steckner Gl.4: abfallende Böschung (β<0) mindert die Bettungsziffer um (1+β/40).
+  // Höhenwirkung (Jul 2026): eine ENDLICHE Böschung (h_β>0) legt nur den Anteil der Einbindetiefe
+  // frei, der über ihre Höhe reicht → frac = h_β/t (gekappt auf 1) → geringere Abminderung;
+  // durchlaufend (h_β=0, Sentinel „unendlich") = volle Reduktion (frac=1, rückwärtskompatibel).
+  let beta_fac = 1.0;
+  if(beta_deg < 0){
+    const frac = (hbeta > 0) ? Math.min(1, hbeta / Math.max(0.1, t)) : 1;
+    beta_fac = 1 + (beta_deg / 40) * frac;
+  }
   return Math.max(1, C_base * beta_fac / 1000); // → MN/m³
 }
 
@@ -6949,10 +6976,11 @@ function c1AutoValue(){
   const t         = Math.max(0.1, +gi('g_hblock') + Math.max(0,+gi('g_uberd')||0));
   const B         = Math.max(0.1, +gi('g_bx'));
   const beta      = +gi('bg_beta')||0;
+  const hbeta     = Math.max(0, +gi('bg_bhoehe')||0);   // Böschungshöhe (0 = durchlaufend)
   const grenzwert = _bgKoernig==='fein' ? 12 : 25;
   const phi_avg   = SCHICHTEN.length>1 ? avgPhiToDepth(t) : (+gi('bg_phi')||30);
   const me_avg    = SCHICHTEN.length>1 ? avgMeToDepth(t) : (SCHICHTEN[0]?.me ?? 20);
-  const c1_steck  = c1Steckner(phi_avg, t, beta);
+  const c1_steck  = c1Steckner(phi_avg, t, beta, hbeta);
   const c1_me     = c1Effective_layers(t, B);
   let c1_eff, zoneKey, w=0;
   if(_c1Methode === 'winkler'){
@@ -9188,7 +9216,7 @@ function _plausCheck(){
 // gwDepth (bg_gw/bg_gwt), govSoilHansen & Co. (SCHICHTEN global) sowie getGF (lw_G/lw_Q)
 // — für Geometrie-Sweeps konstant und daher unkritisch.
 const _CALC_FIELDS = ['g_bx','g_by','g_hblock','g_uberd','g_kx','g_ky','g_hkopf','g_ex','g_ey',
-  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_delta_fac','bg_delta_sohle',
+  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_bhoehe','bg_delta_fac','bg_delta_sohle',
   'tw_phi','tw_c','tw_Ea','tw_Ep',
   'l_NG','l_HGx','l_HGy','l_HWx','l_HWy','l_MGx','l_MGy','l_MWx','l_MWy',
   'lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_inf','lw_G_eig','lw_G_gzg','lw_Q_gzg',
@@ -9253,8 +9281,9 @@ function _doCalculate(inp){
   // C₁ nach Steckner 1989 Gl.3/4: {4+0.6(φ−20)}·10⁴·t/2·(1+β/40) [kN/m³]
   // Mehrschicht: tiefengewichteter Mittelwert φ_k; Einzelschicht: φ_k global
   const beta_deg_c1 = +gi('bg_beta') || 0;
+  const hbeta_c1 = Math.max(0, +gi('bg_bhoehe') || 0);   // Böschungshöhe (0 = durchlaufend)
   const phi_k_c1 = SCHICHTEN.length > 1 ? avgPhiToDepth(t) : (phi_k * 180/Math.PI);
-  const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1);  // MN/m³ (Steckner-Anteil, Fallback)
+  const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1, hbeta_c1);  // MN/m³ (Steckner-Anteil, Fallback)
   // C₁: im Auto-Modus den vollen 3-Zonen-Blend live nehmen (folgt β/B/t/φ) und das
   // Feld nachführen; im manuellen Modus (_c1Manual) den Feldwert verwenden.
   const _c1m = P.c1_manual;
@@ -9276,6 +9305,11 @@ function _doCalculate(inp){
     const Nq_t=Math.exp(Math.PI*Math.tan(phi_d))*Math.tan(Math.PI/4+phi_d/2)**2;
     const Nc_t=phi_d>0.001?(Nq_t-1)/Math.tan(phi_d):5.14;
     gb_c=phi_d>0.001?gb_q-(1-gb_q)/(Nc_t*Math.tan(phi_d)):Math.max(0,1-2*Math.abs(beta)/(Math.PI+2));
+    // Höhenwirkung (Jul 2026): endliche Böschung (h_β>0) mindert die Grundbruch-Abminderung nur über den
+    // Anteil h_β/B_char der Bruchkörpertiefe (B_char = min(B,L)) → weniger Reduktion; durchlaufend (h_β=0)
+    // = volle Reduktion (rückwärtskompatibel). Gilt für Block- und Flach-Grundbruch (gemeinsame gb_*).
+    const _hbG=Math.max(0,+gi('bg_bhoehe')||0), _frG = _hbG>0 ? Math.min(1, _hbG/Math.max(0.1, Math.min(B,L))) : 1;
+    gb_c=1-(1-gb_c)*_frG; gb_q=1-(1-gb_q)*_frG; gb_g=1-(1-gb_g)*_frG;
   }
 
   // ── Eigengewichte
@@ -9886,13 +9920,13 @@ function _doCalculate(inp){
     // Block: nur GZT (Steckner Gl.66) + GZG (Schiefstellung) sind massgebend
     // Flach: Sohlspannung + Grundbruch + Gleiten + Kippen
     if(isBlock){
-      if(NW.gzt && doGZT) chk.push(etaGZT>=1);
-      if(NW.gzg && doGZG) chk.push(etaGZG>=1);
+      if(NW.gzt && doGZT) chk.push(_etaOk(etaGZT));
+      if(NW.gzg && doGZG) chk.push(_etaOk(etaGZG));
     } else {
-      if(NW.sohlsp) chk.push(etaSIG>=1);
-      if(NW.grundb) chk.push(etaGB>=1);
-      if(NW.gleiten)chk.push(etaGL>=1);
-      if(NW.kippen) chk.push(isBlock ? inKern : eta_klaf >= 1);
+      if(NW.sohlsp) chk.push(_etaOk(etaSIG));
+      if(NW.grundb) chk.push(_etaOk(etaGB));
+      if(NW.gleiten)chk.push(_etaOk(etaGL));
+      if(NW.kippen) chk.push(isBlock ? inKern : _etaOk(eta_klaf));
     }
 
     return {
@@ -10553,7 +10587,11 @@ function exportFundamentliste(){
 // ════════════════════════════════════════════
 // RENDER RESULTS
 // ════════════════════════════════════════════
-function eCls(e){if(e===Infinity||isNaN(e))return'dim';return e>=1.0?'ok':'fail';}
+// Ampel auf dem ANGEZEIGTEN (2-Dezimal-)Wert klassifizieren, damit Farbe/Status zur gezeigten Zahl passen
+// (η=0.997 zeigt „1.00" → soll grün/erfüllt sein; erst ≤0.99 ist rot). Grenzwert effektiv η ≥ 0.995.
+function _etaRound(e){ return Math.round(e*100)/100; }
+function _etaOk(e){ return isFinite(e) && _etaRound(e)>=1.0; }   // Erfüllt-Entscheid auf dem angezeigten 2-Dezimal-Wert
+function eCls(e){if(e===Infinity||isNaN(e))return'dim';return _etaRound(e)>=1.0?'ok':'fail';}
 function eTxt(e){if(e===Infinity||isNaN(e))return'n.m.';return`η = ${e.toFixed(2)}`;}
 
 // ── Formel-Definitionen für GZT-Zeilen (Steckner Typ C) ─────────────────────
@@ -13660,13 +13698,13 @@ function renderResults(res,worst,g){
     const NW=SETTINGS.nw;
     const worst=res.reduce((a,b)=>(!b.ok?b:a), res[0]);
     if(g.isBlock){
-      if(NW.gzt && worst && worst.etaGZT<1) failNames.push('GZT Standsicherheit');
-      if(NW.gzg && worst && worst.etaGZG<1) failNames.push('GZG Schiefstellung');
+      if(NW.gzt && worst && !_etaOk(worst.etaGZT)) failNames.push('GZT Standsicherheit');
+      if(NW.gzg && worst && !_etaOk(worst.etaGZG)) failNames.push('GZG Schiefstellung');
     } else {
-      if(NW.sohlsp && worst && worst.etaSIG<1) failNames.push('σ_max');
-      if(NW.grundb && worst && worst.etaGB <1) failNames.push('Grundbruch');
-      if(NW.gleiten && worst && worst.etaGL<1) failNames.push('Gleiten');
-      if(NW.kippen  && worst && (g.isBlock ? !worst.inKern : (worst.eta_klaf??1) < 1)) failNames.push(g.isBlock ? 'Ausmitte' : 'Kippnachweis');
+      if(NW.sohlsp && worst && !_etaOk(worst.etaSIG)) failNames.push('σ_max');
+      if(NW.grundb && worst && !_etaOk(worst.etaGB)) failNames.push('Grundbruch');
+      if(NW.gleiten && worst && !_etaOk(worst.etaGL)) failNames.push('Gleiten');
+      if(NW.kippen  && worst && (g.isBlock ? !worst.inKern : !_etaOk(worst.eta_klaf??1))) failNames.push(g.isBlock ? 'Ausmitte' : 'Kippnachweis');
     }
     pill.textContent = failNames.length ? `Nicht erfüllt · ${failNames.join(', ')}` : 'Nicht erfüllt';
   } else {
@@ -13859,7 +13897,8 @@ function renderResults(res,worst,g){
   // Block/Pfahlfundament bewusst AUSGENOMMEN: dort läge die Gleitfläche im Beton bzw. schnitte die
   // Tragglieder → Lamellenverfahren (reine Bodenscheiben) nicht gültig.
   window._flachBishop = null;   // für den Flach-Nachweisbericht (buildNachweisDocFlach)
-  if(!g.isBlock){
+  // Nur Flach, nur wenn in den Optionen aktiviert (Standard aus, SETTINGS.nw.bishop)
+  if(!g.isBlock && SETTINGS.nw && SETTINGS.nw.bishop===true){
     const _bTyp=(document.getElementById('bg_btyp')||{}).value||'none', _bBeta=+gi('bg_beta')||0;
     if(_bTyp!=='none' && Math.abs(_bBeta)>0.1){
       let bres=null;
@@ -14775,6 +14814,7 @@ function runSelfTest(){
   const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
               pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, nw:SETTINGS.nw };
   SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
+  SETTINGS.nw = Object.assign({}, SETTINGS.nw, {bishop:true});   // Bishop-Golden (T7) braucht den aktiven Nachweis
   // Selbsttest-Flag während des Laufs setzen (auch bei eval-Aufruf ohne ?selftest=1) → unterdrückt
   // Seiteneffekt-Defaults wie die Frisch-Flach-Stahlplatten-Vorbelegung (Golden-Zustand bleibt exakt).
   const _stModeBak = window._SELFTEST_MODE; window._SELFTEST_MODE = true;
