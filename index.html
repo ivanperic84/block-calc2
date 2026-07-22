@@ -887,7 +887,8 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 .ll-tbl tbody tr:hover td { background:var(--s2); }
 .ll-tbl td { padding:3px 4px; border-bottom:1px solid var(--ol); vertical-align:middle; }
 .ll-tbl tr:last-child td { border-bottom:none; }
-.ll-inp { background:transparent; border:none; color:var(--on); font-family:var(--f-mono); font-size:10px; text-align:right; padding:1px 2px; outline:none; width:38px; }
+.ll-inp { background:transparent; border:none; color:var(--on); font-family:var(--f-mono); font-size:10px; text-align:right; padding:1px 2px; outline:none; width:48px; -moz-appearance:textfield; }
+.ll-inp::-webkit-outer-spin-button, .ll-inp::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .ll-inp.ll-name { text-align:left; width:82px; }
 .ll-inp:focus { background:var(--s3); border-radius:2px; }
 
@@ -933,7 +934,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
     <button class="btn btn-icon" onclick="openBemessung()" id="btn-bemessung" title="Bemessungsdiagramm (Standardlasten)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5v13h13"/><path d="M5.5 13.5c2.5-1 4-3.5 5-6 .8-2 1.8-3.5 4-4"/><path d="M5.5 15.5c3.5-.6 6.5-2.5 8-5 .9-1.5 1.7-2.6 3-3.2"/></svg>
     </button>
-    <button class="btn btn-icon" onclick="calculate()" id="btn-calc" title="Neu berechnen" style="border-color:rgba(124,141,224,0.45);color:var(--acc)">
+    <button class="btn btn-icon" onclick="calculate()" id="btn-calc" title="Neu berechnen" style="border-color:var(--acc);color:var(--acc)">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15.5 9A5.5 5.5 0 104.8 13.5M15.5 9V5.5M15.5 9H12"/></svg>
     </button>
   </div>
@@ -1109,18 +1110,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div class="field"><label>B_Kopf <em>m</em></label><input id="g_kx" type="number" value="0.6" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
           <div class="field"><label>L_Kopf <em>m</em></label><input id="g_ky" type="number" value="0.6" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
           <div class="field"><label>H_Kopf <em>m</em></label><input id="g_hkopf" type="number" value="1.0" step="0.05" min="0" oninput="updateViewer();scheduleCalc()"/></div>
-          <div class="field">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-              <label style="margin:0">Überdeckung <em>m</em></label>
-              <label class="sw" style="margin:0;transform:scale(0.82);transform-origin:right" title="Überdeckung optional: aus = Block an GOK, keine Erdüberdeckung (Aussparung sichtbar)"><input type="checkbox" id="g_uberd_on" checked onchange="toggleUberd(this)"><div class="sw-track"></div><div class="sw-thumb"></div></label>
-            </div>
-            <div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_r" min="0" max="1.5" step="0.05" value="0.40" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (typ. 0.20–0.60 m)"/></div>
+          <div class="field" id="block-uberd-row">
+            <label>Überdeckung <em>m</em></label>
+            <div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_r" min="0" max="1.5" step="0.05" value="0.40" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd" type="number" value="0.40" step="0.05" min="0" oninput="slSync('g_uberd',this.value);updateViewer();scheduleCalc()" title="Erdüberdeckung ab OK Block bis GOK (0 = Block an GOK, keine Überdeckung; typ. 0.20–0.60 m)"/></div>
           </div>
-          <div style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:6px 0 2px">
-            <label class="sw"><input type="checkbox" id="kopf_in_gk" checked onchange="scheduleCalc()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
-            <label for="kopf_in_gk" style="cursor:pointer;user-select:none;font-size:11px;color:var(--on2)">Kopfgewicht in G_k einschliessen</label>
-          </div>
-          <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:0;display:block;padding-bottom:4px">Deaktivieren für DP2a-Kompatibilität (Stütze als Mastteil)</span>
           <div class="g2">
             <div class="field"><label>Versatz e_x <em>m</em></label><input id="g_ex" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()" title="Exzentrizität des Mastes/Lastangriffs gegenüber der Blockachse in x (quer). Erzeugt zusätzliches Moment N·e_x."/></div>
             <div class="field"><label>Versatz e_y <em>m</em></label><input id="g_ey" type="number" value="0.0" step="0.05" oninput="updateViewer();scheduleCalc()" title="Exzentrizität des Mastes/Lastangriffs gegenüber der Blockachse in y (längs). Erzeugt zusätzliches Moment N·e_y."/></div>
@@ -1138,9 +1131,9 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
             </select>
           </div>
           <div class="field" id="flach-uberd-row">
-            <label>Überdeckung / Planumtiefe <em>m</em></label>
-            <input id="g_uberd_flach" type="number" value="0.15" step="0.05" min="0" oninput="si('g_uberd',this.value);updateViewer();scheduleCalc()" title="Tiefe Planum unter GOK (typ. 0.10–0.20 m bei Stahlplatte)"/>
-            <span class="hint" style="margin-top:2px">Bestimmt den Auflagerdruck q₀ = γ_s × t im Grundbruchnachweis</span>
+            <label>Einbindetiefe Sohle <em>m</em></label>
+            <div class="sl-wrap"><input type="range" class="sl-rng" id="g_uberd_flach_r" min="0" max="2.5" step="0.05" value="0.15" oninput="slSync('g_uberd_flach',this.value);si('g_uberd',this.value);updateViewer();scheduleCalc()"><input id="g_uberd_flach" type="number" value="0.15" step="0.05" min="0" oninput="slSync('g_uberd_flach',this.value);si('g_uberd',this.value);updateViewer();scheduleCalc()" title="Tiefe der Fundamentsohle unter GOK. 0 = Sohle auf GOK (q₀=0). Ist die Sohle tiefer als die Plattendicke eingebunden, wirkt die Erdüberdeckung darüber als Auflast."/></div>
+            <span class="hint" style="margin-top:2px">Sohltiefe unter GOK → Auflagerdruck q₀ = γ_s × t im Grundbruch. 0 = Sohle auf GOK.</span>
           </div>
         </div>
         <!-- Auflasten-Section (nur sichtbar bei flach + stahl) -->
@@ -1432,7 +1425,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       <div id="tab-lasten" class="tab-panel">
 
         <div class="sec"><span>Lastniveaus</span></div>
-        <div class="hint">Vordefinierte Lastkombinationen. Laden übernimmt Werte in die Felder.</div>
+        <div class="hint">Vordefinierte Lastkombinationen (Standardlasten). Auswählen lädt die Werte in die Felder; Bearbeiten unter „Niveaus verwalten".</div>
         <div id="load-lvls-list"></div>
         <button class="btn btn-tonal btn-full btn-sm" onclick="addLoadLvl()">
           <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
@@ -1458,6 +1451,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         <div class="g2">
           <div class="field"><label>M_Gx Moment um x-Achse <em>kNm</em></label><input id="l_MGx" type="number" value="40" step="1" oninput="updateViewer();scheduleCalc()"/></div>
           <div class="field"><label>M_Gy Moment um y-Achse <em>kNm</em></label><input id="l_MGy" type="number" value="40" step="1" oninput="updateViewer();scheduleCalc()"/></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:center;gap:8px;padding:6px 0 2px">
+          <label class="sw"><input type="checkbox" id="kopf_in_gk" checked onchange="scheduleCalc()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+          <label for="kopf_in_gk" style="cursor:pointer;user-select:none;font-size:11px;color:var(--on2)">Kopfgewicht in G_k einschliessen</label>
         </div>
 
         <div class="sec">Veränderliche Lasten W (Wind)</div>
@@ -1796,7 +1793,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         <div class="viewer-legend" id="vleg" style="cursor:pointer;user-select:none" onclick="toggleLegend()">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
             <span style="font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)">Legende</span>
-            <span id="vleg-chev" style="font-size:10px;color:var(--dim);line-height:1">▸</span>
+            <svg id="vleg-chev" class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--dim)"><path d="M4 2l4 4-4 4"/></svg>
           </div>
           <div id="vleg-body" style="display:none">
             <div id="lg-block">
@@ -2579,7 +2576,7 @@ function renderCustomGZList(){
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
         <input type="text" value="${gz.label||''}" placeholder="Bezeichnung" style="flex:1;font-family:var(--f-mono);font-size:10px;background:var(--s3);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:3px 6px"
           oninput="SETTINGS.gz_custom[${i}].label=this.value;refreshMatrix()"/>
-        <button class="btn btn-text btn-sm" style="padding:2px 6px;font-size:10px" onclick="delCustomGZ(${i})">×</button>
+        <button class="btn btn-text btn-sm" style="padding:2px 6px;display:flex;align-items:center" title="Entfernen" onclick="delCustomGZ(${i})"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
       </div>
       <input type="text" value="${gz.sub||''}" placeholder="Nachweise (z.B. Setzung · Schwingung)" style="width:100%;font-family:var(--f-mono);font-size:9.5px;background:var(--s3);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on2);padding:3px 6px;margin-bottom:4px"
         oninput="SETTINGS.gz_custom[${i}].sub=this.value;refreshMatrix()"/>
@@ -3375,16 +3372,9 @@ function loadVizUI(){ const C=vizStyle();
 }
 function resetVizStyle(){ SETTINGS.viz={}; dbSet('bc_settings',SETTINGS); loadVizUI(); applyCameraMode(); applyGridStyle(); rebuildScene(); }
 function clr(n){const o=scene.getObjectByName(n);if(o)scene.remove(o);}
-// Überdeckung optional: Checkbox g_uberd_on (Default an). Aus ⇒ ü wirkt nicht (=0) in Calc+Viewer.
+// Überdeckung ü: Toggle (g_uberd_on) Jul 2026 entfernt — ü=0 setzen hat dieselbe Wirkung.
+// _uberdOn() bleibt (ohne Checkbox immer true), damit Alt-Aufrufer in Calc/Viewer weiterlaufen.
 function _uberdOn(){ const c=document.getElementById('g_uberd_on'); return !c || c.checked; }
-function toggleUberd(cb){
-  const on=cb.checked;
-  const f=document.getElementById('g_uberd'), r=document.getElementById('g_uberd_r');
-  if(f){ f.disabled=!on; f.style.opacity=on?'':'0.5'; }
-  if(r){ r.disabled=!on; r.style.opacity=on?'':'0.5'; }
-  if(typeof updateViewer==='function') updateViewer();
-  if(typeof scheduleCalc==='function') scheduleCalc();
-}
 
 // ── Zentrale 3D-Vermassung (einheitlich für Block / Flach / Pfahlfundament) ───────────────
 // Misst zwischen zwei Bauteilpunkten a,b; die Masslinie liegt um n·off versetzt, mit
@@ -3639,7 +3629,10 @@ function rebuildScene(){
   const _dimMode=showStr||showVec;
   const bCol=_dimMode?C.concreteDim:C.concrete, bOp=_dimMode?C.ghostOp:C.solidOp;
   const bMesh=new THREE.Mesh(bGeo,new THREE.MeshLambertMaterial({color:bCol,transparent:true,opacity:bOp}));
-  bMesh.position.set(0,-ue-hb/2,0);bMesh.castShadow=true;bMesh.renderOrder=1;
+  // Block: Körper sitzt ü unter GOK (OK Block bei −ü, Sohle bei −(ü+H)).
+  // Flach: ü = Einbindetiefe der Sohle → Sohle bei −ü, Platte ragt nach oben (bei ü=0 auf GOK).
+  const _yBodyC = (CALC_MODEL==='flach') ? (-ue+hb/2) : (-ue-hb/2);
+  bMesh.position.set(0,_yBodyC,0);bMesh.castShadow=true;bMesh.renderOrder=1;
   bMesh.userData.ffields=['g_bx','g_by','g_hblock','g_uberd'];bMesh.userData.comp='block';bMesh.userData._op0=bMesh.material.opacity;bg.add(bMesh);
   const bEdgeCol=_dimMode?C.edgeDim:C.edge;
   const bEdge=new THREE.LineSegments(new THREE.EdgesGeometry(bGeo),new THREE.LineBasicMaterial({color:bEdgeCol,opacity:_dimMode?0.5:0.7,transparent:true}));
@@ -3650,7 +3643,9 @@ function rebuildScene(){
     const kGeo=new THREE.BoxGeometry(kx,hk,ky);
     const kCol=_dimMode?C.concreteDim:C.concrete, kOp=_dimMode?C.ghostOp:C.solidOp;
     const kMesh=new THREE.Mesh(kGeo,new THREE.MeshLambertMaterial({color:kCol,transparent:true,opacity:kOp}));
-    kMesh.position.set(ex,-ue+hk/2,ey);kMesh.castShadow=true;kMesh.renderOrder=1;
+    // Kopf sitzt auf der Körper-Oberkante: Block OK Block (−ü), Flach OK Platte (−ü+H)
+    const _yKopfBase = (CALC_MODEL==='flach') ? (-ue+hb) : -ue;
+    kMesh.position.set(ex,_yKopfBase+hk/2,ey);kMesh.castShadow=true;kMesh.renderOrder=1;
     kMesh.userData.ffields=['g_hkopf','g_kx','g_ky'];kMesh.userData.comp='kopf';kMesh.userData._op0=kMesh.material.opacity;bg.add(kMesh);
     const kEdge=new THREE.LineSegments(new THREE.EdgesGeometry(kGeo),new THREE.LineBasicMaterial({color:C.edge,opacity:0.7,transparent:true}));
     kEdge.position.copy(kMesh.position);kEdge.userData.comp='kopf';kEdge.userData._op0=kEdge.material.opacity;bg.add(kEdge);
@@ -3842,7 +3837,9 @@ function rebuildScene(){
     const _gGe=+gi('lw_G_eig')||1.00;
     const Nd=gG*NG+_gGe*_Gk;
     const S_MIN=0.55, S_MAX=2.0; // Mindest- / Maximallänge Vektoren [m] (N kappt bei grossen Lasten, z. B. 150 kN)
-    const okKopf = -_ue + hk;    // OK Fundamentkopf (Lastangriff) in Welt-y — Pfeile setzen hier an (wie Pfahlfundament)
+    // OK Fundamentkopf (Lastangriff) in Welt-y — Einwirkung setzt IMMER hier an, inkl. Kopf-Exzentrizität (ex/ey).
+    // Block: OK Block (−ü) + H_Kopf.  Flach: OK Platte (−ü+H_Platte) + H_Kopf (bei Stahl ohne Kopf = OK Platte).
+    const okKopf = (CALC_MODEL==='flach') ? (-_ue + hb + hk) : (-_ue + hk);
     if(Ht>0.001){
       const s=Math.max(S_MIN,Math.min(S_MAX,Ht/35));
       const d=new THREE.Vector3(Hxd,0,Hyd).normalize();
@@ -3930,18 +3927,25 @@ function rebuildScene(){
     const dg=new THREE.Group();dg.name='dim';
     _dimBegin(dg, new THREE.LineBasicMaterial({color:_dimColor(),opacity:C.dimOp,transparent:true}));
     const V=(x,y,z)=>new THREE.Vector3(x,y,z);
-    const dimY=-ue, t_eff=hb+ue, okKopf=-ue+hk;
-    // B (x) vorne · L (z) rechts — beide auf OK-Block-Ebene
-    _dim3(V(-bx/2,dimY,by/2), V(bx/2,dimY,by/2), V(0,0,1), {label:`B = ${bx.toFixed(2)} m`, field:'g_bx'});
-    _dim3(V(bx/2,dimY,-by/2), V(bx/2,dimY,by/2), V(1,0,0), {label:`L = ${by.toFixed(2)} m`, field:'g_by'});
-    // Rechts vertikal (z=0): Einbindetiefe t
-    _dim3(V(bx/2,0,0), V(bx/2,-t_eff,0), V(1,0,0), {off:DIM3_OFF+0.7, label:`t = ${t_eff.toFixed(2)} m`, field:'g_hblock'});
-    // Links vertikal (z=0): ü innen (GOK → OK Block) · H_Kopf + H_Block aussen (gleiche Flucht, off+0.7)
-    if(ue>0.01) _dim3(V(-bx/2,0,0), V(-bx/2,-ue,0), V(-1,0,0), {label:`ü = ${ue.toFixed(2)} m`, field:'g_uberd'});
-    if(hk>0.05) _dim3(V(-bx/2,-ue,0), V(-bx/2,okKopf,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
-    // Blockkörperhöhe H_Block (OK Block → Sohle), gleiche Flucht wie H_Kopf → durchgehende Kette
-    // (Label „H_Block", nicht „H" — „H" ist schon der Horizontalkraft-Vektor)
-    _dim3(V(-bx/2,-ue,0), V(-bx/2,-t_eff,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Block = ${hb.toFixed(2)} m`, field:'g_hblock'});
+    const _flach=CALC_MODEL==='flach';
+    // Bezugsebenen — Block: OK Block −ü, Sohle −(H+ü) · Flach: OK Platte −ü+H, Sohle −ü (ü=Einbindetiefe)
+    const okPlane = _flach ? (-ue+hb) : -ue;   // Oberkante Körper
+    const ukPlane = _flach ? -ue : -(hb+ue);   // Sohle
+    const tGOK    = _flach ? ue : (hb+ue);     // Sohltiefe unter GOK
+    const okKopf  = okPlane + hk;
+    // B (x) vorne · L (z) rechts — auf der OK-Körper-Ebene
+    _dim3(V(-bx/2,okPlane,by/2), V(bx/2,okPlane,by/2), V(0,0,1), {label:`B = ${bx.toFixed(2)} m`, field:'g_bx'});
+    _dim3(V(bx/2,okPlane,-by/2), V(bx/2,okPlane,by/2), V(1,0,0), {label:`L = ${by.toFixed(2)} m`, field:'g_by'});
+    // Rechts vertikal (z=0): Sohltiefe/Einbindetiefe t (GOK → Sohle)
+    if(tGOK>0.005) _dim3(V(bx/2,0,0), V(bx/2,-tGOK,0), V(1,0,0), {off:DIM3_OFF+0.7, label:`t = ${tGOK.toFixed(2)} m`, field:_flach?'g_uberd':'g_hblock'});
+    // Links vertikal (z=0): ü innen (GOK → OK Körper) · H_Kopf + H_Körper aussen (gleiche Flucht, off+0.7)
+    // Block: ü = Erdüberdeckung über OK Block. Flach: Erdüberdeckung über der Platte (ü−H, nur bei tiefer Einbindung).
+    const _cover = _flach ? Math.max(0, ue-hb) : ue;
+    if(_cover>0.01) _dim3(V(-bx/2,0,0), V(-bx/2,okPlane,0), V(-1,0,0), {label:`ü = ${_cover.toFixed(2)} m`, field:'g_uberd'});
+    if(hk>0.05) _dim3(V(-bx/2,okPlane,0), V(-bx/2,okKopf,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`H_Kopf = ${hk.toFixed(2)} m`, field:'g_hkopf'});
+    // Körperhöhe H (OK → Sohle), gleiche Flucht wie H_Kopf → durchgehende Kette
+    // (Label „H_Block"/„H_Platte", nicht „H" — „H" ist schon der Horizontalkraft-Vektor)
+    _dim3(V(-bx/2,okPlane,0), V(-bx/2,ukPlane,0), V(-1,0,0), {off:DIM3_OFF+0.7, label:`${_flach?'H_Platte':'H_Block'} = ${hb.toFixed(2)} m`, field:'g_hblock'});
     scene.add(dg);
   }
 
@@ -3957,7 +3961,8 @@ function rebuildScene(){
     const My=(c_.MGy?gG*MGy_:0)+(c_.MWy?gW*MWy_:0);
     const Mres=Math.sqrt(Mx*Mx+My*My);
     const gM=new THREE.Group();gM.name='arM';
-    const pos=new THREE.Vector3(ex,-ue+hk,ey);   // OK Kopf (= okKopf) — ue ist rebuildScene-weit
+    // OK Kopf inkl. Kopf-Exzentrizität (ex/ey); Flach: Platte (−ü+H) + H_Kopf, Block: −ü + H_Kopf
+    const pos=new THREE.Vector3(ex, (CALC_MODEL==='flach'?(-ue+hb+hk):(-ue+hk)), ey);
     // Resultierendes Moment: Drehachse = normierter Vektor aus Mx*(1,0,0) + My*(0,0,-1)
     let arcMres=null;
     if(Mres>0.5){
@@ -4955,7 +4960,7 @@ let _legOpen=false;
 function toggleLegend(){
   _legOpen=!_legOpen;
   document.getElementById('vleg-body').style.display=_legOpen?'':'none';
-  document.getElementById('vleg-chev').textContent=_legOpen?'▾':'▸';
+  const _vc=document.getElementById('vleg-chev'); if(_vc) _vc.style.transform=_legOpen?'rotate(90deg)':'';
 }
 
 // ════════════════════════════════════════════
@@ -6474,18 +6479,38 @@ function setModel(m, silent){
   if(pbSec)  pbSec.style.display  = 'none';
   // Dynamic labels
   const isBlock = m==='block';
+  // Frisches Flachfundament (noch kein eigener Geometrie-Slot) → als Stahl-Basisplatte vorbelegen:
+  // d=0.09 m, kein Kopf (H_Kopf=0), Material Stahl (γ 78.5). Nutzer-Default.
+  if(m==='flach' && !_applyingState && !window._SELFTEST_MODE && !_geom.flach && _prevModel!=='flach'){
+    si('g_hblock','0.09'); { const hr=document.getElementById('g_hblock_r'); if(hr) hr.value='0.09'; }
+    si('g_hkopf','0'); si('g_kx','0'); si('g_ky','0');
+    si('g_gbeton','78.5');
+    FLACH_MAT='stahl'; const ms=document.getElementById('flach-material'); if(ms) ms.value='stahl';
+  }
   // Geometry section header
   document.getElementById('geo-sec-block').textContent = isBlock ? 'Blockgeometrie' : 'Fundamentgeometrie';
   // Field labels
   document.getElementById('lbl-bx').innerHTML      = isBlock ? 'B_Block <em>m</em>' : 'B_Fund <em>m</em>';
   document.getElementById('lbl-by').innerHTML      = isBlock ? 'L_Block <em>m</em>' : 'L_Fund <em>m</em>';
-  document.getElementById('lbl-hblock').innerHTML  = isBlock ? 'H_Block <em>m</em>' : 'Fundamentdicke d <em>m</em>';
+  document.getElementById('lbl-hblock').innerHTML  = isBlock ? 'H_Block <em>m</em>' : 'H_Platte <em>m</em>';
   document.getElementById('lbl-gauf').innerHTML    = isBlock ? 'γ Auffüllung <em>kN/m³</em>' : 'γ Hinterfüllung <em>kN/m³</em>';
+  // H_Platte-Schieber nur beim Block (Flach: reines Zahlenfeld — Plattendicke ist ein statischer Kleinwert)
+  { const hr=document.getElementById('g_hblock_r'), hn=document.getElementById('g_hblock');
+    if(hr) hr.style.display = isBlock ? '' : 'none';
+    if(hn){ hn.style.width = isBlock ? '' : '100%'; hn.style.minWidth = isBlock ? '' : '0'; hn.style.textAlign = isBlock ? '' : 'left'; } }
   // Kopf section: nur bei Block oder Beton-Flach
   const showKopf = isBlock || FLACH_MAT === 'beton';
   document.getElementById('kopf-section').style.display = showKopf ? '' : 'none';
+  // Block-Überdeckung (g_uberd) nur beim Block — bei Flach steuert „Einbindetiefe Sohle" (g_uberd_flach) dieselbe Grösse
+  { const br=document.getElementById('block-uberd-row'); if(br) br.style.display = isBlock ? '' : 'none'; }
+  // Dimensionierungs-Karte nur beim Block (beim Flach auf Nutzerwunsch ausgeblendet)
+  { const dc=document.getElementById('dim-card'); if(dc) dc.style.display = isBlock ? '' : 'none'; }
   // Material-Section: nur bei Flach
   document.getElementById('flach-material-section').style.display = isBlock ? 'none' : '';
+  // Bei Flach: Einbindetiefe (g_uberd_flach) → g_uberd spiegeln (das Block-Feld ist ausgeblendet)
+  if(!isBlock){ const uf=document.getElementById('g_uberd_flach'); if(uf){ si('g_uberd', uf.value);
+    const ur=document.getElementById('g_uberd_r'); if(ur) ur.value=uf.value;
+    const ufr=document.getElementById('g_uberd_flach_r'); if(ufr) ufr.value=uf.value; } }
   // Materialkennwerte-Panel umschalten
   const mbp = document.getElementById('mat-block-params');
   const mfp = document.getElementById('mat-flach-params');
@@ -6637,30 +6662,83 @@ function addLoadLvl(){
 
 function removeLoadLvl(i){
   if(!confirm('Löschen?')) return;
-  LOAD_LVLS.splice(i,1); saveLLVLS(); renderLoadLvls();
+  LOAD_LVLS.splice(i,1); _activeLoadLvlIdx=null; saveLLVLS(); renderLoadLvls();
 }
 
+// Dropdown zeigt das geladene Niveau (bleibt sichtbar) → springt erst auf den Platzhalter zurück,
+// wenn unten ein Lastfeld von Hand geändert wird (_onLoadFieldEdit). _activeLoadLvlIdx = aktives Niveau.
+let _activeLoadLvlIdx=null;
+const _LL_KEYS=['NG','HGx','HGy','MGx','MGy','HWx','HWy','MWx','MWy'];
+// Index des Lastniveaus, dessen Werte EXAKT den aktuellen Mastlast-Feldern entsprechen (−1 = keins)
+function _matchLoadLvl(){
+  const cur=_LL_KEYS.map(k=>+gi('l_'+k)||0);
+  return LOAD_LVLS.findIndex(ll=>_LL_KEYS.every((k,j)=>Math.abs((+ll[k]||0)-cur[j])<1e-6));
+}
+// Dropdown auf das passende Niveau (oder Platzhalter) setzen — spiegelt immer die aktuellen Felder
+function _syncLoadLvlSelect(){
+  const i=_matchLoadLvl();
+  _activeLoadLvlIdx = i>=0 ? i : null;
+  const sel=document.querySelector('#load-lvls-list select');
+  if(sel) sel.value = i>=0 ? String(i) : '';
+}
+function _loadLvlByIdx(i){
+  if(!LOAD_LVLS[i]) return;
+  applyLoadVals(LOAD_LVLS[i]);          // Felder via si() (kein input-Event) → danach explizit abgleichen
+  _syncLoadLvlSelect();
+}
+function _loadLvlPick(sel){
+  if(sel.value==='' || isNaN(+sel.value)) return;
+  _loadLvlByIdx(+sel.value);
+}
+// Manuelle Feldänderung → Dropdown neu abgleichen: zeigt das Niveau wieder, sobald die Werte wieder passen,
+// sonst den Platzhalter (delegiert; si() feuert kein input → programmatische Loads triggern nicht doppelt).
+document.addEventListener('input', e=>{
+  if(e.target && /^l_(NG|HGx|HGy|MGx|MGy|HWx|HWy|MWx|MWy)$/.test(e.target.id)) _syncLoadLvlSelect();
+});
+let _llManageOpen=false;   // „Niveaus verwalten"-Bereich auf/zu (überlebt Rebuilds)
+function _toggleLLManage(){ _llManageOpen=!_llManageOpen;
+  const c=document.querySelector('#load-lvls-list .ll-manage'); if(c) c.classList.toggle('open', _llManageOpen); }
 function renderLoadLvls(){
   const el=document.getElementById('load-lvls-list');
   if(!el) return;
   if(!LOAD_LVLS.length){
-    el.innerHTML='<div class="hint" style="padding:2px 0 6px">Noch keine Lastniveaus gespeichert.</div>';
+    el.innerHTML='<div class="hint" style="padding:2px 0 6px">Noch keine Lastniveaus gespeichert — unten „Aktuelle Werte als Lastniveau speichern".</div>';
     return;
   }
   const cols=[['NG','N_G'],['HGx','HGx'],['HGy','HGy'],['MGx','MGx'],['MGy','MGy'],
               ['HWx','HWx'],['HWy','HWy'],['MWx','MWx'],['MWy','MWy']];
-  el.innerHTML=`<div class="ll-wrap"><table class="ll-tbl">
-    <thead><tr><th>Bezeichnung</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr></thead>
-    <tbody>${LOAD_LVLS.map((ll,i)=>`<tr>
-      <td><input class="ll-inp ll-name" value="${ll.name}"
-        onchange="LOAD_LVLS[${i}].name=this.value;saveLLVLS()"/></td>
-      ${cols.map(c=>`<td><input class="ll-inp" type="number" value="${ll[c[0]]??0}"
-        onchange="LOAD_LVLS[${i}]['${c[0]}']=+this.value;saveLLVLS()"/></td>`).join('')}
-      <td style="white-space:nowrap">
-        <button class="btn btn-tonal btn-xs" onclick="applyLoadVals(LOAD_LVLS[${i}])">Laden</button>
-        <button class="btn btn-danger" style="margin-left:3px" onclick="removeLoadLvl(${i})">−</button>
-      </td></tr>`).join('')}
-    </tbody></table></div>`;
+  const _actIdx=_matchLoadLvl();   // Dropdown spiegelt die aktuellen Felder
+  _activeLoadLvlIdx = _actIdx>=0 ? _actIdx : null;
+  el.innerHTML=`
+    <div style="margin:2px 0 8px">
+      <select onchange="_loadLvlPick(this)" title="Standardlast laden"
+        style="width:100%;background:var(--s1);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:8px 10px;font-family:var(--f-mono);font-size:11px;cursor:pointer;outline:none">
+        <option value="">Lastniveau laden…</option>
+        ${LOAD_LVLS.map((l,i)=>`<option value="${i}"${_actIdx===i?' selected':''}>${l.name||('Niveau '+(i+1))}</option>`).join('')}
+      </select>
+    </div>
+    <div class="lf-card ll-manage${_llManageOpen?' open':''}">
+      <div class="lf-card-head" onclick="_toggleLLManage()" style="cursor:pointer">
+        <span style="font-weight:500;font-size:11px">Niveaus verwalten</span>
+        <span style="flex:1"></span>
+        <span style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);margin-right:6px">${LOAD_LVLS.length} Niveau${LOAD_LVLS.length!==1?'s':''}</span>
+        <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+      </div>
+      <div class="lf-card-body" style="padding:0;overflow-x:auto">
+        <table class="ll-tbl" style="width:100%">
+          <thead><tr><th>Bezeichnung</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr></thead>
+          <tbody>${LOAD_LVLS.map((ll,i)=>`<tr>
+            <td><input class="ll-inp ll-name" value="${ll.name}"
+              onchange="LOAD_LVLS[${i}].name=this.value;saveLLVLS();renderLoadLvls()"/></td>
+            ${cols.map(c=>`<td><input class="ll-inp" type="number" value="${ll[c[0]]??0}"
+              onchange="LOAD_LVLS[${i}]['${c[0]}']=+this.value;saveLLVLS()"/></td>`).join('')}
+            <td style="white-space:nowrap;text-align:right">
+              <button class="btn btn-tonal btn-xs" onclick="_loadLvlByIdx(${i})">Laden</button>
+              <button class="btn btn-danger btn-xs" style="margin-left:3px" title="Entfernen" onclick="removeLoadLvl(${i})"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6M6.5 6l.5 9.5a1 1 0 001 1h4a1 1 0 001-1l.5-9.5"/></svg></button>
+            </td></tr>`).join('')}
+          </tbody></table>
+      </div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════
@@ -9138,8 +9216,10 @@ function _doCalculate(inp){
   // computeGZT_dir/Combo-Closures) wird damit über das Eingabepaket parametrisierbar.
   const gi = id => (P.raw && P.raw[id] !== undefined) ? P.raw[id] : '0';
   const B=+gi('g_bx'), L=+gi('g_by'), Hb=+gi('g_hblock');
-  const ue=P.uberd_on?Math.max(0,+gi('g_uberd')||0):0;  // Überdeckung ab OK Block (optional, Schalter)
-  const t=Hb+ue;                                    // effektive Einbindetiefe
+  const ue=P.uberd_on?Math.max(0,+gi('g_uberd')||0):0;  // Block: Erdüberdeckung ab OK Block · Flach: Einbindetiefe der Sohle unter GOK
+  // Effektive Einbindetiefe t (Sohltiefe unter GOK, treibt q₀/Tiefenbeiwerte):
+  //   Block — H_Block + ü (vergrabener Block).  Flach — Feldwert direkt (0 ⇒ Sohle auf GOK, q₀=0).
+  const t = (CALC_MODEL==='block') ? (Hb+ue) : ue;
   const Bk=+gi('g_kx'), Lk=+gi('g_ky'), Hk=+gi('g_hkopf');
   const exk=+gi('g_ex'), eyk=+gi('g_ey'), gb=+gi('g_gbeton');
   const qu=+gi('bg_qu');
@@ -9208,9 +9288,10 @@ function _doCalculate(inp){
   const G_ue = ue>0
     ? (_inclKopf ? Bk*Lk*ue*gb : 0) + (B*L - Bk*Lk)*ue*gauf
     : 0;
+  const _coverFlach = Math.max(0, ue - Hb);           // Flach: Erdüberdeckung über der Platte (Sohltiefe − Plattendicke, nur bei tieferer Einbindung)
   const Gk0 = isBlock
     ? (V_block + (_inclKopf ? V_kopf : 0))*gb + G_ue  // Block: Kopf optional
-    : B*L*Hb*gb + (ue>0 ? B*L*ue*gauf : 0);           // Flach: Platte + Hinterfüllung oben
+    : B*L*Hb*gb + (_coverFlach>0 ? B*L*_coverFlach*gauf : 0);   // Flach: Platte + Erdüberdeckung (0 bei Sohle nahe/auf GOK)
   // Auftrieb: Fundamentkörper unter GW-Spiegel (γw=10 kN/m³, effektive Gewichte)
   // ST-Fundament-verifiziert (Test02): N = Block + Auffüllung − Auftrieb = 111.2 kN
   const _subH = Math.min(Math.max(0, t - gwDepth()), Hb);
@@ -9228,7 +9309,10 @@ function _doCalculate(inp){
   const HWx=+gi('l_HWx'), HWy=+gi('l_HWy');
   const MGx=+gi('l_MGx'), MGy=+gi('l_MGy');
   const MWx=+gi('l_MWx'), MWy=+gi('l_MWy');
-  const arm = t + Hk;    // Momentenarm: Sohle → OK Kopf
+  // Momentenarm Sohle → OK Kopf. Block: t + H_Kopf (Konvention, ST-kalibriert).
+  // Flach: Plattendicke + H_Kopf (Lastpunkt liegt fix über der Sohle, einbindungsunabhängig — sonst
+  //        ginge bei „Sohle auf GOK" der Plattenhebel verloren).
+  const arm = isBlock ? (t + Hk) : (Hb + Hk);
 
   // Sohlfläche
   const A = B*L, Wx_=B*L**2/6, Wy_=L*B**2/6;
@@ -14034,7 +14118,6 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
 function collectState(){
   const st={};FDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
   st.kopf_in_gk = document.getElementById('kopf_in_gk')?.checked ?? true;
-  st.g_uberd_on = document.getElementById('g_uberd_on')?.checked ?? true;
   // Geometrie-Slots pro Modell (Block/Flach entkoppelt) — aktiven Slot mit den aktuellen Feldern sichern
   { const g=Object.assign({}, _geom); if(CALC_MODEL==='block'||CALC_MODEL==='flach') g[CALC_MODEL]=_readGeom();
     st._geom=JSON.stringify(g); }
@@ -14055,7 +14138,8 @@ function applyState(st){
     }
   });
   if(st.kopf_in_gk !== undefined){ const cb=document.getElementById('kopf_in_gk'); if(cb) cb.checked = !!st.kopf_in_gk; }
-  { const cb=document.getElementById('g_uberd_on'); if(cb){ cb.checked = st.g_uberd_on===undefined?true:!!st.g_uberd_on; if(typeof toggleUberd==='function') toggleUberd(cb); } }
+  // Migration Altprojekte: Überdeckungs-Toggle (g_uberd_on) entfernt Jul 2026 → war er aus, ü auf 0 setzen
+  if(st.g_uberd_on===false){ const uf=document.getElementById('g_uberd'), ur=document.getElementById('g_uberd_r'); if(uf) uf.value='0'; if(ur) ur.value='0'; }
   // Migration Altprojekte: γ_G/γ_Q lagen vor Jun 2026 in tw_G/tw_Q (Felder entfernt)
   if(st.lw_G === undefined && st.tw_G !== undefined) si('lw_G', st.tw_G);
   if(st.lw_Q === undefined && st.tw_Q !== undefined) si('lw_Q', st.tw_Q);
@@ -14070,6 +14154,7 @@ function applyState(st){
   if(ufEl){
     if(st.g_uberd_flach) ufEl.value = st.g_uberd_flach;
     else if(st.g_uberd)  ufEl.value = st.g_uberd;
+    const ufr=document.getElementById('g_uberd_flach_r'); if(ufr) ufr.value=ufEl.value;
   }
   // bg_qu_flach synchronisieren
   const quFlEl = document.getElementById('bg_qu_flach');
@@ -14368,8 +14453,8 @@ function renderProjList(){
         ${ec('p_bemerk',p.p_bemerk,'var(--xdim)')}
         <td style="padding:5px 6px;text-align:right;white-space:nowrap">
           <button class="btn btn-tonal btn-xs" onclick="loadProj('${k}')">Laden</button>
-          <button class="btn btn-tonal btn-xs" onclick="reassignProj('${k}')" title="Projekt zuweisen" style="margin-left:3px">⇆</button>
-          <button class="btn btn-danger btn-xs" onclick="delProj('${k}')" title="Entfernen" style="margin-left:3px">×</button>
+          <button class="btn btn-tonal btn-xs" onclick="reassignProj('${k}')" title="Projekt zuweisen" style="margin-left:3px"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h12l-3-3M16 13H4l3 3"/></svg></button>
+          <button class="btn btn-danger btn-xs" onclick="delProj('${k}')" title="Entfernen" style="margin-left:3px"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6M6.5 6l.5 9.5a1 1 0 001 1h4a1 1 0 001-1l.5-9.5"/></svg></button>
         </td>`;
       tbody.appendChild(tr);
     });
@@ -14690,6 +14775,9 @@ function runSelfTest(){
   const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
               pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, nw:SETTINGS.nw };
   SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
+  // Selbsttest-Flag während des Laufs setzen (auch bei eval-Aufruf ohne ?selftest=1) → unterdrückt
+  // Seiteneffekt-Defaults wie die Frisch-Flach-Stahlplatten-Vorbelegung (Golden-Zustand bleibt exakt).
+  const _stModeBak = window._SELFTEST_MODE; window._SELFTEST_MODE = true;
   try{
     // ── T1 Hetényi: p-y-FE (bddBeamPY) gegen geschlossene Halbunendlich-Lösung y=2λ/k_w
     (()=>{ const ks=20000,B=0.2,EI=50000;
@@ -14718,11 +14806,12 @@ function runSelfTest(){
     // ── T5 Flach/Hansen (Golden, gleicher Zustand)
     setModel('flach'); calculate();
     (()=>{ const r=_lastResults&&_lastResults[0]||{};
-      // Golden aktualisiert Jul 2026 nach Ausmitte-Richtungsfix (LF quer → Ausmitte voll in x,
-      // Le=L): effektive Fläche kleiner, η konservativer (war 1.1119/694.73 mit dem H-Paarungs-Bug).
-      add('Flach Grundbruch η', r.etaGB, 1.0257473505222212, 1e-3,'rel');
-      add('Flach Gleiten η',    r.etaGL, 2.2126289841864333, 1e-3,'rel');
-      add('Flach R_d [kN]',     r.Rd,    640.8859641468226,  1e-3,'rel'); })();
+      // Golden aktualisiert Jul 2026 nach Flach-Einbindetiefe-Umstellung: Sohltiefe = Feldwert direkt
+      // (t=ü, war t=H_Block+ü) → im ST-Zustand (H_Block=2.70/ü=0.40) sinkt t 3.10→0.40, q₀ entsprechend,
+      // dazu Erdüberdeckung max(0,ü−H_Block)=0 (weniger Auflast) → kleineres R_d/η_GB, leicht kleineres η_GL.
+      add('Flach Grundbruch η', r.etaGB, 0.14457026793431385, 1e-3,'rel');
+      add('Flach Gleiten η',    r.etaGL, 2.0441853688470344,  1e-3,'rel');
+      add('Flach R_d [kN]',     r.Rd,    86.04382122101026,   1e-3,'rel'); })();
     // ── T6 Pfahlfundament (Golden; Result-Felder sind auf 2 Dez. gerundet → abs-Toleranz)
     setModel('pfahlbock');
     (()=>{ const r=window._pbReport&&window._pbReport.r||{};
@@ -14743,6 +14832,7 @@ function runSelfTest(){
   } finally {
     SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.pfahlRandMin=bak.pfahlRandMin;
     SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.nw=bak.nw;
+    window._SELFTEST_MODE = _stModeBak;
   }
   _renderSelfTest(T);
   return T;
