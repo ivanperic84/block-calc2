@@ -1101,6 +1101,14 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           </div>
         </div>
         <div id="model-hint" class="hint"></div>
+        <!-- Sicherung/Aushub optional (selten) — blendet den Tab «Sicherung» ein; nur Blockfundament -->
+        <div id="sich-enable-row" style="display:none;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 8px;padding:7px 10px;background:var(--s2);border:1px solid var(--ol);border-radius:var(--r1)">
+          <div style="min-width:0">
+            <div style="font-size:12px;color:var(--on)">Sicherung / Aushub berechnen</div>
+            <div style="font-size:9px;color:var(--xdim);margin-top:1px;line-height:1.35">Zusatzpfähle + Bauzustand Aushub (selten) — blendet den Tab «Sicherung» ein</div>
+          </div>
+          <label class="sw"><input type="checkbox" id="sich-enable" onchange="toggleSichEnabled()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        </div>
         <div id="geo-standard">
         <!-- Standard-Geometrie (Block / Flach) — bei Pfahlbock ausgeblendet -->
 
@@ -1183,12 +1191,33 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 
         <!-- Bodenprofile -->
         <div class="sec"><span>Bodenprofile</span></div>
-        <div class="hint" style="padding:2px 0 6px;font-size:9.5px;color:var(--xdim);font-family:var(--f-mono)">Vordefinierte Bodenkennwerte. Laden übernimmt Werte in die Felder.</div>
-        <div id="bg-tpl-list"></div>
-        <button class="btn btn-tonal btn-full btn-sm" onclick="saveBGTemplate()" style="margin-bottom:10px">
-          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
-          Neues Profil erstellen
-        </button>
+        <!-- Standard-Bodenprofile (editierbar, kollabierbar) -->
+        <div class="lf-card" id="bgp-std-card">
+          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Standard-Bodenprofile</span>
+            <span class="mat-card-summary" id="bgp-std-summary">9 Profile</span>
+            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+          </div>
+          <div class="lf-card-body">
+            <div class="hint" style="padding:0 0 6px;font-size:9px;color:var(--xdim);font-family:var(--f-mono);line-height:1.4">Vordefinierte Kennwerte — bearbeitbar. Änderung gilt für neue Schicht-Zuweisungen; „•" = überschrieben, ↺ = zurücksetzen.</div>
+            <div id="bgp-std-list"></div>
+          </div>
+        </div>
+        <!-- Eigene Bodenprofile (kollabierbar) -->
+        <div class="lf-card" id="bgp-user-card" style="margin-top:6px;margin-bottom:10px">
+          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Eigene Bodenprofile</span>
+            <span class="mat-card-summary" id="bgp-user-summary"></span>
+            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+          </div>
+          <div class="lf-card-body">
+            <div id="bg-tpl-list"></div>
+            <button class="btn btn-tonal btn-full btn-sm" onclick="saveBGTemplate()">
+              <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 4v12M4 10h12"/></svg>
+              Neues Profil erstellen
+            </button>
+          </div>
+        </div>
 
         <!-- Bodenschichten als Karten -->
         <div class="sec">Bodenschichten</div>
@@ -2182,12 +2211,16 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
       <div class="set-group-title">Steckner Berechnungsparameter</div>
       <div style="padding:10px 14px">
         <div class="field">
+          <div class="toggle-row" style="margin-bottom:6px">
+            <div><div class="toggle-label">Passivdruck über NL mobilisieren</div><div class="toggle-sub">E_p,mob = E₀ + mob·(E_p − E₀) statt vollem λ_p · konservativ, entspricht DC-Fundament · <b>Standard an</b> · aus = voller Passivdruck λ_p (mob = 100 %, Steckner-Papier Gl.32)</div></div>
+            <label class="sw"><input type="checkbox" id="set-steckner-mob" checked onchange="_syncMobUI()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+          </div>
           <label>Mobilisierungsgrad mob</label>
           <div style="display:flex;align-items:center;gap:8px">
             <input id="set-mob" type="number" value="0.25" step="0.05" min="0.1" max="1.0" style="flex:1"/>
             <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">Steckner 1989: 0.25</span>
           </div>
-          <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Ew = E₀ + mob·(Ep − E₀) — mobilisierter Passivwiderstand über Nulllinie</span>
+          <span id="set-mob-hint" style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Ew = E₀ + mob·(Ep − E₀) — mobilisierter Passivwiderstand über Nulllinie</span>
         </div>
         <div class="field" style="margin-top:8px">
           <label>GZG Schiefstellung tan(α) zulässig</label>
@@ -2197,10 +2230,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         <div class="toggle-row" style="margin-top:8px">
           <div><div class="toggle-label">Sohlspannung beim Block</div><div class="toggle-sub">σ_max ≤ q_u ist informativ (kein Versagenskriterium bei Steckner)</div></div>
           <div style="font-size:9px;color:var(--acc);font-family:var(--f-mono);padding:4px 6px;background:var(--acc-s);border-radius:4px">AUTO</div>
-        </div>
-        <div class="toggle-row" style="margin-top:8px">
-          <div><div class="toggle-label">Passivdruck über NL mobilisieren</div><div class="toggle-sub">E_p,mob = E₀ + mob·(E_p − E₀) statt vollem λ_p · konservativ, entspricht DC-Fundament · <b>Standard an</b> · aus = Steckner-Papier (voller Passivdruck Gl.32)</div></div>
-          <label class="sw"><input type="checkbox" id="set-steckner-mob" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
         <div class="toggle-row" style="margin-top:8px">
           <div><div class="toggle-label">Erweiterung: Böschung im GZT</div><div class="toggle-sub">E_p talseitig mit K_p,β statt K_p → Nachweis richtungsabhängig · über Steckner hinaus · Standard aus</div></div>
@@ -2528,6 +2557,20 @@ let SETTINGS = {
       phi:{min:20,max:40},beta:{min:-40,max:0}}
 };
 
+// mob-Eingabe an den Mobilisierungs-Toggle koppeln: Toggle aus ⇒ Feld ausgegraut + auf 100 % (voller Passivdruck λ_p)
+function _syncMobUI(){
+  const t=document.getElementById('set-steckner-mob'), m=document.getElementById('set-mob'), h=document.getElementById('set-mob-hint');
+  if(!t||!m) return;
+  if(t.checked){
+    m.disabled=false; m.style.opacity=''; m.style.cursor='';
+    if(m.dataset.saved!=null && m.dataset.saved!=='') { m.value=m.dataset.saved; delete m.dataset.saved; }
+    if(h) h.textContent='Ew = E₀ + mob·(Ep − E₀) — mobilisierter Passivwiderstand über Nulllinie';
+  } else {
+    if(!m.disabled) m.dataset.saved=m.value;   // realen Wert vor dem Ausgrauen merken
+    m.disabled=true; m.style.opacity='0.45'; m.style.cursor='not-allowed'; m.value='1.00';
+    if(h) h.textContent='mob = 100 % — voller Passivwiderstand λ_p (Steckner-Papier Gl.32)';
+  }
+}
 function loadSettings(){
   const s = dbGet('bc_settings');
   if(s) SETTINGS = Object.assign(SETTINGS, s);
@@ -2562,6 +2605,10 @@ function loadSettings(){
   set('set-mob',     SETTINGS.mob??0.25);
   set('set-alpha-zul', SETTINGS.alphaZul??0.005);
   chk('set-steckner-mob', SETTINGS.stecknerMob !== false);     // Standard AN (Passivdruck mobilisiert)
+  _syncMobUI();   // mob-Eingabe an den Toggle koppeln (aus ⇒ ausgegraut, 100 %)
+  _sichEnabled = SETTINGS.sichEnabled === true;                 // Sicherung/Aushub-Tab (Standard aus, selten)
+  chk('sich-enable', _sichEnabled);
+  try{ if(typeof _applySichEnabledUI==='function') _applySichEnabledUI(); }catch(_){ }
   chk('set-steckner-slope', SETTINGS.stecknerSlope===true);   // Standard aus (Original-Steckner)
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
   chk('set-pfahl-decouple', SETTINGS.pfahlGzgDecouple);
@@ -2677,7 +2724,7 @@ function applySettings(){
   SETTINGS.bggamma = gv('set-bggamma');
   SETTINGS.bgme    = gv('set-bgme');
   SETTINGS.uberd   = gv('set-uberd');
-  SETTINGS.mob     = gv('set-mob');
+  if(gc('set-steckner-mob')) SETTINGS.mob = gv('set-mob');   // nur bei aktiver Mobilisierung übernehmen (aus ⇒ Feld = 100 %, realer Wert bleibt erhalten)
   SETTINGS.alphaZul= gv('set-alpha-zul');
   SETTINGS.stecknerMob = gc('set-steckner-mob');   // Passivdruck-Mobilisierung (Standard an)
   SETTINGS.stecknerSlope = gc('set-steckner-slope');
@@ -3567,11 +3614,42 @@ function buildPfahlbockViz(){
     }
   });
 
-  // ── GOK / Terrain
+  // ── GOK / Terrain (inkl. Böschung — wie Block-Viewer; Slope in +x = Feldseite)
   if(showGnd){
-    const gMesh=new THREE.Mesh(new THREE.PlaneGeometry(Bbank+4,Lbank+4),
-      new THREE.MeshBasicMaterial({color:_lt?C.terrainLight:C.terrain,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false}));
-    gMesh.rotation.x=-Math.PI/2; grp.add(gMesh);
+    const gndMatP=new THREE.MeshBasicMaterial({color:_lt?C.terrainLight:C.terrain,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false});
+    const _bBeta=+gi('bg_beta')||0, _bBtyp=(document.getElementById('bg_btyp')||{}).value||'none',
+          _bFuss=Math.max(0,+gi('bg_bfuss')||0), _bH=Math.max(0,+gi('bg_bhoehe')||0);
+    const gW=Bbank+4, gD=Lbank+4, hzP=gD/2;
+    if(_bBtyp!=='none' && Math.abs(_bBeta)>0.1){
+      const betaR=_bBeta*Math.PI/180, sDir=betaR>0?1:-1, tanB=Math.tan(Math.abs(betaR));
+      const flatEnd=Bbank/2+_bFuss;
+      // ebener Teil bis zum Böschungsfuss
+      const fm=new THREE.Mesh(new THREE.PlaneGeometry(flatEnd+gW/2, gD), gndMatP);
+      fm.rotation.x=-Math.PI/2; fm.position.set((flatEnd-gW/2)/2,0.02,0); grp.add(fm);
+      // Böschungsfläche (bei h_β>0 auf Böschungshöhe begrenzt)
+      const slopeLen=_bH>0.05 && tanB>0.001 ? Math.min(12,Math.max(0.3,_bH/tanB)) : 4;
+      const dx=slopeLen, dyv=tanB*slopeLen*sDir, fx=flatEnd;
+      const sGeo=new THREE.BufferGeometry();
+      sGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array([fx,0.02,-hzP, fx+dx,dyv,-hzP, fx+dx,dyv,hzP, fx,0.02,hzP]),3));
+      sGeo.setIndex(new THREE.BufferAttribute(new Uint16Array([0,1,2,0,2,3]),1)); sGeo.computeVertexNormals();
+      grp.add(new THREE.Mesh(sGeo,gndMatP));
+      const bfMatP=new THREE.LineBasicMaterial({color:0x7888a0,opacity:0.65,transparent:true});
+      grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(fx,0.03,-hzP),new THREE.Vector3(fx,0.03,hzP)]),bfMatP));
+      // Plateau (2. Ebene) bei h_β>0
+      if(_bH>0.05 && tanB>0.001){
+        const px0=fx+dx, px1=fx+dx+3.5;
+        const pG=new THREE.BufferGeometry();
+        pG.setAttribute('position',new THREE.BufferAttribute(new Float32Array([px0,dyv,-hzP,px1,dyv,-hzP,px1,dyv,hzP,px0,dyv,hzP]),3));
+        pG.setIndex(new THREE.BufferAttribute(new Uint16Array([0,1,2,0,2,3]),1)); pG.computeVertexNormals();
+        grp.add(new THREE.Mesh(pG,gndMatP));
+        grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(px0,dyv+0.01,-hzP),new THREE.Vector3(px0,dyv+0.01,hzP)]),bfMatP));
+        if(showDim) _vlAdd(`h_β = ${_bH.toFixed(1)} m`, new THREE.Vector3(px0+0.6,dyv+0.3,hzP+0.3),'vl-dim');
+      }
+      if(showDim) _vlAdd(`β = ${_bBeta}°`, new THREE.Vector3(fx+dx/2,dyv/2+0.3,hzP+0.3),'vl-dim');
+    } else {
+      const gMesh=new THREE.Mesh(new THREE.PlaneGeometry(gW,gD), gndMatP);
+      gMesh.rotation.x=-Math.PI/2; gMesh.position.y=0.02; grp.add(gMesh);
+    }
   }
 
   // ── Bodenschichten (Horizontflächen auf der −x-Seite, mit Tiefen-Labels)
@@ -4329,6 +4407,32 @@ function _updateKeilBtnVis(){
   b.classList.toggle('on', showPfahlKeil);
 }
 
+// Sicherung/Aushub ist ein SELTENER Nachweis → standardmässig ausgeblendet. Ein Toggle unter
+// «Berechnungsmodell» (nur Blockfundament) blendet den Tab «Sicherung» ein. Zustand global in SETTINGS.
+let _sichEnabled = false;
+function toggleSichEnabled(){
+  const el = document.getElementById('sich-enable');
+  _sichEnabled = !!(el && el.checked);
+  SETTINGS.sichEnabled = _sichEnabled;
+  try{ dbSet('bc_settings', SETTINGS); }catch(_){ }
+  _applySichEnabledUI();
+}
+// Sichtbarkeit Tab «Sicherung» + Toggle-Zeile nach _sichEnabled & Modell; deaktiviert die Sicherung,
+// wenn der Toggle ausgeschaltet wird (verlässt ggf. den Tab).
+function _applySichEnabledUI(){
+  const isBlock = (typeof CALC_MODEL==='undefined') || CALC_MODEL==='block';
+  const row = document.getElementById('sich-enable-row');
+  if(row) row.style.display = isBlock ? 'flex' : 'none';
+  const chk = document.getElementById('sich-enable'); if(chk) chk.checked = _sichEnabled;
+  const nav = document.getElementById('tab-nav-sicherung');
+  if(nav) nav.style.display = (isBlock && _sichEnabled) ? '' : 'none';
+  if(!_sichEnabled){
+    // Sicherung deaktivieren (falls aktiv) + Tab verlassen
+    if(showPfahl){ showPfahl = false; _updateSicherungBtn(); _updateKeilBtnVis();
+      try{ calculate(); rebuildScene(); }catch(_){ } }
+    if(document.getElementById('tab-sicherung')?.classList.contains('active')) switchTab('geometrie');
+  }
+}
 function toggleSicherungAktiv(){
   showPfahl = !showPfahl;
   _updateSicherungBtn();
@@ -5411,6 +5515,53 @@ const BGP = {
   aufsch_verd:  { phi:30, c:0,   gamma:20.0, gamma2:10.0, qu:150, me:20,  warn:'Auffüllung — M_E = Erfahrungswert (verdichtet). Feldnachweis durch Plattendruckversuch empfohlen.' },
   aufsch_locker:{ phi:25, c:0,   gamma:18.0, gamma2:8.5,  qu:80,  me:5,   warn:'Auffüllung locker — M_E sehr tief. Steckner GZG nicht gültig. Feldnachweis zwingend empfohlen.' },
 };
+// Reihenfolge + Anzeigenamen + Gruppe der Standard-Bodenprofile (eine Quelle für Tabelle + Dropdown)
+const BGP_META = [
+  {key:'kies',          name:'Kies',                   grp:'std'},
+  {key:'sand',          name:'Sand',                   grp:'std'},
+  {key:'schluff',       name:'Schluff',                grp:'std'},
+  {key:'ton',           name:'Ton, steif',             grp:'std'},
+  {key:'fels',          name:'Fels',                   grp:'std'},
+  {key:'ton_weich',     name:'Ton, weich',             grp:'spec'},
+  {key:'sand_locker',   name:'Sand, locker',           grp:'spec'},
+  {key:'aufsch_verd',   name:'Auffüllung, verdichtet', grp:'spec'},
+  {key:'aufsch_locker', name:'Auffüllung, locker',     grp:'spec'},
+];
+// Standard-Presets sind editierbar: Nutzer-Overrides (bc_bgp_over) über die Defaults gemischt (je Feld).
+function bgpMerged(){ const ov=dbGet('bc_bgp_over')||{}; const o={};
+  for(const k in BGP){ o[k]=Object.assign({}, BGP[k], ov[k]||{}); } return o; }
+function bgpOverField(key, field, val){
+  const ov=dbGet('bc_bgp_over')||{}; if(!ov[key]) ov[key]={};
+  ov[key][field]=val; dbSet('bc_bgp_over', ov);
+  renderBGPresetTable();   // • Marke + evtl. Reset-Knopf
+  renderSchichten();       // Dropdown-Labels (M_E) nachführen — bestehende Schichten behalten ihre Werte
+  scheduleCalc();
+}
+function bgpResetKey(key){
+  const ov=dbGet('bc_bgp_over')||{}; delete ov[key]; dbSet('bc_bgp_over', ov);
+  renderBGPresetTable(); renderSchichten(); scheduleCalc();
+}
+// Editierbare Tabelle der Standard-Bodenprofile (φ'/c'/γ/M_E). Edit gilt für NEUE Schicht-Zuweisungen;
+// bereits zugewiesene Schichten behalten ihre kopierten Werte. „•" = überschrieben, Reset stellt Default her.
+function renderBGPresetTable(){
+  const el=document.getElementById('bgp-std-list'); if(!el) return;
+  const M=bgpMerged(), ov=dbGet('bc_bgp_over')||{};
+  const rowsFor = grp => BGP_META.filter(m=>m.grp===grp).map(m=>{ const p=M[m.key], edited=!!ov[m.key];
+    return `<tr>
+      <td style="text-align:left;white-space:nowrap">${m.name}${edited?' <span style="color:var(--acc)" title="überschrieben">•</span>':''}</td>
+      <td><input class="ll-inp" type="number" value="${p.phi}" step="0.5" onchange="bgpOverField('${m.key}','phi',+this.value)"/></td>
+      <td><input class="ll-inp" type="number" value="${p.c}" step="0.5" onchange="bgpOverField('${m.key}','c',+this.value)"/></td>
+      <td><input class="ll-inp" type="number" value="${p.gamma}" step="0.5" onchange="bgpOverField('${m.key}','gamma',+this.value)"/></td>
+      <td><input class="ll-inp" type="number" value="${p.me}" step="1" onchange="bgpOverField('${m.key}','me',+this.value)"/></td>
+      <td>${edited?`<button class="btn btn-tonal btn-sm" title="Auf Standard zurücksetzen" onclick="bgpResetKey('${m.key}')" style="padding:0 6px">↺</button>`:''}</td>
+    </tr>`; }).join('');
+  const grpHd = t => `<tr><td colspan="6" style="text-align:left;padding-top:5px;color:var(--xdim);font-size:8.5px;letter-spacing:.04em;border:none">${t}</td></tr>`;
+  el.innerHTML = `<div class="ll-wrap"><table class="ll-tbl">
+    <thead><tr><th style="text-align:left">Bodenprofil</th><th>φ' °</th><th>c' kPa</th><th>γ kN/m³</th><th>M_E</th><th></th></tr></thead>
+    <tbody>${grpHd('STANDARD')}${rowsFor('std')}${grpHd('SONDERBÖDEN')}${rowsFor('spec')}</tbody></table></div>`;
+  const sum=document.getElementById('bgp-std-summary');
+  if(sum){ const nOv=Object.keys(ov).length; sum.textContent = nOv?`${BGP_META.length} Profile · ${nOv} bearbeitet`:`${BGP_META.length} Profile`; }
+}
 
 function updateGWField(){
   const wrap = document.getElementById('bg_gwt_wrap');
@@ -5474,24 +5625,17 @@ function schichtHeaderLabel(s){
 function schichtPresetDropdown(i){
   const s = SCHICHTEN[i];
   const cur = s.preset||'';
-  const stdKeys = ['kies','sand','schluff','ton','fels'];
+  const M = bgpMerged();
   const tpls = getBGTemplates();
+  const stdKeys = BGP_META.map(m=>m.key);
   const isCustom = !stdKeys.includes(cur) && !tpls.find(t=>t.id===cur);
+  const opt = k => { const m=BGP_META.find(x=>x.key===k), p=M[k];
+    return `<option value="${k}" ${cur===k?'selected':''}>${m.name} (M_E ${p.me})${p.warn?' ⚠':''}</option>`; };
+  const g = grp => BGP_META.filter(m=>m.grp===grp).map(m=>opt(m.key)).join('');
   return `<select class="sch-preset-sel" id="sch-sel-${i}"
     onchange="applySchichtPreset(${i},this.value)">
-    <optgroup label="Standard">
-      <option value="kies"    ${cur==='kies'   ?'selected':''}>Kies (M_E 80)</option>
-      <option value="sand"    ${cur==='sand'   ?'selected':''}>Sand (M_E 40)</option>
-      <option value="schluff" ${cur==='schluff'?'selected':''}>Schluff (M_E 15)</option>
-      <option value="ton"     ${cur==='ton'    ?'selected':''}>Ton, steif (M_E 12)</option>
-      <option value="fels"    ${cur==='fels'   ?'selected':''}>Fels (M_E 500)</option>
-    </optgroup>
-    <optgroup label="Sonderböden">
-      <option value="ton_weich"     ${cur==='ton_weich'    ?'selected':''}>Ton, weich (M_E 6) ⚠</option>
-      <option value="sand_locker"   ${cur==='sand_locker'  ?'selected':''}>Sand, locker (M_E 18)</option>
-      <option value="aufsch_verd"   ${cur==='aufsch_verd'  ?'selected':''}>Auffüllung, verdichtet (M_E 20) ⚠</option>
-      <option value="aufsch_locker" ${cur==='aufsch_locker'?'selected':''}>Auffüllung, locker (M_E 5) ⚠</option>
-    </optgroup>
+    <optgroup label="Standard">${g('std')}</optgroup>
+    <optgroup label="Sonderböden">${g('spec')}</optgroup>
     ${tpls.length?`<optgroup label="Gespeichert">${tpls.map(t=>`<option value="__tpl__${t.id}" ${cur===t.id?'selected':''}>${t.name}</option>`).join('')}</optgroup>`:''}
     ${isCustom?`<option value="" selected>—</option>`:''}
   </select>`;
@@ -5582,7 +5726,7 @@ function applySchichtPreset(i, key){
     SCHICHTEN[i].preset = id;
     if(i===0) applyBGState(d);
   } else {
-    const p = BGP[key]; if(!p) return;
+    const p = bgpMerged()[key]; if(!p) return;   // editierbare Standard-Presets (Nutzer-Overrides)
     SCHICHTEN[i].phi    = p.phi;
     SCHICHTEN[i].c      = p.c;
     SCHICHTEN[i].gamma  = p.gamma;
@@ -5700,12 +5844,13 @@ function saveBGTemplate(){
   }, 50);
 }
 
-function renderBGTplDropdown(){ renderBGTplTable(); } // Compat-Alias
+function renderBGTplDropdown(){ renderBGTplTable(); renderBGPresetTable(); } // Compat-Alias (beide Tabellen)
 
 function renderBGTplTable(){
   const el = document.getElementById('bg-tpl-list');
   if(!el) return;
   const arr = getBGTemplates();
+  const sum=document.getElementById('bgp-user-summary'); if(sum) sum.textContent = arr.length?`${arr.length} Profil${arr.length>1?'e':''}`:'keine';
   if(!arr.length){
     el.innerHTML = '<div style="color:var(--xdim);font-size:9.5px;font-family:var(--f-mono);padding:2px 0 8px">Keine gespeicherten Profile.</div>';
     return;
@@ -6446,7 +6591,8 @@ function _pbResultHTML(r, piles, n){
   // ── massgebenden Nachweis identifizieren
   const govName=(()=>{ const m=r.eta_massg;
     if(m===r.etaGeo) return 'Geo'; if(m===r.etaSteel) return 'Stahl';
-    if(m===r.etaKnick) return 'Knick'; if(m===r.etaGZG) return 'GZG'; return ''; })();
+    if(m===r.etaKnick) return 'Knick'; if(r.etaLat!=null && m===r.etaLat) return 'Lat';
+    if(m===r.etaGZG) return 'GZG'; return ''; })();
   const gL=r.govLoad||{}, Hd=Math.hypot(gL.Hx||0, gL.Hy||0);   // Sohlkräfte massg. Kombo (UK Bankett)
   const govF=r.govPile>=0?Math.abs(r.pileRes[r.govPile]?.F||0):0;
   const govZug=r.govPile>=0 && !!r.pileRes[r.govPile]?.zug;
@@ -6526,6 +6672,15 @@ function _pbResultHTML(r, piles, n){
       ${diagWrap('_pbdiag_axial', buildPbAxialDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
+    ${cardHd('Laterale Bodentragfähigkeit (Rotation / Kick-out)', r.etaLat, null, govName==='Lat')}
+      <div class="nw-formula">Grenzgleichgewicht der p_u-Hüllkurve (Reibung 3·Kp·σ'v·d, bindig 9·c_u·d) · Interaktion V/V_u,d + M_gl/M_u,d ≤ 1</div>
+      ${row('V_u,d (Querkraft-Grenzlast, /γ_R)', r.Vcap_d+' kN')}
+      ${row('M_u,d (Moment-Grenzwiderstand, /γ_R)', r.Mcap_d+' kNm')}
+      ${row('Einwirkung V_d / M_gl,d', r.latVd+' kN / '+r.latMd+' kNm')}
+      ${etaRow('η lateral', r.etaLat, 'η = 1 / (V_d/V_u,d + M_gl,d/M_u,d)<br>= 1 / ('+r.latVd+'/'+r.Vcap_d+' + '+r.latMd+'/'+r.Mcap_d+') = '+(isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'))}
+      <div style="font-size:8px;color:var(--xdim);margin-top:2px">Rotations-/Kick-out-Versagen des Pfahls im Boden (plastische p_u-Hüllkurve, Böschung via Bettungsfaktor). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast <b>und</b> das Mast-Moment (M_gl = M_Kopf + V·freie Länge).':'Gruppe: massgebender Pfahl über die laterale Kopfkraft (Kopfmoment ≈ 0, im axialen Kräftepaar erfasst).'} · <b>Behebt</b>: sehr kurze Einbindelängen fallen jetzt durch. γ_R = ${gRv.toFixed(2)}.</div>
+    ${CARD_END}
+
     ${cardHd('Innerer Tragwiderstand (Tragglied)', Math.min(r.etaSteel, r.etaKnick), null, govName==='Stahl'||govName==='Knick')}
       <!-- Querschnitt N+M -->
       <div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:0 0 4px">Querschnitt — N+M-Interaktion</div>
@@ -6547,6 +6702,7 @@ function _pbResultHTML(r, piles, n){
       ${row('N_b,Rd = χ·N_pl,k/γ_s', r.N_bRd+' kN')}
       ${etaRow('η Knicken', r.etaKnick, 'η = N_b,Rd / N_Ed = '+r.N_bRd.toFixed(0)+' / '+r.Ncomp.toFixed(0)+' = '+(isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞')+'<br>N_b,Rd = χ·N_pl,k/γ_s = '+r.chi.toFixed(2)+'·'+r.N_pl_k.toFixed(0)+'/'+(+gi('pb_gS')||1.15).toFixed(2))}
       ${diagWrap('_pbdiag_knick', buildPbKnickDiagram(r,n,_gztExpanded))}
+      ${r.knickValid===false?'<div style="font-size:8px;color:var(--warn);margin-top:3px">L = '+r.L.toFixed(2)+' m &lt; Knick-Halbwelle L_hw = '+r.L_hw.toFixed(2)+' m — die Euler-auf-Bettung-Formel (längenunabhängig) ist hier ungültig; massgebend ist die laterale Bodentragfähigkeit (Rotation/Kick-out).</div>':''}
       <div style="font-size:8px;color:var(--xdim);margin-top:3px">Knickkurve c (Stahl-Voll/Hohlstab, α=0.49) · Bettung weichste Schicht · im weichen Boden massgebend, sonst Querschnitt</div>
       <!-- massgebend innerer Tragwiderstand -->
       <div style="display:flex;justify-content:space-between;padding:5px 0 0;margin-top:6px;border-top:1px solid var(--ol);font-weight:600"><span>η innerer Tragwiderstand = min(Querschnitt, Knicken)</span><span style="color:${cV(Math.min(r.etaSteel,r.etaKnick))}">η = ${isFinite(Math.min(r.etaSteel,r.etaKnick))?Math.min(r.etaSteel,r.etaKnick).toFixed(2):'∞'}</span></div>
@@ -6698,9 +6854,9 @@ function setModel(m, silent){
   document.querySelectorAll('.nw-block-only').forEach(el => {
     el.style.display = isBlock ? '' : 'none';
   });
-  // Sicherung-Tab + Toggle-Button nur bei Blockfundament
-  const sNavEl = document.getElementById('tab-nav-sicherung');
-  if(sNavEl) sNavEl.style.display = isBlock ? '' : 'none';
+  // Sicherung-Tab: nur bei Blockfundament UND aktiviertem Toggle (Sicherung/Aushub, selten).
+  // _applySichEnabledUI setzt Nav-Tab + Toggle-Zeile konsistent (und verlässt den Tab, wenn aus).
+  _applySichEnabledUI();
   // Sicherungs-Layer-Buttons (Sicherung + Keile) zentral: nur Block UND aktive Sicherung
   _updateKeilBtnVis();
   if(!isBlock && document.getElementById('tab-sicherung')?.classList.contains('active')){
@@ -6903,18 +7059,23 @@ function renderLoadLvls(){
 // ── Steckner 1989, Gl.3/4: C₁ aus φ_k und Einbindetiefe t
 // C = {4 + 0.6·(φ−20)} · 10⁴ · t/2 · (1 + β_p/40)  [kN/m³]
 // β_p < 0: abfallendes Gelände (Gl.4); β_p ≥ 0: eben/ansteigend → Gl.3 (β=0)
+// Steckner Gl.4 — Böschungsabminderung der Bettungsziffer: eine abfallende Böschung (β<0) mindert
+// C₁ um (1+β/40). Höhenwirkung (Jul 2026): eine ENDLICHE Böschung (h_β>0) legt nur den Anteil der
+// Einbindetiefe frei, der über ihre Höhe reicht → frac = h_β/t (gekappt auf 1) → geringere
+// Abminderung; durchlaufend (h_β=0, Sentinel „unendlich") = volle Reduktion (frac=1, rückwärtskompatibel).
+// WICHTIG: Der Böschungseinfluss ist ein GEOMETRIE-Effekt (freier Erdwiderstand talseitig) und damit
+// UNABHÄNGIG davon, mit welcher Methode C₁ abgeschätzt wird. Deshalb wird dieser Faktor sowohl auf den
+// Steckner-Ast (Gl.3) ALS AUCH auf den Winkler-Ast (M_E·Kp/B) angewandt — d. h. die Böschung wirkt auch
+// dann, wenn die Steckner-Einsatzbedingungen (M_E ≥ 12/25, φ ≥ 27°) NICHT erfüllt sind (Jul 2026).
+function _c1SlopeFactor(beta_deg, hbeta, t){
+  if(!(beta_deg < 0)) return 1.0;
+  const frac = (hbeta > 0) ? Math.min(1, hbeta / Math.max(0.1, t)) : 1;
+  return 1 + (beta_deg / 40) * frac;   // → 0 bei β=−40° (Modellgrenze); Flooring erfolgt am C₁-Wert
+}
+
 function c1Steckner(phi_k_deg, t, beta_deg, hbeta) {
   const C_base = (4 + 0.6 * (phi_k_deg - 20)) * 1e4 * (t / 2); // [kN/m³]
-  // Steckner Gl.4: abfallende Böschung (β<0) mindert die Bettungsziffer um (1+β/40).
-  // Höhenwirkung (Jul 2026): eine ENDLICHE Böschung (h_β>0) legt nur den Anteil der Einbindetiefe
-  // frei, der über ihre Höhe reicht → frac = h_β/t (gekappt auf 1) → geringere Abminderung;
-  // durchlaufend (h_β=0, Sentinel „unendlich") = volle Reduktion (frac=1, rückwärtskompatibel).
-  let beta_fac = 1.0;
-  if(beta_deg < 0){
-    const frac = (hbeta > 0) ? Math.min(1, hbeta / Math.max(0.1, t)) : 1;
-    beta_fac = 1 + (beta_deg / 40) * frac;
-  }
-  return Math.max(1, C_base * beta_fac / 1000); // → MN/m³
+  return Math.max(1, C_base * _c1SlopeFactor(beta_deg, hbeta, t) / 1000); // → MN/m³
 }
 
 // Tiefengewichteter Mittelwert φ_k [°] über alle Schichten bis Tiefe t
@@ -7053,6 +7214,8 @@ function openC1Info(){
   const phiOk = d.phi_avg >= 27;
   const meOkFein = d.me_avg >= 12;
   const meOkGrob = d.me_avg >= 25;
+  const slpOn  = d.slopeFac != null && d.slopeFac < 0.999;   // abfallende Böschung wirkt
+  const slpTxt = slpOn ? ` · ${d.slopeFac.toFixed(3)} (Böschung Gl.4)` : '';
   const lines = [
     `Bettungsziffer C₁ — Berechnungsdetails`,
     `${'─'.repeat(52)}`,
@@ -7064,18 +7227,20 @@ function openC1Info(){
     `  M_E,avg = ${d.me_avg.toFixed(1)} MN/m²  (tiefengewichtet)`,
     `  B = ${d.B.toFixed(2)} m`,
     ``,
-    `Methode 1 — Steckner (1989) Gl.3:`,
-    `  C₁ = {4 + 0.6·(${d.phi_avg.toFixed(1)}−20)} · 10⁴ · ${(d.t/2).toFixed(2)} = ${d.c1_steck.toFixed(1)} MN/m³`,
+    `Methode 1 — Steckner (1989) Gl.3${slpOn?'/4':''}:`,
+    `  C₁ = {4 + 0.6·(${d.phi_avg.toFixed(1)}−20)} · 10⁴ · ${(d.t/2).toFixed(2)}${slpTxt} = ${d.c1_steck.toFixed(1)} MN/m³`,
     ``,
     `Methode 2 — Winkler horizontal (M_E · Kp / B):`,
     `  Kp = tan²(45+${(d.phi_avg/2).toFixed(1)}°) = ${Kp.toFixed(3)}`,
-    `  C₁_ME = ${d.me_avg.toFixed(1)} · ${Kp.toFixed(3)} / ${d.B.toFixed(2)} = ${d.c1_me.toFixed(1)} MN/m³`,
+    `  C₁_ME = ${d.me_avg.toFixed(1)} · ${Kp.toFixed(3)} / ${d.B.toFixed(2)}${slpTxt} = ${d.c1_me.toFixed(1)} MN/m³`,
     blendText,
     ``,
     `Gültigkeitsprüfung (Projektunterlage):`,
     `  φ'_k = ${d.phi_avg.toFixed(1)}° ${phiOk?'≥':'<'} 27°  ${phiOk?'✓':'✗'}`,
     `  M_E = ${d.me_avg.toFixed(1)} MN/m²:  ≥ 12 (feinkörnig) ${meOkFein?'✓':'✗'}  |  ≥ 25 (grobkörnig) ${meOkGrob?'✓':'✗'}`,
     `  → ${d.stecknerGueltig?'Steckner für gewählte Bodenart gültig':'Steckner für gewählte Bodenart NICHT voll gültig — '+( d.zoneKey==='soft'?'Winkler-Ansatz':'Blend')+' angewendet'}`,
+    ...(slpOn ? [`  Böschung β = ${d.beta.toFixed(0)}° (Gl.4-Faktor ${d.slopeFac.toFixed(3)}) mindert C₁ in BEIDEN Methoden`,
+                `  → wirkt auch, wenn Steckner-Einsatzbedingung nicht erfüllt ist (Winkler/Blend)`] : []),
     ``,
     `${'─'.repeat(52)}`,
     `Quellen: Steckner (1989) Bautechnik 2/89 Gl.3`,
@@ -7112,8 +7277,11 @@ function c1AutoValue(){
   const grenzwert = _bgKoernig==='fein' ? 12 : 25;
   const phi_avg   = SCHICHTEN.length>1 ? avgPhiToDepth(t) : (+gi('bg_phi')||30);
   const me_avg    = SCHICHTEN.length>1 ? avgMeToDepth(t) : (SCHICHTEN[0]?.me ?? 20);
-  const c1_steck  = c1Steckner(phi_avg, t, beta, hbeta);
-  const c1_me     = c1Effective_layers(t, B);
+  const slopeFac  = _c1SlopeFactor(beta, hbeta, t);           // Steckner Gl.4 (β/h_β-abhängig)
+  const c1_steck  = c1Steckner(phi_avg, t, beta, hbeta);      // Gl.3 · Gl.4 (Faktor bereits enthalten)
+  // Winkler-Ast (M_E·Kp/B) trägt die Böschungsabminderung ebenfalls → C₁ folgt der Neigung auch,
+  // wenn die Steckner-Einsatzbedingungen (M_E, φ) nicht erfüllt sind (Winkler/Blend-Zone).
+  const c1_me     = Math.max(1, c1Effective_layers(t, B) * slopeFac);
   let c1_eff, zoneKey, w=0;
   if(_c1Methode === 'winkler'){
     c1_eff=c1_me; zoneKey='soft'; w=0;
@@ -7126,13 +7294,13 @@ function c1AutoValue(){
       c1_eff=(1-w)*c1_me+w*c1_steck; zoneKey='mid';
     } else { c1_eff=c1_steck; zoneKey='ok'; w=1; }
   }
-  return {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert,
+  return {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert, slopeFac,
           c1_steck, c1_me, stecknerGueltig: me_avg >= grenzwert};
 }
 
 function autoC1(){
   const a = c1AutoValue();
-  let {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert,
+  let {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert, slopeFac,
        c1_steck, c1_me, stecknerGueltig} = a;
   // bg_me als Display-Feld aktualisieren
   const bgMeEl = document.getElementById('bg_me');
@@ -7148,7 +7316,7 @@ function autoC1(){
   _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w);
 
   // Details für Info-Panel und Nachweisbericht
-  window._c1Calc = {phi_avg,me_avg,B,t,beta,grenzwert,c1_steck,c1_me,c1_eff,zoneKey,
+  window._c1Calc = {phi_avg,me_avg,B,t,beta,grenzwert,slopeFac,c1_steck,c1_me,c1_eff,zoneKey,
                     stecknerGueltig,w,koernig:_bgKoernig,manual:_c1Manual};
   calculate();
 }
@@ -8137,6 +8305,21 @@ function pileLatCapLimitEq(L, B, e, puAt){
   return Math.max(0, Hu);
 }
 
+// Ultimate groundline MOMENT capacity of the embedded pile (rigid short-pile rotation, p_u-envelope).
+// Reines Kopfmoment ohne Netto-Querkraft: Rotation um Tiefe a mit ∫p_u[0,a]=∫p_u[a,L] (Querkraft-Nulldurch-
+// gang) → M_u = ∫₀^L p_u·|z−a| dz (plastisches Widerstandsmoment um den Rotationspunkt). [kNm]
+function pileLatMomCap(L, B, puAt){
+  const I0=(z1,z2)=>{ const n=Math.max(4,Math.round((z2-z1)/0.05)),h=(z2-z1)/n; let s=0;
+    for(let i=0;i<n;i++){ const z=z1+(i+0.5)*h; s+=Math.max(0,puAt(z))*h; } return s; };
+  const Iabs=(z1,z2,a)=>{ const n=Math.max(4,Math.round((z2-z1)/0.05)),h=(z2-z1)/n; let s=0;
+    for(let i=0;i<n;i++){ const z=z1+(i+0.5)*h; s+=Math.max(0,puAt(z))*Math.abs(z-a)*h; } return s; };
+  const F0=zr=>I0(0,zr)-I0(zr,L);                 // <0 bei zr→0, >0 bei zr→L → Vorzeichenwechsel garantiert
+  let lo=1e-3, hi=L-1e-3;
+  for(let i=0;i<40;i++){ const m=(lo+hi)/2; if(F0(m)<0) lo=m; else hi=m; }
+  const a=(lo+hi)/2;
+  return Iabs(0,L,a);
+}
+
 // ── Laterale Grenzlast aus dem inkrementellen p-y-Push ──
 // Steigert die Kopflast bis zum Verformungs-Kollaps (Mechanismus): grobe Kopf-
 // verschiebung > 8 % L. Bisektion, gröberes Netz (Tempo), gebracketed durch das
@@ -8358,6 +8541,23 @@ function pfahlbockAnalyse(cfg){
   const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
   const Rskin_d  = Rskin_k  / gR;                               // Druck-Bemessungswiderstand
   const Rskin_dZ = Rskin_kZ / gR;                               // Zug-Bemessungswiderstand
+  // ── Laterale BODEN-Tragfähigkeit (ULS) — Grenzgleichgewicht der p_u-Hüllkurve (Rotations-/Kick-out-
+  //    Versagen des kurzen Pfahls). Fehlte bisher (nur lineare Bettung) → sehr kurze Pfähle „bestanden".
+  //    p_u(z) schichtweise (Reibung 3·Kp·σ'v·B, bindig 9·c_u·B), Böschung via bettungFac. Gilt für den
+  //    EINZELPFAHL (Kopf trägt volle Mast-H+M) UND als Reserve-Check je Pfahl der Gruppe.
+  const puAtL = z => { const s=schichtAtDepth(Math.max(0,z)), ph=s.phi??30;
+    if(ph<=5) return z>1.5*dG ? 9*Math.max(0,s.c??0)*dG : 0;
+    const Kp=Math.tan(Math.PI/4+ph*Math.PI/360)**2; return 3*Kp*sigVeffTo(z)*dG*bettungFac; };
+  const Vcap_k = pileLatCapLimitEq(L, dG, 0, puAtL) || 0;       // reine Querkraft-Grenzlast am GOK [kN]
+  const Mcap_k = pileLatMomCap(L, dG, puAtL) || 0;              // reines Moment-Grenzwiderstand [kNm]
+  const Vcap_d = Vcap_k/gR, Mcap_d = Mcap_k/gR;
+  // Knick-Deckel: die Euler-auf-Bettung-Formel N_cr=2√(k·EI) ist längenunabhängig und nur gültig, wenn die
+  // Einbindelänge mindestens eine Knick-Halbwelle L_hw=π·(EI/(k·B))^0.25 umfasst — sonst ist sie ungültig
+  // (der laterale Nachweis wird dann massgebend). Flag zur Kennzeichnung im Panel/Bericht.
+  let _ksMinL = Infinity; for(let i=0;i<=20;i++) _ksMinL = Math.min(_ksMinL, ksAt(i/20*L));
+  const kbedL = Math.max(1e-6, _ksMinL * dG);
+  const L_hw = Math.PI * Math.pow(EI/kbedL, 0.25);   // Knick-Halbwellenlänge [m]
+  const knickValid = L >= L_hw;                       // Euler-auf-Bettung nur oberhalb gültig
   const Rt_d = micropileRtd(tdn, gS);                     // Stahl axial (Streckgrenzkraft)
   // Biegewiderstand Tragglied: W_pl ≈ (da³−di³)/6 (Voll-/Hohlkreis), M_Rd = W_pl·f_yk/γ_s
   const Wpl  = (tdn.Wpl != null) ? tdn.Wpl : (Math.pow(da,3) - Math.pow(di,3)) / 6;   // m³
@@ -8420,6 +8620,24 @@ function pfahlbockAnalyse(cfg){
     if(eGeo_i < etaGeo){ etaGeo = eGeo_i; govPile = i; govComboIdx = rep; }
     if(eSteel_i < etaSteel) etaSteel = eSteel_i;
   }
+  // ── Laterale Boden-Tragfähigkeit (ULS) je Kombo: Interaktion Querkraft V + Grundmoment M_gl.
+  //    Einzelpfahl (np=1): der Kopf trägt die volle Mast-Horizontallast + das Mast-Moment (M_gl =
+  //    M_Kopf + V·e). Gruppe: massgebender Pfahl über die laterale Kopfkraft FLat (Moment steckt im
+  //    axialen Kräftepaar → dort via η_Geo/η_Stahl erfasst) → konservativer Reserve-Check.
+  let etaLat = Infinity, latGovCombo = -1, latVd = 0, latMd = 0;
+  ulsData.forEach((u,ci) => {
+    let Vd, Mgl;
+    if(np === 1){ const ld = u.load || {};
+      Vd  = Math.hypot(ld.Hx||0, ld.Hy||0);
+      Mgl = Math.hypot(ld.Mx||0, ld.My||0) + Vd*e;          // Grundmoment = Kopfmoment + V·freie Länge
+    } else {
+      Vd  = u.FLat ? Math.max(...u.FLat.map(v=>Math.abs(v))) : 0;
+      Mgl = Vd*e;                                            // Gruppe: Kopfmoment ≈ 0 (axiales Kräftepaar)
+    }
+    const util = (Vcap_d>1e-6 ? Vd/Vcap_d : (Vd>1e-6?9e9:0)) + (Mcap_d>1e-6 ? Mgl/Mcap_d : (Mgl>1e-6?9e9:0));
+    const eL = util>1e-9 ? 1/util : Infinity;
+    if(eL < etaLat){ etaLat = eL; latGovCombo = ci; latVd = Vd; latMd = Mgl; }
+  });
   const uls = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].sol : (ulsData[0] ? ulsData[0].sol : null);
   const govCombo = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].label : (ulsData[0]?ulsData[0].label:'');
   const govLoad = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].load : (ulsData[0]?ulsData[0].load:{});
@@ -8489,6 +8707,9 @@ function pfahlbockAnalyse(cfg){
            da:+da.toFixed(4), Wpl:Wpl, fyk:(tdn.fy||500), gammaS:+gS.toFixed(2),
            N_cr:+N_cr.toFixed(0), etaKnick:+etaKnick.toFixed(2), Ncomp:+Ncomp.toFixed(1),
            N_pl_k:+N_pl_k.toFixed(0), lamBar:+lamBar.toFixed(2), chi:+chi.toFixed(3), N_bRd:+N_bRd.toFixed(0),
+           knickValid, L_hw:+L_hw.toFixed(2),
+           etaLat:+etaLat.toFixed(2), Vcap_k:+Vcap_k.toFixed(1), Vcap_d:+Vcap_d.toFixed(1),
+           Mcap_k:+Mcap_k.toFixed(1), Mcap_d:+Mcap_d.toFixed(1), latVd:+latVd.toFixed(1), latMd:+latMd.toFixed(1),
            Es:Es, kbed:+(ksMin*dG).toFixed(4), kAxSteel:kAxSteel, headFixReq,
            pileDecomp, govCombo, govLoad, govLoadChar, ulsCombosN:ulsCombos.length,
            settle_mm: gFull ? +gFull.w_mm.toFixed(1) : 0,
@@ -8497,7 +8718,7 @@ function pfahlbockAnalyse(cfg){
            e:+e.toFixed(3), L:+L.toFixed(3), dG:+dG.toFixed(4), Mmax1:+Mmax1.toFixed(4),
            govLatPile:govLat, FLatMax:+FLatMax.toFixed(2), pyProfile: py1?py1.profile:null,
            bettungFac:+bettungFac.toFixed(3), Lbend:+Lbend.toFixed(2),
-           eta_massg:+Math.min(etaGeo, etaSteel, etaKnick, etaGZG).toFixed(2) };
+           eta_massg:+Math.min(etaGeo, etaSteel, etaKnick, etaGZG, etaLat).toFixed(2) };
 }
 
 // Sichtbarkeit f_eff-Eingabe nach Lastverteilungs-Modus
@@ -12310,9 +12531,21 @@ function buildNachweisDocPfahl(r, piles, n){
       ${fml("N_cr = 2·√(k_bed·EI) · λ̄ = √(N_pl,k/N_cr) · N_b,Rd = χ·N_pl,k/γ_s", `N_cr = ${N(r.N_cr)} kN · λ̄ = ${N(r.lamBar,2)} · χ = ${N(r.chi,3)}`, `N_b,Rd = ${N(r.N_bRd)} kN`)}
       ${fml("η_Knick = N_b,Rd / N_Ed", `${N(r.N_bRd)} / ${N(r.Ncomp)}`, `${isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞'}`)}
       ${eta(r.etaKnick)}
+      ${r.knickValid===false?`<div style="font-size:8px;color:var(--warn);margin-top:3px">L = ${N(r.L,2)} m &lt; Knick-Halbwelle L_hw = ${N(r.L_hw,2)} m — die längenunabhängige Euler-auf-Bettung-Formel ist hier ungültig; massgebend ist die laterale Bodentragfähigkeit (5.4).</div>`:''}
       ${figFn(()=>buildPbKnickDiagram(r,n,true),'Abb. — Knickkurve c χ(λ̄) mit Betriebspunkt; graue Punkte = übrige Katalog-Tragglieder')}
     </div>
-    <div style="font-size:8px;color:var(--xdim);margin-top:4px">γ_R = ${N(gR,2)} (Modellwert ohne Probebelastung) · γ_s = ${N(gS,2)} · voller A_s (kein Abrostzuschlag, SIA 267) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant).</div>
+    ${r.etaLat!=null?`<div class="np-nw">
+      ${nwh('5.4','Äusserer Tragwiderstand — Laterale Bodentragfähigkeit','Grenzgleichgewicht p_u')}
+      <div class="np-cf" style="margin-bottom:4px">Rotations-/Kick-out-Versagen des Pfahls im Boden — plastische p_u-Hüllkurve (Reibung 3·Kp·σ'v·d, bindig 9·c_u·d). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast und das Mast-Moment.':'Gruppe: massgebender Pfahl über die laterale Kopfkraft.'}</div>
+      <table class="np-tbl" style="margin:4px 0">
+        <tr><td>V_u,d (Querkraft-Grenzlast, /γ_R)</td><td class="r">${N(r.Vcap_d)} kN</td></tr>
+        <tr><td>M_u,d (Moment-Grenzwiderstand, /γ_R)</td><td class="r">${N(r.Mcap_d)} kNm</td></tr>
+        <tr><td>Einwirkung V_d / M_gl,d</td><td class="r">${N(r.latVd)} kN / ${N(r.latMd)} kNm</td></tr>
+      </table>
+      ${fml("η_lateral = 1 / (V_d/V_u,d + M_gl,d/M_u,d)", `1 / (${N(r.latVd)}/${N(r.Vcap_d)} + ${N(r.latMd)}/${N(r.Mcap_d)})`, `${isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'}`)}
+      ${eta(r.etaLat)}
+    </div>`:''}
+    <div style="font-size:8px;color:var(--xdim);margin-top:4px">γ_R = ${N(gR,2)} (Modellwert ohne Probebelastung) · γ_s = ${N(gS,2)} · voller A_s (kein Abrostzuschlag, SIA 267) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant) · laterale Bodentragfähigkeit = plastisches Grenzgleichgewicht (Kick-out/Rotation).</div>
   </div>`;
 
   // ── Kap 6: GZG
@@ -12347,6 +12580,7 @@ function buildNachweisDocPfahl(r, piles, n){
     <table class="np-tbl" style="margin-bottom:14px">
       <thead><tr><th>Nachweis / Grenzzustand</th><th class="r">η</th></tr></thead><tbody>
         ${sumRow('GZT — Äusserer Tragwiderstand (Mantelreibung)', r.etaGeo)}
+        ${r.etaLat!=null?sumRow('GZT — Laterale Bodentragfähigkeit (Kick-out)', r.etaLat):''}
         ${sumRow('GZT — Innerer Tragwiderstand (Querschnitt N+M)', r.etaSteel)}
         ${sumRow('GZT — Innerer Tragwiderstand (Knicken)', r.etaKnick)}
         ${sumRow('GZG — Schiefstellung / Verschiebung', r.etaGZG)}
