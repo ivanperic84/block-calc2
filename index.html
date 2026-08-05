@@ -2076,10 +2076,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px">
           <div class="field"><label>Bemessungsgrösse (y-Achse)</label>
             <select id="bem-mode" onchange="_bemModeUI()" style="width:100%;background:var(--s1);border:1px solid var(--ol);border-radius:var(--r1);color:var(--on);padding:6px 8px;font-family:var(--f-mono);font-size:10.5px;cursor:pointer;outline:none">
-              <option value="H">Blocktiefe H (Kurven = B×L)</option>
-              <option value="B">Seitenlänge B (Kurven = H)</option>
+              <option value="H">Blocktiefe H · Balken = B×L</option>
+              <option value="B">Seitenlänge B · Balken = H</option>
             </select></div>
-          <div class="field"><label id="bem-hs-label">B×L-Kurven [m, kommagetrennt]</label>
+          <div class="field"><label id="bem-hs-label">B×L-Werte [m, kommagetrennt]</label>
             <input id="bem-hs" type="text" style="font-family:var(--f-mono)"/></div>
           <div class="field"><label>Böschung β₁ [°]</label>
             <input id="bem-b1" type="number" step="5" value="0"/></div>
@@ -10663,10 +10663,10 @@ function _bemModeUI(){
   const mh=document.getElementById('bem-maxh'), mhl=document.getElementById('bem-maxh-label');
   if(mh){ const on=mode==='H'; mh.disabled=!on; mh.style.opacity=on?'':'0.4'; if(mhl) mhl.style.opacity=on?'':'0.4'; }
   if(mode==='H'){
-    if(lbl) lbl.textContent='B×L-Kurven [m, kommagetrennt]';
+    if(lbl) lbl.textContent='B×L-Werte [m, kommagetrennt]';
     si('bem-hs', _DIM_BL_STAFFEL.map(([,b])=>b.toFixed(2)).join(', '));
   } else {
-    if(lbl) lbl.textContent='H_Block-Kurven [m, kommagetrennt]';
+    if(lbl) lbl.textContent='H_Block-Werte [m, kommagetrennt]';
     const H0=+gi('g_hblock')||2.2;
     si('bem-hs',[Math.max(0.8,H0-0.5),H0,H0+0.5,H0+1.0].map(v=>v.toFixed(1)).join(', '));
   }
@@ -10695,7 +10695,7 @@ async function runBemessung(){
   const lvls=[...document.querySelectorAll('.bem-lvl-cb:checked')].map(cb=>LOAD_LVLS[+cb.dataset.i]).filter(Boolean);
   if(!lvls.length){ status.textContent='Mindestens ein Lastniveau auswählen.'; return; }
   const curveVals=(gi('bem-hs')||'').split(',').map(s=>+s.trim()).filter(v=>isFinite(v)&&v>0.3).slice(0,5);
-  if(!curveVals.length){ status.textContent='Kurvenwerte prüfen (z. B. '+(mode==='H'?'1.10, 1.20, 1.40':'1.8, 2.2, 2.7')+').'; return; }
+  if(!curveVals.length){ status.textContent='Werte prüfen (kommagetrennt, z. B. '+(mode==='H'?'1.10, 1.20, 1.40':'1.8, 2.2, 2.7')+').'; return; }
   const b1=+gi('bem-b1')||0;
   const b2raw=(document.getElementById('bem-b2').value||'').trim();
   const betas=[b1]; if(b2raw!=='' && isFinite(+b2raw) && +b2raw!==b1) betas.push(+b2raw);
@@ -10717,12 +10717,15 @@ async function runBemessung(){
   const setLoads=ll=>{ si('l_NG',ll.NG); si('l_HGx',ll.HGx); si('l_HGy',ll.HGy);
     si('l_MGx',ll.MGx); si('l_MGy',ll.MGy);
     si('l_HWx',ll.HWx); si('l_HWy',ll.HWy); si('l_MWx',ll.MWx); si('l_MWy',ll.MWy); };
+  // Live-C₁ je Sweep-Schritt: c1AutoValue() liest die (soeben gesetzte) Suchgeometrie aus dem DOM →
+  // C₁ folgt der Blocktiefe/Seitenlänge exakt (kein Freeze mehr). Manueller C₁ bleibt konstant (Feldwert).
+  const liveC1=fb=>{ try{ return c1AutoValue().c1_eff; }catch(_){ return fb; } };
   try{
     const series=[];   // {label, beta, pts:[{name, val|null}]}
     let done=0, total=betas.length*curveVals.length;
     for(const beta of betas){
       for(const cv of curveVals){
-        status.textContent='Berechne Kurve '+(++done)+' / '+total+'  ('+(mode==='H'?'B×L = '+cv.toFixed(2):'H = '+cv.toFixed(2))+' m, β = '+beta+'°)…';
+        status.textContent='Berechne Balken '+(++done)+' / '+total+'  ('+(mode==='H'?'B×L = '+cv.toFixed(2):'H = '+cv.toFixed(2))+' m, β = '+beta+'°)…';
         await new Promise(r=>setTimeout(r,10));   // UI-Repaint zwischen Kurven
         // Kurven-Zustand in die Felder schreiben (C₁/Kombis exakt wie die App)
         si('bg_beta',String(beta));
@@ -10739,14 +10742,18 @@ async function runBemessung(){
             if(cv < Math.max(Bk_,Lk_)-1e-9){ found=null; }   // Kopf passt nicht in dieses B×L
             else for(let H=start; H<=Hmax+1e-9; H+=step){
               const Hs=snap(H);
-              const r=_doCalculate({ ...base, raw:{ ...base.raw, g_hblock:String(Hs) }, _pure:true });
+              si('g_hblock',String(Hs));                                  // DOM setzen → C₁ live (t = H+ü)
+              const c1e = base.c1_manual ? base.c1_auto_eff : liveC1(base.c1_auto_eff);
+              const r=_doCalculate({ ...base, c1_auto_eff:c1e, raw:{ ...base.raw, g_hblock:String(Hs) }, _pure:true });
               if(r && _dimEtaMin(r)>=1.0){ found=Hs; foundR=r; break; }
             }
           } else {
             // y = kleinste Seitenlänge B bei festem H=cv
             for(let B=start; B<=Bmax+1e-9; B+=step){
               const Bs=snap(B), Ls=snap(B*ratio);
-              const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(Bs), g_by:String(Ls) }, _pure:true });
+              si('g_bx',String(Bs)); si('g_by',String(Ls));              // DOM setzen → C₁ live (B-abhängig)
+              const c1e = base.c1_manual ? base.c1_auto_eff : liveC1(base.c1_auto_eff);
+              const r=_doCalculate({ ...base, c1_auto_eff:c1e, raw:{ ...base.raw, g_bx:String(Bs), g_by:String(Ls) }, _pure:true });
               if(r && _dimEtaMin(r)>=1.0){ found=Bs; foundR=r; break; }
             }
           }
@@ -10797,25 +10804,33 @@ function _bemGovAbbr(g){ return ({'GZT Standsicherheit':'GZT','GZG Schiefstellun
 function _bemTableHTML(series, lvls, meta){
   const betas=meta.betas;
   const mRes=ll=>Math.hypot((ll.MGx||0)+(ll.MWx||0),(ll.MGy||0)+(ll.MWy||0));
+  const nB=Math.max(1,betas.length), nC=Math.max(1, Math.round(series.length/nB));
   const th='padding:3px 9px 3px 0;border-bottom:1px solid var(--ol);color:var(--xdim);font-weight:500;font-size:8.5px;letter-spacing:.04em;text-transform:uppercase';
+  const DIV='border-left:0.5px solid var(--ol2)';                     // dezente Trennlinie zwischen den Böschungsfällen (Gruppenkopf + Einrückung trennen zusätzlich)
+  const grpStart=si=>nB>1 && si>0 && (si%nC===0);                     // erste Spalte einer neuen β-Gruppe
   let h='<style>#bem-chart .bem-cell:hover{outline:1.5px solid var(--acc);outline-offset:-1.5px}</style>'
-    +'<table style="border-collapse:collapse;font-size:10px;font-family:var(--f-mono)"><thead><tr>'
-    +'<th style="text-align:left;'+th+'">Lastniveau</th>'
-    +'<th style="text-align:right;'+th+'">M_res,k [kNm]</th>';
-  series.forEach(sr=>{ const bl=sr.label+(betas.length>1&&sr.beta!==betas[0]?' β'+sr.beta+'°':'');
-    h+='<th style="text-align:right;'+th+'">'+bl+'</th>'; });
+    +'<table style="border-collapse:collapse;font-size:10px;font-family:var(--f-mono)"><thead>';
+  // Gruppenkopf: je Böschung ein zusammengefasster Titel (nur bei >1 Böschung)
+  if(nB>1){
+    h+='<tr><th style="'+th+'"></th><th style="'+th+'"></th>';
+    betas.forEach((b,bi)=>{ h+='<th colspan="'+nC+'" style="text-align:center;'+th+(bi>0?';'+DIV+';padding-left:16px':'')+'">Böschung β = '+b+'°</th>'; });
+    h+='</tr>';
+  }
+  // Einzelkopf (Balken-Wert je Spalte)
+  h+='<tr><th style="text-align:left;'+th+'">Lastniveau</th><th style="text-align:right;'+th+'">M_res,k [kNm]</th>';
+  series.forEach((sr,si)=>{ h+='<th style="text-align:right;'+th+(grpStart(si)?';'+DIV+';padding-left:16px':'')+'">'+sr.label+'</th>'; });
   h+='</tr></thead><tbody>';
   lvls.forEach((ll,i)=>{
     h+='<tr><td style="padding:3px 9px 3px 0;color:var(--on2)">'+(ll.name||'?')+'</td>'
       +'<td style="text-align:right;padding:3px 9px;color:var(--dim)">'+mRes(ll).toFixed(0)+'</td>';
-    series.forEach((sr,sIdx)=>{ const p=sr.pts[i];
+    series.forEach((sr,sIdx)=>{ const p=sr.pts[i], gs=grpStart(sIdx);
       const clickable=!!(p&&p.val!=null);
       const cell= clickable
         ? p.val.toFixed(2)+' <span style="color:var(--xdim)">('+_bemGovAbbr(p.gov)+')</span>'
           +(p.vol!=null?'<div style="color:var(--dim);font-size:8.5px">'+p.vol.toFixed(1)+' m³</div>':'')
         : '<span style="color:var(--fail)">—</span>';
       h+='<td '+(clickable?'class="bem-cell" onclick="_bemApplyCell('+sIdx+','+i+')" title="Abmessung ins Modell übernehmen"':'')
-        +' style="text-align:right;padding:3px 9px;color:var(--on);vertical-align:top'+(clickable?';cursor:pointer':'')+'">'+cell+'</td>'; });
+        +' style="text-align:right;padding:3px 9px'+(gs?';padding-left:16px;'+DIV:'')+';color:var(--on);vertical-align:top'+(clickable?';cursor:pointer':'')+'">'+cell+'</td>'; });
     h+='</tr>';
   });
   h+='</tbody></table>'
@@ -10844,7 +10859,7 @@ function _bemApplyCell(sIdx, lIdx){
     + row('H_Block', H.toFixed(2)+' m')
     + (p.vol!=null?row('Betonkubatur', p.vol.toFixed(1)+' m³'):'')
     + (p.gov?row('massgebend', p.gov):'')
-    + (sr.beta?row('Böschung (Kurve)', 'β = '+sr.beta+'°'):'');
+    + (sr.beta?row('Böschung', 'β = '+sr.beta+'°'):'');
   document.getElementById('ov-bem-apply').classList.add('open');
 }
 function _bemConfirmApply(){
@@ -10929,7 +10944,7 @@ function buildBemessungSVG(series, names, meta){
     s+=`<rect x="${VB-padR+10}" y="${ly+16}" width="10" height="10" fill="none" stroke="var(--dim)" stroke-width="1.3"/><text x="${VB-padR+24}" y="${ly+25}" font-family="var(--f-mono)" font-size="8" fill="var(--dim)">β₂ = ${betas[1]}° (hohl)</text>`;
   }
   // Fussnoten
-  s+=`<text x="${padL}" y="${(HB-32).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--dim)">Balken = erf. ${meta.mode==='H'?'Blocktiefe H (Kurven = B×L fest)':'Seitenlänge B (Kurven = H_Block)'} je Lastniveau · <tspan fill="var(--acc)">Balken anklicken → übernehmen</tspan> · × = keine Lösung bis ${meta.ymissing} m</text>
+  s+=`<text x="${padL}" y="${(HB-32).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--dim)">Balken = erf. ${meta.mode==='H'?'Blocktiefe H (je B×L, fest)':'Seitenlänge B (je H_Block)'} je Lastniveau · <tspan fill="var(--acc)">Balken anklicken → übernehmen</tspan> · × = keine Lösung bis ${meta.ymissing} m</text>
       <text x="${padL}" y="${(HB-20).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--xdim)">Lastniveaus sind eigenständige Masttypen (keine Interpolation dazwischen) · Baugrund/Kopf/ü/Teilsicherheiten wie Eingabe · Modell: ${CALC_MODEL==='block'?'Blockfundament (Steckner)':'Flachfundament (Hansen)'} · Raster 0.05 m</text>
       <text x="${padL}" y="${(HB-8).toFixed(1)}" font-family="var(--f-mono)" font-size="8" fill="var(--xdim)">${CALC_MODEL==='block'?'Block-GZG kollabiert modellbedingt ab β ≈ −30° (Steckner Gl.4)':'Globale Böschungsstandsicherheit (Gleitkreis) bei β ≠ 0 separat prüfen'}</text>`;
   return s+'</svg>';
