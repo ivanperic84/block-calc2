@@ -8896,6 +8896,9 @@ function calcPfahlsicherung(){
   const dEx_side     = worst ? (worst.dEx_side || '') : '';
   const dEx_gov      = worst ? (worst.dEx_gov || 0) : 0;
   const hasExState   = d_ex > 0.01 && worst && (worst.dEx_used || 0) > 0.01;
+  // Steckner-Mechanismus im Aushubzustand degeneriert (NL in Sohle, Kapazitätskurve kehrt um) →
+  // M_u,ex ist KEINE gültige Kapazität mehr, sondern der eingefrorene Wert einer flacheren Grube.
+  const dEx_degen    = hasExState && worst ? !!worst.dEx_degen : false;
 
   // ── Richtungsfall Stütze (gleiche dirX-Konvention wie Zustand A):
   // Pfähle stehen gegenüber dem Aushub. Moment ZUM Aushub → Blockkopf bewegt sich
@@ -9133,31 +9136,64 @@ function calcPfahlsicherung(){
   const exClipRed = (exClip && Hu_1k_full > 0.01) ? (1 - Hu_1k / Hu_1k_full) : 0;
   const Hu_1     = Hu_1k / gamma_R;                 // Bemessungswert
 
-  // Nichtlinearer p-y-Service-Solve bei der tatsächlichen Last/Pfahl (Reaktion auf p_u
-  // gedeckelt). Bei Nicht-Konvergenz (nahe Grenzlast) Fallback auf linear (py1 skaliert).
+  // Nichtlinearer p-y-Service-Solve bei der tatsächlichen Last/Pfahl (Reaktion auf p_u gedeckelt).
+  // KONVERGENZ-BEDEUTUNG (Jul 2026, verifiziert): Nicht-Konvergenz tritt GENAU im Grenzlastband auf
+  // (L=1.0 m, H_u,k=5.76 kN → keine Konvergenz für H=5.5…6.45 kN; darunter y=4.3 mm, darüber 47.5 mm).
+  // Der frühere lineare Ersatzwert lieferte dort 0.98 mm statt real ≫47 mm (~50× unkonservativ) und
+  // meldete η_V „erfüllt", obwohl η_H<1 → die nicht monotonen, unschlüssigen Erfüllungsgrade.
+  // Nach Reese/Matlock (API RP-2A) wächst die p-y-Verformung beim Erreichen der Grenzlast über alle
+  // Grenzen — eine linear gerechnete Verformung ist dort bedeutungslos. Jetzt: divergiert der Solve,
+  // gelten Verformung/Moment als nicht nachweisbar (η = 0, nicht erfüllt).
+  // Ein STRUKTURELLER Solver-Ausfall (Rückgabe null) behält den linearen Ersatzwert (Robustheit).
   const H_per  = H_pfahl_total / n;
   const pyNL   = bddBeamPY(EI, B, e_eff, L_emb, H_per, ksAt, {puAt});
   const pyUse  = (pyNL && pyNL.converged) ? pyNL : null;
+  const pyDiverged = !!(pyNL && pyNL.converged === false);   // im/über dem Grenzlastbereich
   // Max. Bettungs-Ausnutzung p/p_u im Pfahl (für die p-y-Kennlinien-Skizze)
   let pyMob = 0.5;
   if(pyUse){ pyMob = 0; for(const pt of pyUse.profile){ if(pt.z>0){ const pu=puAt(pt.z); if(pu>0.1) pyMob=Math.max(pyMob, Math.abs(pt.p)/pu); } } }
+  else if(pyDiverged) pyMob = 1;                              // Bettung voll ausgeschöpft
 
-  // Stahlnachweis pro Pfahl: M_max aus der nichtlinearen p-y-Biegelinie (Fallback linear).
+  // Stahlnachweis pro Pfahl: M_max aus der nichtlinearen p-y-Biegelinie.
   // Gestossen (Krinner): Biegemoment über die begrenzte Biegelänge Lbend_p (Stoss = Gelenk).
-  const pyNLb    = spliced_p ? bddBeamPY(EI, B, e_eff, Lbend_p, H_per, ksAt, {puAt}) : pyNL;
-  const pyBUse   = (pyNLb && pyNLb.converged) ? pyNLb : (spliced_p ? null : pyUse);
-  const M_max_1  = pyBUse ? pyBUse.Mmax_kNm : Mmax1b * H_per;
-  const etaStahl = Mpl / Math.max(0.001, M_max_1);
+  const pyNLb     = spliced_p ? bddBeamPY(EI, B, e_eff, Lbend_p, H_per, ksAt, {puAt}) : pyNL;
+  const pyBUse    = (pyNLb && pyNLb.converged) ? pyNLb : (spliced_p ? null : pyUse);
+  const pyBDiverg = spliced_p ? !!(pyNLb && pyNLb.converged === false) : pyDiverged;
+  const M_max_1   = pyBUse ? pyBUse.Mmax_kNm : (pyBDiverg ? Infinity : Mmax1b * H_per);
+  // Querschnittsnachweis mit N+M-INTERAKTION (SIA 263). Der Pfahl trägt über die Richtstütze auch
+  // AXIAL (N = H_eff·|tan α| / n) — vorher war der Nachweis reine Biegung (η = M_pl/M_max), also
+  // unkonservativ; spürbar bei steiler Stütze + kleinem Profil. Das Pfahlfundament-Modul rechnet die
+  // Interaktion seit je (|N|/R_t,d + |M|/M_Rd) → jetzt konsistent (Aug 2026).
+  // WIDERSTANDSBASIS (Aug 2026): Querschnittswiderstand jetzt als BEMESSUNGSWERT mit γ_M nach
+  // SIA 263 (γ_M0 = 1.05 für den Querschnittsnachweis von Baustahl; überschreibbar via
+  // SETTINGS.sichGammaM). Vorher war f_yk = 355 N/mm² ungeteilt angesetzt — im GZT inkonsistent,
+  // da die Einwirkungsseite mit γ_G/γ_Q bemessen ist. Wirkt auf BEIDE Interaktionsterme.
+  // Divergiert der p-y-Solve, ist M_max_1 = Infinity ⇒ util = Infinity ⇒ η = 0 (nicht erfüllt).
+  const gamma_M   = Math.max(1.0, +(SETTINGS.sichGammaM ?? 1.05));
+  const N_pl      = 355e3 * (prof.A || 0) / gamma_M;    // [kN] N_pl,Rd Querschnitt
+  const M_pl_Rd   = Mpl / gamma_M;                      // [kNm] M_pl,Rd
+  const N_ax_1    = Math.abs(V_pfahl) / n;              // [kN] Axialkraft je Pfahl (Zug ODER Druck)
+  const utilN     = N_pl > 0.01 ? N_ax_1 / N_pl : 0;
+  const utilM     = Math.abs(M_max_1) / Math.max(0.001, M_pl_Rd);
+  const utilSt    = utilN + utilM;
+  const etaStahl  = utilSt > 1e-9 ? 1 / utilSt : Infinity;
 
   const Hu_gruppe = n * Hu_1 * f_gr;
 
   // ── C) Gesamtnachweis Tragfähigkeit
   const eta_H = H_pfahl_total > 0.01 ? Hu_gruppe / H_pfahl_total : Infinity;
 
-  // Verformung — Kopfverschiebung aus der nichtlinearen p-y-Biegelinie (Fallback linear)
-  const delta_1_mm = pyUse ? pyUse.yHead_mm : yHead1 * H_per;
+  // Verformung — Kopfverschiebung aus der nichtlinearen p-y-Biegelinie. Divergenz = Grenzlastbereich
+  // → unbeschränkte Verformung, KEIN linearer Ersatzwert (s. Kommentar beim Service-Solve oben).
+  const delta_1_mm = pyUse ? pyUse.yHead_mm : (pyDiverged ? Infinity : yHead1 * H_per);
   const delta_gruppe_mm = delta_1_mm * (1 / f_gr);       // Gruppe verformt sich mehr
-  const neig_mm_m = delta_gruppe_mm;                      // tan α × 1000 (h_Ref = 1 m)
+  // Verkippung θ: die Pfahlkopfverschiebung δ wird über die (axial steife) Richtstütze auf den
+  // Blockanschluss übertragen; der Block dreht um seine Sohle ⇒ θ = δ / arm_stuetze [mm/m].
+  // FRÜHER: neig_mm_m = delta_gruppe_mm, also h_Ref = 1 m fix („tan α × 1000") — die Eingabefelder
+  // heissen aber „Schiefstellung [mm/m]" ⇒ Label und Rechnung widersprachen sich und die Verkippung
+  // wurde um den Faktor arm_stuetze (typ. 3–4) ÜBERSCHÄTZT (η_V entsprechend zu klein).
+  const h_ref_tilt = Math.max(0.5, arm_stuetze);          // [m] Sohle → Anschluss Richtstütze
+  const neig_mm_m  = delta_gruppe_mm / h_ref_tilt;        // [mm/m] echte Schiefstellung
   const eta_V = d_krit / Math.max(0.001, neig_mm_m);
 
   // ── Axialer Pfahlnachweis: V = H_eff·tan(α) drückt den Pfahl (Mantelreibung HEB-Kasten)
@@ -9178,7 +9214,11 @@ function calcPfahlsicherung(){
 
   // ── Systemnachweis Block + Pfahl (GZT) — Blockkapazität im AUSHUBZUSTAND,
   //    Pfahlbeitrag kapazitätsgedeckelt, volle Bemessungslast im Nenner
-  const Mu_sys     = hasExState ? Mu_block_ex : Mu_block;
+  // Bei degeneriertem Mechanismus wird dem Block KEINE Restkapazität gutgeschrieben (Aug 2026):
+  // M_u,ex ist dort der eingefrorene Wert einer viel flacheren Grube (verifiziert: d_ex = 3.00 m von
+  // t = 3.10 m liefert die Kapazität einer 0.75-m-Grube). Eine nicht berechenbare Kapazität darf im
+  // Systemnachweis nicht angerechnet werden → das System trägt allein über die Pfähle.
+  const Mu_sys     = hasExState ? (dEx_degen ? 0 : Mu_block_ex) : Mu_block;
   const H_pf_full  = (H_d_bemessung + M_d_bemessung / arm_stuetze) * Math.cos(alpha_rad);
   const M_pile_cap = pile_active ? Math.min(H_pf_full, Hu_gruppe) * arm_stuetze : 0;
   const eta_sys = (isFinite(etaGZT_block) && Md_Hst_block >= 0.1)
@@ -9200,8 +9240,12 @@ function calcPfahlsicherung(){
   // Erdwiderstand, Gl.66) ab; die Böschung geht dort über Kp,β/C₁ ein.
   const bishopRes = null;
   // ── D) Massgebende Gesamtsicherheit (Minimum aller Nachweise)
+  // GZG System (Schiefstellung Block+Pfahl) gehört in die massgebende Gesamtsicherheit — sonst kann
+  // eine verletzte Schiefstellung nie „MASSGEBEND" werden und schlägt nicht auf den Status durch
+  // (Jul 2026; das Pfahlfundament-Modul führt η_GZG seit je in eta_massg → jetzt konsistent).
   const _etas = [['System', eta_sys], ['Tragf.', eta_H], ['Verform.', eta_V],
-                 ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab]];
+                 ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab],
+                 ['GZG System', eta_GZG_sys]];
   let eta_massgebend = Infinity, nw_massgebend = '—';
   for(const [_nm, _ev] of _etas){
     if(isFinite(_ev) && _ev < eta_massgebend){ eta_massgebend = _ev; nw_massgebend = _nm; }
@@ -9216,8 +9260,15 @@ function calcPfahlsicherung(){
   const row = (lbl, val, unit='') =>
     `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)">
       <span style="color:var(--dim)">${lbl}</span>
-      <span style="font-weight:500;font-family:var(--f-mono)">${val}${unit?'<span style="color:var(--xdim);font-weight:400"> '+unit+'</span>':''}</span>
+      <span style="font-weight:500;font-family:var(--f-mono)">${val}${(unit && !/≫/.test(String(val)))?'<span style="color:var(--xdim);font-weight:400"> '+unit+'</span>':''}</span>
     </div>`;
+  // Zahlenformat mit Grenzlast-Fall: divergierter p-y-Solve liefert Infinity (unbeschränkt)
+  const nfx = (v, d=1) => isFinite(v) ? v.toFixed(d) : '≫ Grenzlast';
+  // Hinweiszeile, wenn der Pfahl im/über dem Grenzlastbereich liegt (p-y-Solve divergiert)
+  const divNote = `<div style="margin:4px 0 2px;padding:5px 8px;background:var(--fail-s);border-left:2px solid var(--fail);border-radius:3px;font-size:9px;color:var(--fail);line-height:1.5">
+        Pfahl im Grenzlastbereich der Bettung — die p-y-Verformung wächst unbeschränkt (Reese/Matlock).
+        Verformung und Biegemoment sind hier nicht nachweisbar; massgebend ist die Lateraltragfähigkeit (η_H).
+      </div>`;
 
   const warn_s = neig_mm_m >= d_krit
     ? `<div style="margin-top:6px;padding:6px 10px;background:var(--fail-s);border-left:2px solid var(--fail);border-radius:3px;font-size:9.5px;color:var(--fail);font-family:var(--f-mono)">Kritischer Grenzwert überschritten — Sofortmassnahme</div>`
@@ -9258,7 +9309,8 @@ function calcPfahlsicherung(){
           return `<span style="color:${c};font-weight:600">${isFinite(e)?e.toFixed(2):'n.m.'}</span>`; };
         const sideLbl = dEx_side==='passiv' ? 'Erdwiderstandsseite' : dEx_side==='aktiv' ? 'aktive Seite'
                       : dEx_side==='parallel' ? 'parallel zur Lastrichtung' : '—';
-        const needSich = (isFinite(etaGZT_ex)&&etaGZT_ex<1)||(isFinite(etaGZG_ex)&&etaGZG_ex<1);
+        // Degeneration ⇒ Zustand A ist NICHT NACHWEISBAR (kein gültiges M_u,ex) ⇒ Sicherung zwingend
+        const needSich = dEx_degen || (isFinite(etaGZT_ex)&&etaGZT_ex<1)||(isFinite(etaGZG_ex)&&etaGZG_ex<1);
         const warnDeep = d_ex >= t_bl - 0.01;
         const colC = (tt, rows) => `<div style="flex:1;min-width:90px;background:var(--s2);border-radius:var(--r1);padding:6px 8px">
           <div style="font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--xdim);margin-bottom:4px">${tt}</div>${rows}</div>`;
@@ -9272,11 +9324,15 @@ function calcPfahlsicherung(){
                 kv('GZG η', pill(etaGZG_block)) +
                 kv('M_u', Mu_block.toFixed(0)+' kNm'))}
             ${colC('A — ohne Massnahme',
-                kv('GZT η'+(komb_ex?' · K'+komb_ex:''), pill(hasExState?etaGZT_ex:NaN)) +
+                kv('GZT η'+(komb_ex?' · K'+komb_ex:''), dEx_degen
+                    ? '<span style="color:var(--fail);font-weight:600">n. führbar</span>'
+                    : pill(hasExState?etaGZT_ex:NaN)) +
                 kv('GZG η <span style="color:var(--xdim)">(Näh.)</span>', pill(hasExState?etaGZG_ex:NaN)) +
-                kv('M_u,ex', hasExState?Mu_block_ex.toFixed(0)+' kNm':'—') +
+                kv('M_u,ex', !hasExState ? '—'
+                    : dEx_degen ? '<span style="color:var(--fail)">ungültig</span>'
+                    : Mu_block_ex.toFixed(0)+' kNm') +
                 (hasExState && dEx_gov > 0.01 && dEx_gov < d_ex - 0.01
-                  ? kv('massg. Bauzustand', 'd = '+dEx_gov.toFixed(2)+' m') : ''))}
+                  ? kv('Kurvenumkehr ab', 'd = '+dEx_gov.toFixed(2)+' m') : ''))}
             ${colC('B — mit Massnahme',
                 kv('η_System', pill(eta_sys)) +
                 kv('GZG_sys η', pill(eta_GZG_sys)) +
@@ -9284,9 +9340,17 @@ function calcPfahlsicherung(){
           </div>
           <div style="margin-top:5px;padding:5px 8px;border-left:2px solid ${needSich?'var(--warn)':'var(--ok)'};background:${needSich?'var(--warn-s)':'var(--ok-s)'};font-size:9.5px;color:${needSich?'var(--warn)':'var(--ok)'}">
             ${!hasExState ? 'Zustand A noch nicht berechnet — Berechnen ausführen'
+              : dEx_degen ? 'Sicherung zwingend — Zustand A rechnerisch NICHT NACHWEISBAR'
               : needSich ? 'Sicherung erforderlich — Aushub ohne Massnahme nicht nachgewiesen'
               : 'Aushub ohne Massnahme rechnerisch zulässig'}
           </div>
+          ${dEx_degen ? `<div style="margin-top:4px;padding:5px 8px;border-left:2px solid var(--fail);background:var(--fail-s);font-size:9px;color:var(--fail);line-height:1.5">
+            <b>Steckner-Mechanismus degeneriert</b> — der Erdwiderstand oberhalb der Neutrallinie ist durch den
+            Aushub aufgezehrt, die NL wandert in die Sohle (Gl.64/65). Ab d = ${dEx_gov.toFixed(2)} m liefert
+            Gl.66 keine fallende Kapazität mehr (rechnerisch steigt M_u wieder an) → der Nachweis ist ausserhalb
+            seines Gültigkeitsbereichs. Es wird KEIN M_u,ex ausgewiesen und dem Block im Systemnachweis KEINE
+            Restkapazität angerechnet (Kragarm-/Stützwandproblem → gesonderter Nachweis erforderlich).
+          </div>` : ''}
           ${warnDeep ? `<div style="margin-top:4px;padding:4px 8px;border-left:2px solid var(--fail);font-size:9px;color:var(--fail)">Aushub bis/unter Sohle — Steckner-Modell nicht mehr gültig, gesonderter Nachweis erforderlich</div>` : ''}
           ${hasGW && z_gw < d_ex ? `<div style="margin-top:4px;padding:4px 8px;border-left:2px solid var(--warn);font-size:9px;color:var(--warn)">GW über Aushubsohle — Wasserhaltung vorausgesetzt; einseitiger Wasserdruck nicht modelliert</div>` : ''}
           <div style="margin-top:4px;font-size:8px;color:var(--xdim);line-height:1.5">Näherungen: E₀-Seitenflächen unverändert · GZG D_eff = t − d_ex · Rankine-Keil ohne δ${dEx_side==='parallel'?' · Aushub parallel — Einfluss vernachlässigt':''}</div>
@@ -9400,13 +9464,21 @@ function calcPfahlsicherung(){
 
       <div class="lf-grp">Innere Tragsicherheit — Bauteil (GZT)</div>
       ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
-      ${row('M_max,1 (p-y'+(pyUse?(pyUse.yielded?', plastisch':', elastisch')+', z='+(pyUse.sMmax-e_eff).toFixed(2)+'m u.GOK':' — Näherung')+')', M_max_1.toFixed(1), 'kNm')}
+      ${row('M_max,1 (p-y'+(pyBUse?((pyBUse.yielded?', plastisch':', elastisch')+', z='+(pyBUse.sMmax-e_eff).toFixed(2)+'m u.GOK'):(pyBDiverg?' — Grenzlast':' — Näherung'))+')', nfx(M_max_1), 'kNm')}
+      ${pyBDiverg ? divNote : ''}
       ${spliced_p ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
-      ${row('M_pl (S355)', Mpl.toFixed(1), 'kNm')}
+      ${row('M_pl,k (S355, f_yk = 355 N/mm²)', Mpl.toFixed(1), 'kNm')}
+      ${row('γ_M (SIA 263, Querschnitt)', gamma_M.toFixed(2), '')}
+      ${row('M_pl,Rd = M_pl,k / γ_M', M_pl_Rd.toFixed(1), 'kNm')}
+      ${row('N_Pfahl'+(axial_pullout?' (Zug)':' (Druck)')+' = H_eff·tan(α)/n', N_ax_1.toFixed(1), 'kN')}
+      ${row('N_pl,Rd = A·f_yk/γ_M (A = '+((prof.A||0)*1e4).toFixed(1)+' cm²)', N_pl.toFixed(0), 'kN')}
+      <div class="nw-formula" style="margin-top:3px">|N|/N_pl,Rd + |M|/M_pl,Rd ≤ 1  ·  η = 1 / Ausnutzung</div>
+      ${row('Ausnutzung = '+utilN.toFixed(3)+' (N) + '+(isFinite(utilM)?utilM.toFixed(3):'≫')+' (M)', isFinite(utilSt)?utilSt.toFixed(3):'≫ Grenzlast', '')}
       <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:2px;border-top:1px solid var(--ol)">
-        <span style="color:var(--dim)">η_Stahl = M_pl / M_max,1</span>
+        <span style="color:var(--dim)">η_Stahl = 1 / (|N|/N_pl,Rd + |M|/M_pl,Rd)</span>
         <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
       </div>
+      <div style="font-size:8px;color:var(--xdim);margin-top:2px">N+M-Interaktion (SIA 263) mit γ_M = ${gamma_M.toFixed(2)} auf beide Terme; Knicken des Pfahls nicht massgebend (allseitig gebettet)</div>
       ${CARD_END}
       ${(isFinite(etaGZT_block) && Md_Hst_block >= 0.1) ? '<div class="lf-grp">Stabilität — System Block + Pfahl (GZT)</div>' : ''}
       ${(() => {
@@ -9417,16 +9489,23 @@ function calcPfahlsicherung(){
         const eta_ex_c  = !hasExState ? 'var(--xdim)' : etaGZT_ex >= 1.0 ? 'var(--ok)' : 'var(--fail)';
         const capped    = H_pf_full > Hu_gruppe + 0.01;
         const deficit   = Math.max(0, Md_Hst_block - Mu_sys);
-        return cardHd('Systemnachweis Block + Pfahl', eta_sys, null, nw_massgebend==='System') + `
+        // Die System-GZG-Zeile (Schiefstellung) sitzt in dieser Karte → Karte auch dann als
+        // massgebend markieren, wenn η_GZG,sys das Minimum stellt (sonst trüge keine Karte den Tag).
+        return cardHd('Systemnachweis Block + Pfahl', eta_sys, null,
+                      nw_massgebend==='System' || nw_massgebend==='GZG System') + `
             ${row('M_d,H* (Steckner, Block)', Md_Hst_block.toFixed(1), 'kNm')}
             <div style="display:flex;justify-content:space-between;padding:3px 0">
               <span style="color:var(--dim)">M_u Block intakt</span>
               <span style="font-family:var(--f-mono);color:${eta_blk_c}">${Mu_block.toFixed(1)} kNm · η=${etaGZT_block.toFixed(2)}</span>
             </div>
-            ${hasExState ? `<div style="display:flex;justify-content:space-between;padding:3px 0">
+            ${hasExState ? (dEx_degen ? `<div style="display:flex;justify-content:space-between;padding:3px 0">
+              <span style="color:var(--fail)">M_u,ex Block (Aushub${dEx_side?', '+dEx_side:''})</span>
+              <span style="font-family:var(--f-mono);color:var(--fail)">nicht anrechenbar · 0.0 kNm</span>
+            </div>
+            <div style="font-size:8px;color:var(--fail);padding:0 0 3px;line-height:1.5">Mechanismus degeneriert (NL in Sohle) → das System trägt allein über die Pfähle</div>` : `<div style="display:flex;justify-content:space-between;padding:3px 0">
               <span style="color:var(--dim)">M_u,ex Block (Aushub${dEx_side?', '+dEx_side:''})</span>
               <span style="font-family:var(--f-mono);color:${eta_ex_c}">${Mu_block_ex.toFixed(1)} kNm · η=${isFinite(etaGZT_ex)?etaGZT_ex.toFixed(2):'n.m.'}</span>
-            </div>` : ''}
+            </div>`) : ''}
             ${pile_active
               ? row('M_Pfahl = min(H_voll, H_u,Gruppe) × arm'+(capped?' — kapazitätsgedeckelt':''), M_pile_cap.toFixed(1), 'kNm')
               : `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)"><span style="color:var(--fail)">M_Pfahl — Anschluss nur druckfest, Zugfall</span><span style="font-family:var(--f-mono);color:var(--fail)">0.0 kNm</span></div>`}
@@ -9436,7 +9515,7 @@ function calcPfahlsicherung(){
               <span style="font-family:var(--f-mono);color:${eta_sys_c}">η = ${eta_sys.toFixed(2)}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--ol);font-size:9.5px">
-              <span style="color:var(--dim)">Schiefstellung System (Block+Pfahl, GZG)</span>
+              <span style="color:var(--dim)">Schiefstellung System (Block+Pfahl, GZG)${nw_massgebend==='GZG System'?' <span style="color:var(--acc);font-size:8px;letter-spacing:.05em">MASSGEBEND</span>':''}</span>
               <span style="font-family:var(--f-mono)">${neig_sys_mm.toFixed(1)} mm/m · ${eta_cls(eta_GZG_sys)(isFinite(eta_GZG_sys)?'η = '+eta_GZG_sys.toFixed(2):'n.m.')}</span>
             </div>
             <div style="font-size:8px;color:var(--xdim);margin-top:3px">Kapazitätssumme: Blockwiderstand im Aushubzustand + kapazitätsgedeckelter Pfahlbeitrag vs. volle Bemessungslast</div>
@@ -9453,8 +9532,10 @@ function calcPfahlsicherung(){
       ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
       ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
       ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
-      ${row('δ Pfahlkopf bei H_d (p-y)', delta_gruppe_mm.toFixed(1), 'mm')}
-      ${row('Verkippung tan α × 1000', neig_mm_m.toFixed(1), 'mm/m')}
+      ${row('δ Pfahlkopf bei H_d (p-y)', nfx(delta_gruppe_mm), 'mm')}
+      ${row('h_Bezug Verkippung (Sohle → Anschluss)', h_ref_tilt.toFixed(2), 'm')}
+      ${row('Verkippung θ = δ / h_Bezug', nfx(neig_mm_m), 'mm/m')}
+      ${pyDiverged ? divNote : ''}
       <div style="display:flex;gap:8px;margin-top:2px">
         <div style="flex:1;padding:3px 6px;background:${neig_mm_m>=d_krit?'var(--fail-s)':neig_mm_m>=d_mass?'var(--warn-s)':'var(--ok-s)'};border-radius:3px;font-size:9px">
           Massnahme: ${d_mass.toFixed(0)} mm/m
@@ -9553,7 +9634,7 @@ function _updateSicherungsBadge(eta_H, eta_V, etaStahl, neig_mm_m, d_krit, d_mas
   const cls  = isCrit ? 'pill-f' : isWarn ? 'pill-w' : 'pill-ok';
   const icon = isCrit ? '● Kritisch' : isWarn ? '● Massnahme erf.' : '● Sicherung nachgew.';
   const etaStr = isFinite(eta_massgebend) ? eta_massgebend.toFixed(2) : 'n.m.';
-  const txt  = `${icon} · η=${etaStr} (${nw_massgebend}) · ${neig_mm_m.toFixed(1)} mm/m`;
+  const txt  = `${icon} · η=${etaStr} (${nw_massgebend}) · ${isFinite(neig_mm_m)?neig_mm_m.toFixed(1)+' mm/m':'≫ Grenzlast'}`;
 
   badge.style.display = 'block';
   badge.innerHTML = `<span class="pill ${cls}" style="white-space:nowrap;backdrop-filter:blur(4px)">${txt}</span>`;
@@ -9948,6 +10029,7 @@ function _doCalculate(inp){
     let komb_GZT_=0;   // massgebende Lastfall-Kombination (1-8, 0 = n/a)
     // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
     let etaGZT_ex_=Infinity, Mu_GZT_ex_=0, komb_GZT_ex_=0, dEx_used_=0, dEx_side_='', dEx_gov_=0, yNL_ex_=0;
+    let dEx_degen_=false;   // Steckner-Mechanismus im Aushubzustand degeneriert (s. Zustand-A-Loop)
     let etaGZG_ex_=Infinity, alpha_GZG_ex_=0, Mu_char_GZG_ex_=0;
     const mob = SETTINGS.mob ?? 0.25;  // ausserhalb if(isBlock) — wird im return-Objekt benötigt
     // Passivdruck über NL mobilisieren (Standard AN): E_p,mob = E_p0 + mob·(E_p − E_p0), E_p0 = Ruhedruck K0
@@ -10152,10 +10234,21 @@ function _doCalculate(inp){
       if(d_ex_sich > 0.01){
         const exSign = (gi('pfahl_dex_seite') || 'gleis') === 'gleis' ? -1 : 1;
         // Bauzustands-Logik: der Aushub DURCHLÄUFT alle Zwischentiefen — massgebend ist
-        // das Minimum über den Aushubpfad. Verhindert zugleich das Gl.64/65-Artefakt
-        // (NL in Sohle: Rp entfällt im Nu-Term → Mu steigt rechnerisch wieder an).
-        // Festes 0.25-m-Raster: Stützstellen sind für grösseres d_ex eine Obermenge
-        // → η_ex(d_ex) garantiert monoton fallend.
+        // das Minimum über den Aushubpfad. Festes 0.25-m-Raster: Stützstellen sind für
+        // grösseres d_ex eine Obermenge → η_ex(d_ex) monoton fallend.
+        //
+        // DEGENERATIONS-ERKENNUNG (Aug 2026): Das Pfad-Minimum war bislang ein WORKAROUND für das
+        // Gl.64/65-Artefakt (NL wandert in die Sohle → der Term −E_w·v entfällt → M_u STEIGT bei
+        // tieferem Aushub wieder an). Es verhinderte den sichtbaren Anstieg, lieferte aber für jeden
+        // tiefen Aushub die Kapazität einer viel FLACHEREN Grube — stark unkonservativ.
+        // Verifiziert (t=3.10, φ=30, Aushub passivseitig): M_u,ex 279.3 → 238.0 (0.25 m) → 196.1
+        // (0.50 m) → 156.4 (0.75 m), y_NL 0.407 → 0.051 (NL in Sohle); ab 0.75 m friert der Wert ein
+        // und wird bis d_ex = 3.00 m (von t = 3.10 m!) unverändert als η = 2.03 „erfüllt" gemeldet.
+        // Steckner Gl.66 setzt eine INNENLIEGENDE Neutrallinie mit Erdwiderstand ober- UND unterhalb
+        // voraus; ein tiefer einseitiger Aushub macht daraus ein Kragarm-/Stützwandproblem → Formel
+        // ausserhalb ihres Gültigkeitsbereichs. Liegt das Minimum einer Kombination VOR der Endtiefe,
+        // hat die Kapazitätskurve umgekehrt ⇒ `exDegen` → der Nachweis wird als NICHT FÜHRBAR
+        // deklariert (statt eine zu günstige Zahl auszuweisen).
         const _exDepths = [];
         for(let _dz = 0.25; _dz < d_ex_sich - 0.01; _dz += 0.25) _exDepths.push(_dz);
         _exDepths.push(d_ex_sich);
@@ -10171,13 +10264,23 @@ function _doCalculate(inp){
           }
           const dirX = (Hxd_c !== 0 ? Hxd_c : Mokx_s) >= 0 ? 1 : -1;
           const isP  = dirX === exSign;                   // Aushub auf Passivseite?
+          let cbBest = null;                              // Pfad-Minimum DIESER Kombination
           for(const dxi of _exDepths){
             const rx_e = computeGZT_dir(Math.abs(Hxd_c), Math.abs(Mokx_s), B, L,
                           Object.assign({N: Nd_c}, isP ? {dExP: dxi} : {dExA: dxi}, _slpF(dirX)));
+            if(!cbBest || rx_e.eta < cbBest.eta) cbBest = {eta: rx_e.eta, d: dxi};
             if(!best_ex || rx_e.eta < best_ex.eta)
               best_ex = {eta: rx_e.eta, nr: cb.nr, r: rx_e, ux: true,
                          side: isP ? 'passiv' : 'aktiv', dGov: dxi};
           }
+          // Nur auf der PASSIVSEITE ist ein Minimum vor der Endtiefe ein Degenerations-Signal: dort
+          // zehrt der Aushub den Erdwiderstand ÜBER der NL auf, die NL wandert in die Sohle (Gl.64/65)
+          // und M_u steigt rechnerisch wieder an. Auf der AKTIVSEITE ist dasselbe Muster GUTARTIG —
+          // der Wegfall des aktiven Erddrucks wirkt anfangs günstig (M_u steigt leicht), danach fällt
+          // die Kurve regulär; das Pfad-Minimum ist dort eine legitime Bauzustands-Einhüllende.
+          // (Je Kombination geprüft, nicht nur an der global massgebenden — sonst könnte eine
+          // parallele/aktive Kombination die Degeneration der Querrichtung verdecken.)
+          if(isP && cbBest && cbBest.d < d_ex_sich - 0.01) dEx_degen_ = true;
         }
       }
       const rx = best.rx, ry = best.ry, use_x = best.ux;
@@ -10392,6 +10495,7 @@ function _doCalculate(inp){
       komb_GZT:   komb_GZT_,
       // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
       etaGZT_ex: etaGZT_ex_, Mu_GZT_ex: Mu_GZT_ex_, komb_GZT_ex: komb_GZT_ex_, y_NL_GZT_ex: yNL_ex_,
+      dEx_degen: dEx_degen_,
       etaGZG_ex: etaGZG_ex_, alpha_GZG_ex: alpha_GZG_ex_, Mu_char_GZG_ex: Mu_char_GZG_ex_,
       dEx_used: dEx_used_, dEx_side: dEx_side_, dEx_gov: dEx_gov_,
       ue_GZT: isBlock ? ue : 0,
@@ -13379,7 +13483,7 @@ function buildPfahlSystemSVG(params, wide=false){
 
   <!-- Werte -->
   <text x="${PAD_L}" y="${H_VB-7}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">
-    H_u,k=${Hu_1k?.toFixed(1)??'—'}kN · H_u,d=${Hu_1.toFixed(1)}kN · δ=${delta_gruppe_mm.toFixed(1)}mm · ${neig_mm_m.toFixed(1)}mm/m · α_lat=${alpha_lat.toFixed(2)}
+    H_u,k=${Hu_1k?.toFixed(1)??'—'}kN · H_u,d=${Hu_1.toFixed(1)}kN · δ=${isFinite(delta_gruppe_mm)?delta_gruppe_mm.toFixed(1)+'mm':'≫ Grenzlast'} · ${isFinite(neig_mm_m)?neig_mm_m.toFixed(1)+'mm/m':'—'} · α_lat=${alpha_lat.toFixed(2)}
   </text>
 </svg>`;
 }
