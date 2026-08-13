@@ -497,6 +497,23 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 .nw-row.clickable { cursor:pointer; }
 .nw-row.clickable:hover span:first-child { color:var(--on2); }
 .nw-row:last-child { border-bottom:none; }
+/* Zuklappbare Warnbox (Nachweis-Sidebar): einzeilige Zusammenfassung + Detailtext auf Klick.
+   Hält die Sidebar übersichtlich, ohne Information zu verlieren. */
+.nw-warn { margin:4px 0; border-left:2px solid var(--warn); border-radius:3px; background:var(--warn-s); }
+.nw-warn.f { border-left-color:var(--fail); background:var(--fail-s); }
+.nw-warn.i { border-left-color:var(--dim); background:var(--s2); }        /* neutral/informativ */
+.nw-warn.i > summary, .nw-warn.i > div { color:var(--dim); }
+.nw-warn > summary { padding:5px 8px; font-family:var(--f-mono); font-size:9px; color:var(--warn);
+  cursor:pointer; list-style:none; display:flex; align-items:flex-start; gap:5px; line-height:1.45; }
+.nw-warn.f > summary { color:var(--fail); }
+.nw-warn > summary::-webkit-details-marker { display:none; }
+.nw-warn > summary::marker { content:''; }
+.nw-warn > summary:hover { filter:brightness(1.15); }
+.nw-warn .nww-chev { flex:0 0 auto; margin-top:2px; transition:transform .18s ease; }
+.nw-warn[open] .nww-chev { transform:rotate(90deg); }
+.nw-warn > div { padding:0 8px 6px 21px; font-family:var(--f-mono); font-size:9px;
+  color:var(--warn); line-height:1.55; }
+.nw-warn.f > div { color:var(--fail); }
 .nw-row span:first-child { color:var(--dim); }
 .nw-row-formula { font-family:var(--f-mono); font-size:8.5px; color:var(--xdim); padding:4px 8px 6px 10px; border-left:2px solid var(--ol); margin:1px 0 4px; display:none; }
 .nw-row-formula.open { display:block; }
@@ -2275,6 +2292,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div><div class="toggle-label">GZG-Verdrehung entkoppeln</div><div class="toggle-sub">Verformung ohne Schrägstellungs-Kopplung: Moment → reine Verdrehung, Horizontalkraft → reine Verschiebung. Vereinfachung; Kraftberechnung bleibt gekoppelt. Standard: an (entkoppelt) — abschalten für das gekoppelte Modell.</div></div>
           <label class="sw"><input type="checkbox" id="set-pfahl-decouple" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
         </div>
+        <div class="toggle-row" style="margin-top:6px">
+          <div><div class="toggle-label">Lateraler Gruppeneffekt (p-Multiplier)</div><div class="toggle-sub">Eng stehende Pfähle überlagern ihre lateralen Druckzonen → p-y-Kurve abgemindert (Reese/API RP-2A, AASHTO): Faktor 0.65 bei s/D ≤ 3, voll ab s/D ≥ 5. Wirkt auf Bettungssteifigkeit UND Grenzwiderstand. Geneigte Pfähle spreizen auf → meist wirkungslos. Standard: an.</div></div>
+          <label class="sw"><input type="checkbox" id="set-pfahl-latgrp" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        </div>
       </div>
     </div>
 
@@ -2637,6 +2658,7 @@ function loadSettings(){
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
   set('set-pfahl-alat', SETTINGS.pfahlAlphaLat??0.30);
   chk('set-pfahl-decouple', SETTINGS.pfahlGzgDecouple);
+  chk('set-pfahl-latgrp', SETTINGS.pfahlLatGroup!==false);   // Standard an (p-Multiplier)
   // _bgKoernig / _c1Methode sind PROJEKT-Zustand (FDS-Array, via applyState wiederhergestellt) und werden
   // im Boden-Tab gewählt — NICHT aus SETTINGS überschreiben. Sonst setzt jedes Öffnen der Optionen die
   // Boden-Auswahl (USCS-Bodenart / C₁-Methode) auf den veralteten SETTINGS-Wert zurück → C₁ und damit der
@@ -2754,6 +2776,7 @@ function applySettings(){
   SETTINGS.pfahlRandMin = gv('set-pfahl-randmin');
   SETTINGS.pfahlAlphaLat = Math.min(1.0, Math.max(0.1, gv('set-pfahl-alat')||0.30));   // laterale Bettung k_s
   SETTINGS.pfahlGzgDecouple = gc('set-pfahl-decouple');
+  SETTINGS.pfahlLatGroup = gc('set-pfahl-latgrp');   // lateraler Gruppeneffekt (p-Multiplier)
   // bg_koernig / c1_methode NICHT in SETTINGS spiegeln — sie sind Projekt-Zustand (FDS/applyState).
   // (Früher hier gespeichert + in loadSettings zurückgelesen → überschrieb die Boden-Auswahl beim Öffnen.)
   SETTINGS.nw = {
@@ -6680,10 +6703,15 @@ function _pbResultHTML(r, piles, n){
         <div class="kv"><span>M_yd</span><span>${(gL.My||0).toFixed(1)} kNm</span></div>
       </div></div>
 
-    ${r.slopeActive?`<div style="font-size:9.5px;line-height:1.4;padding:6px 8px;border-radius:5px;margin:0 0 8px;border:1px solid var(--warn);color:var(--warn)">
-      <b>Böschung aktiv (β = ${r.slopeBeta.toFixed(0)}°):</b> laterale Bettung talseitig auf ${(r.slopeFac*100).toFixed(0)} % reduziert (K<sub>p,β</sub>/K<sub>p</sub>${(+gi('bg_bhoehe')||0)>0.05?`, h<sub>β</sub>-abgemildert`:``}) → Verformung/Moment ungünstiger. Globale Standsicherheit (Gleitkreis) separat.</div>`:''}
+    ${r.slopeActive ? wBox('warn', 'Böschung aktiv (β = '+r.slopeBeta.toFixed(0)+'°) — Bettung reduziert',
+      `Die laterale Bettung ist talseitig auf <b>${(r.slopeFac*100).toFixed(0)} %</b> reduziert
+       (K<sub>p,β</sub>/K<sub>p</sub>${(+gi('bg_bhoehe')||0)>0.05?', h<sub>β</sub>-abgemildert':''}) →
+       Verformung und Biegemoment fallen ungünstiger aus. Die <b>globale Standsicherheit (Gleitkreis)</b>
+       ist damit NICHT abgedeckt und separat nachzuweisen.`) : ''}
 
-    ${r.headFixReq?`<div style="font-size:9px;line-height:1.4;color:var(--warn);background:var(--s3);border-left:2px solid var(--warn);border-radius:var(--r1);padding:6px 9px;margin:0 0 8px">Anordnung kollinear / Einzelpfahl: Die Rotationsstabilität um die Pfahllinie erfordert einen <b>biegesteifen Kopfanschluss</b> (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).</div>`:''}
+    ${r.headFixReq ? wBox('warn', 'Kollineare Anordnung — biegesteifer Kopfanschluss vorausgesetzt',
+      `Die Rotationsstabilität um die Pfahllinie erfordert hier einen <b>biegesteifen Kopfanschluss</b>
+       (kRot angesetzt). Bei ≥3 nicht-kollinearen Pfählen rechnet das Modell rein gelenkig (konservativ).`) : ''}
 
     <!-- Pfahlkräfte-Übersicht — immer sichtbar, Zeile anklicken = Aufschlüsselung -->
     <div style="font-size:9px;color:var(--dim);margin:0 0 3px">Pfahlkräfte ULS (Bemessungswerte, γ_G inf/sup) · massgebend je Pfahl über ${r.ulsCombosN||0} Lastfälle (quer/längs) &nbsp;<span style="color:var(--xdim)">(N: + Druck / − Zug · Zeile anklicken → Lastanteile + LF)</span></div>
@@ -6703,11 +6731,34 @@ function _pbResultHTML(r, piles, n){
       ${row('|N|_max (P'+(r.govPile+1)+', '+(govZug?'Zug':'Druck')+')', govF.toFixed(1)+' kN')}
       ${etaRow('η Geotechnik', r.etaGeo, 'η = R_s,d '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(govZug?r.Rskin_dZ:r.Rskin_d).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
       <div style="font-size:8px;color:var(--xdim);margin-top:2px">q_s,k Erfahrungswert je Schicht (EA-Pfähle/DIN 4128, Verpresspfahl, tiefenkonstant — Vordimensionierung) · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · <b>Spitzendruck NICHT angesetzt</b> (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand) · kritische Tiefe vernachlässigt</div>
+      ${(() => {
+        // q_s,k-Plausibilität: Preset-Tabellenwert vs. eingegebenes φ' (unkonservative Richtung)
+        const mm = (typeof _qsPlausibility==='function') ? _qsPlausibility(r.L||0) : [];
+        if(!mm.length) return '';
+        const li = mm.map(m=>`<b>${m.name}</b>: φ' = ${m.phiI}° eingegeben, Profil unterstellt ${m.phiP}° →
+          q_s,k = ${m.qsT} kPa (Tabelle) statt ≈ ${m.qsH} kPa (aus φ') = <b>+${m.over} %</b>`).join('<br>');
+        return wBox('warn', 'q_s,k passt nicht zum eingegebenen φ′ ('+mm.length+' Schicht'+(mm.length>1?'en':'')+')',
+          `Der Erfahrungswert q_s,k stammt aus dem gewählten <b>Bodenprofil</b> (EA-Pfähle/DIN 4128) und ist
+           <b>unabhängig von φ′</b>. Hier liegt φ′ deutlich unter dem Wert, den das Profil unterstellt — der
+           Mantelreibungswiderstand ist damit <b>unkonservativ</b>:<br>${li}<br>
+           Abhilfe: q_s,k je Schicht im Tab «Boden» manuell setzen (Tabelle/Probebelastung) oder ein
+           passenderes Bodenprofil wählen.`);
+      })()}
+      ${(r.L||0) > 15 ? wBox('warn', 'Lange Einbindung — R_s,k wächst linear mit L',
+        `Die Mantelreibung ist tiefenkonstant angesetzt (Erfahrungswert), eine <b>kritische Tiefe</b> ist
+         nicht modelliert → R_s,k steigt unbegrenzt mit der Länge (L = ${(r.L||0).toFixed(1)} m).
+         Bei grossen Verpresslängen ist die Spannungsübertragung real begrenzt (fortschreitendes Entbinden);
+         die wirksame Verpresslänge ist gesondert zu beurteilen bzw. durch Probebelastung zu belegen.`) : ''}
       ${diagWrap('_pbdiag_axial', buildPbAxialDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
     ${cardHd('Laterale Bodentragfähigkeit (Rotation / Kick-out)', r.etaLat, null, govName==='Lat')}
       <div class="nw-formula">Grenzgleichgewicht der p_u-Hüllkurve (Reibung 3·Kp·σ'v·d, bindig 9·c_u·d) · Interaktion V/V_u,d + M_gl/M_u,d ≤ 1</div>
+      ${r.latGrpFac!=null && r.latGrpFac<0.999
+        ? row('Lateraler Gruppeneffekt (p-Multiplier, s̄/D='+(isFinite(r.grpSd)?r.grpSd:'∞')+')',
+              '×'+r.latGrpFac.toFixed(2)+' &nbsp;<span style="color:var(--xdim)">auf k_s und p_u</span>')
+        : row('Lateraler Gruppeneffekt (s̄/D='+(isFinite(r.grpSd)?r.grpSd:'∞')+')',
+              r.latGrpOn===false ? 'aus (Optionen)' : 'p_m = 1.00 (gespreizt)')}
       ${row('V_u,d (Querkraft-Grenzlast, /γ_R)', r.Vcap_d+' kN')}
       ${row('M_u,d (Moment-Grenzwiderstand, /γ_R)', r.Mcap_d+' kNm')}
       ${row('Einwirkung V_d / M_gl,d', r.latVd+' kN / '+r.latMd+' kNm')}
@@ -6736,7 +6787,11 @@ function _pbResultHTML(r, piles, n){
       ${row('N_b,Rd = χ·N_pl,k/γ_s', r.N_bRd+' kN')}
       ${etaRow('η Knicken', r.etaKnick, 'η = N_b,Rd / N_Ed = '+r.N_bRd.toFixed(0)+' / '+r.Ncomp.toFixed(0)+' = '+(isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞')+'<br>N_b,Rd = χ·N_pl,k/γ_s = '+r.chi.toFixed(2)+'·'+r.N_pl_k.toFixed(0)+'/'+(+gi('pb_gS')||1.15).toFixed(2))}
       ${diagWrap('_pbdiag_knick', buildPbKnickDiagram(r,n,_gztExpanded))}
-      ${r.knickValid===false?'<div style="font-size:8px;color:var(--warn);margin-top:3px">L = '+r.L.toFixed(2)+' m &lt; Knick-Halbwelle L_hw = '+r.L_hw.toFixed(2)+' m — die Euler-auf-Bettung-Formel (längenunabhängig) ist hier ungültig; massgebend ist die laterale Bodentragfähigkeit (Rotation/Kick-out).</div>':''}
+      ${r.knickValid===false ? wBox('warn', 'Knickformel ungültig (L < Knick-Halbwelle)',
+        `L = ${r.L.toFixed(2)} m &lt; L_hw = ${r.L_hw.toFixed(2)} m — die längenunabhängige
+         Euler-auf-Bettung-Formel N_cr = 2·√(k·EI) setzt mindestens eine Knick-Halbwelle Einbindung
+         voraus und ist hier <b>nicht gültig</b>. Massgebend ist die laterale Bodentragfähigkeit
+         (Rotation/Kick-out).`) : ''}
       <div style="font-size:8px;color:var(--xdim);margin-top:3px">Knickkurve c (Stahl-Voll/Hohlstab, α=0.49) · Bettung weichste Schicht · im weichen Boden massgebend, sonst Querschnitt</div>
       <!-- massgebend innerer Tragwiderstand -->
       <div style="display:flex;justify-content:space-between;padding:5px 0 0;margin-top:6px;border-top:1px solid var(--ol);font-weight:600"><span>η innerer Tragwiderstand = min(Querschnitt, Knicken)</span><span style="color:${cV(Math.min(r.etaSteel,r.etaKnick))}">η = ${isFinite(Math.min(r.etaSteel,r.etaKnick))?Math.min(r.etaSteel,r.etaKnick).toFixed(2):'∞'}</span></div>
@@ -7360,7 +7415,18 @@ function autoC1(){
 // ════════════════════════════════════════════
 
 // Grundwassertiefe [m u. GOK] — Infinity wenn kein GW vorhanden
-function gwDepth(){ return gi('bg_gw')==='ja' ? Math.max(0, +gi('bg_gwt')||3.0) : Infinity; }
+// GW-Tiefe [m u. GOK], Infinity = kein Grundwasser.
+// BUGFIX (Aug 2026): früher `+gi('bg_gwt')||3.0` — der ||-Operator wertet die Eingabe **0** als
+// falsy und ersetzte sie durch 3.0 m. Damit wurde ausgerechnet der UNGÜNSTIGSTE Fall (GW an GOK)
+// stillschweigend verworfen und verhielt sich wie „kein GW" (verifiziert: t=2.0 m, GW 0 ⇒ Auftrieb
+// und γ' blieben unberücksichtigt, Ergebnis identisch zu bg_gw='nein'). Jetzt zählt 0 als 0.
+function gwDepth(){
+  if(gi('bg_gw') !== 'ja') return Infinity;
+  const raw = gi('bg_gwt');
+  if(raw == null || String(raw).trim() === '') return 3.0;   // nur ein LEERES Feld fällt zurück
+  const v = +raw;
+  return isFinite(v) ? Math.max(0, v) : 3.0;                 // „0" ist ein gültiger Wert (GW an GOK)
+}
 
 // Effektive Wichte einer Schicht unterhalb GW (γ' Eingabe, sonst γ−10)
 function gamEff(s){ return s.gamma2 > 0 ? s.gamma2 : Math.max(1, s.gamma - 10); }
@@ -8540,6 +8606,20 @@ function pileGroupEfficiency(piles, L, dG){
            sMean:+sMean.toFixed(2), sd:isFinite(sd)?+sd.toFixed(1):Infinity };
 }
 
+// ── Lateraler Gruppenfaktor (p-Multiplier) ───────────────────────────────────────────────
+// Eng stehende Pfähle überlagern ihre lateralen Druckzonen ("shadowing") → die p-y-Kurve der
+// Gruppe ist gegenüber dem Einzelpfahl abgemindert (Reese & Van Impe; API RP-2A; AASHTO).
+// Streng ist p_m reihenweise (Führungsreihe ≈ 0.8, Folgereihen 0.3–0.5 bei s/D = 3); hier
+// bewusst EIN Gruppenmittel über s/D — Vordimensionierungs-Niveau und identisch zur Kurve, die
+// das Sicherungsmodul seit je verwendet: volle Wirkung ab s/D ≥ 5, 0.65 bei s/D ≤ 3, linear dazwischen.
+// Wirkt auf Steifigkeit UND Grenzwiderstand (der p-Multiplier skaliert die ganze p-y-Kurve).
+function latGroupFactor(sOverD){
+  const r = +sOverD;
+  if(!isFinite(r) || r >= 5) return 1.0;
+  if(r <= 3) return 0.65;
+  return 0.65 + (r - 3) / 2 * 0.35;
+}
+
 function pfahlbockAnalyse(cfg){
   const n = cfg.piles.length;
   const L = Math.max(0.5, cfg.L||6), e = Math.max(0, cfg.e||0);
@@ -8555,12 +8635,20 @@ function pfahlbockAnalyse(cfg){
   const EI = Math.max(1, Es * I);                          // kNm²
   const kAxSteel = Es * As / L;                           // reine Stahldehnung (Referenz)
   const kAx = microAxialStiffness(L, dG, Es * As);        // kN/m: Stahl + Boden-Last-Setzung (t-z)
+  // Gruppenwirkungsgrad (axial, Mantelreibung) — hier oben berechnet, weil der LATERALE
+  // Gruppenfaktor dieselbe Abstandskennzahl s̄/D nutzt und schon in ksAt/puAtL eingehen muss.
+  const grp      = pileGroupEfficiency(cfg.piles, L, dG);
+  // Lateraler Gruppeneffekt (p-Multiplier, Option SETTINGS.pfahlLatGroup, Standard AN): mindert die
+  // p-y-Kurve — Steifigkeit (ksAt) UND Grenzwiderstand (puAtL) — bei engem Achsabstand. Geneigte
+  // Pfähle spreizen mit der Tiefe auf ⇒ s̄/D gross ⇒ Faktor 1.0 (selbst-deaktivierend, wie bei η_g).
+  const latGrpOn  = (typeof SETTINGS === 'undefined') || SETTINGS.pfahlLatGroup !== false;
+  const latGrpFac = latGrpOn ? latGroupFactor(grp.sd) : 1;
   // Laterale Bettung (schichtweise M_E) + p-y-Kopfsteifigkeit
   const nu = 0.3, alat = Math.min(1, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 0.30)));
   // Böschung (abfallend) reduziert die laterale Bettung/Stützung (Talseite) — Faktor Kp,β/Kp aus renderPfahlbock.
   const bettungFac = Math.min(1, Math.max(0.1, cfg.bettungFac ?? 1));
   const ksAt = z => { const s = schichtAtDepth(Math.max(0,z)); const me = Math.max(0.5, s.me ?? (+gi('bg_me')||10));
-                      return me*1000 / ((1-nu*nu)*dG) * alat * bettungFac; };
+                      return me*1000 / ((1-nu*nu)*dG) * alat * bettungFac * latGrpFac; };
   const py1 = bddBeamPY(EI, dG, e, L, 1, ksAt);
   const kLat = py1 ? Math.max(1, 1000/Math.max(1e-3, py1.yHead_mm)) : 0.02*kAx;
   // Mantelreibung am Verpresskörper — schichtweise, q_s je Schicht (s.qs) oder α_c·c + β·σ'v.
@@ -8569,7 +8657,6 @@ function pfahlbockAnalyse(cfg){
   const zugFac  = Math.min(1, Math.max(0.05, cfg.zugFac ?? 1));
   const alphaC  = +(SETTINGS.pfahlAlphaC ?? 1.0);
   const _sk      = microSkinFriction(L, dG, skinFac, alphaC);
-  const grp      = pileGroupEfficiency(cfg.piles, L, dG);        // Gruppenwirkungsgrad η_g (axial)
   const Rskin_k  = _sk.Rk * grp.eta;                            // Druck (charakteristisch), η_g-reduziert
   const Rskin_kZ = Rskin_k * zugFac;                            // Zug (Herausziehen)
   const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
@@ -8579,9 +8666,10 @@ function pfahlbockAnalyse(cfg){
   //    Versagen des kurzen Pfahls). Fehlte bisher (nur lineare Bettung) → sehr kurze Pfähle „bestanden".
   //    p_u(z) schichtweise (Reibung 3·Kp·σ'v·B, bindig 9·c_u·B), Böschung via bettungFac. Gilt für den
   //    EINZELPFAHL (Kopf trägt volle Mast-H+M) UND als Reserve-Check je Pfahl der Gruppe.
+  //    latGrpFac: p-Multiplier (Gruppen-Shadowing) — skaliert die p-y-Kurve, also auch p_u.
   const puAtL = z => { const s=schichtAtDepth(Math.max(0,z)), ph=s.phi??30;
-    if(ph<=5) return z>1.5*dG ? 9*Math.max(0,s.c??0)*dG : 0;
-    const Kp=Math.tan(Math.PI/4+ph*Math.PI/360)**2; return 3*Kp*sigVeffTo(z)*dG*bettungFac; };
+    if(ph<=5) return z>1.5*dG ? 9*Math.max(0,s.c??0)*dG*latGrpFac : 0;
+    const Kp=Math.tan(Math.PI/4+ph*Math.PI/360)**2; return 3*Kp*sigVeffTo(z)*dG*bettungFac*latGrpFac; };
   const Vcap_k = pileLatCapLimitEq(L, dG, 0, puAtL) || 0;       // reine Querkraft-Grenzlast am GOK [kN]
   const Mcap_k = pileLatMomCap(L, dG, puAtL) || 0;              // reines Moment-Grenzwiderstand [kNm]
   const Vcap_d = Vcap_k/gR, Mcap_d = Mcap_k/gR;
@@ -8737,6 +8825,7 @@ function pfahlbockAnalyse(cfg){
              dz:+l.dz.toFixed(2), qs:Math.round(l.qs),
              dRk:+(l.dRk*grp.eta).toFixed(1), dRd:+(l.dRk*grp.eta/gR).toFixed(1), dRdZ:+(l.dRk*grp.eta*zugFac/gR).toFixed(1) })),
            grpEta:grp.eta, grpSMean:grp.sMean, grpSd:grp.sd, grpSCap:grp.sCap, grpSToe:grp.sToe,
+           latGrpFac:+latGrpFac.toFixed(3), latGrpOn,
            Rt_d:+Rt_d.toFixed(1), M_Rd:+M_Rd.toFixed(1), Mmax:+Mmax.toFixed(1),
            da:+da.toFixed(4), Wpl:Wpl, fyk:(tdn.fy||500), gammaS:+gS.toFixed(2),
            N_cr:+N_cr.toFixed(0), etaKnick:+etaKnick.toFixed(2), Ncomp:+Ncomp.toFixed(1),
@@ -8775,6 +8864,50 @@ function _updateSichSummaries(){
   s('sich-sum-param', `${(gi('pfahl_lv_mode')||'auto')==='auto'?'Lastverteilung auto':'f_eff = '+(+(document.getElementById('pfahl_laf')?.value||1)).toFixed(2)} · ${gi('pfahl_dm')||5}/${gi('pfahl_dk')||15} mm/m`);
 }
 
+// ── Zuklappbare Warnbox für die Nachweis-Sidebar (Sicherung UND Pfahlfundament) ──────────
+// Einzeilige Zusammenfassung immer sichtbar, Begründung erst auf Klick (Nutzerwunsch: die Sidebar
+// wurde durch lange Warntexte unübersichtlich). kind: 'warn' (Default) | 'fail'.
+function wBox(kind, title, body){
+  const cls = kind==='fail' ? ' f' : kind==='info' ? ' i' : '';
+  return `<details class="nw-warn${cls}">
+      <summary><svg class="nww-chev" width="9" height="9" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span>${title}</span></summary>
+      <div>${body}</div>
+    </details>`;
+}
+
+// ── q_s,k-Plausibilität (Mikropfahl-Mantelreibung) ───────────────────────────────────────
+// Bei gesetztem Bodenprofil liefert microQsExp() den TABELLENWERT des Presets (EA-Pfähle/
+// DIN 4128) — das eingegebene φ' geht NICHT ein. Liegt φ' deutlich UNTER dem Preset-φ (also
+// lockerere Lagerung als der Tabellenwert unterstellt), ist q_s,k unkonservativ.
+// Verifiziert: Preset „Sand" (q_s 150 kPa) mit φ'=24° ⇒ φ-Heuristik 100 kPa ⇒ +50 % zu hoch;
+// Preset „Kies" mit φ'=30° ⇒ +100 %. Nur die UNKONSERVATIVE Richtung wird gemeldet.
+function _qsPlausibility(L){
+  const out = [];
+  if(typeof SCHICHTEN === 'undefined' || typeof QS_EXP === 'undefined') return out;
+  const bgp = (typeof bgpMerged === 'function') ? bgpMerged()
+            : (typeof BGP !== 'undefined' ? BGP : {});
+  let z = 0;
+  for(let k = 0; k < SCHICHTEN.length && z < L - 1e-6; k++){
+    const s = SCHICHTEN[k], isLast = (k === SCHICHTEN.length - 1);
+    const bot = (s.d === 999 || isLast) ? L : Math.min(L, z + (+s.d || 0));
+    const manuell = (s.qs != null && +s.qs > 0);        // Tabelle/Probebelastung → kein Hinweis
+    if(bot > z + 1e-6 && !manuell && s.preset && QS_EXP[s.preset] != null){
+      const phiP = bgp[s.preset] ? +bgp[s.preset].phi : null;
+      const phiI = +(s.phi ?? phiP);
+      if(phiP != null && isFinite(phiP) && isFinite(phiI) && phiI < phiP - 3.5){
+        const qsT = QS_EXP[s.preset];
+        const qsH = microQsExp({phi: phiI, c: +(s.c || 0)});   // ohne preset ⇒ φ-Heuristik
+        if(qsH > 0 && qsT > qsH * 1.15)
+          out.push({ name: s.name || s.preset, phiP, phiI, qsT, qsH: Math.round(qsH),
+                     over: Math.round(100 * (qsT / qsH - 1)) });
+      }
+    }
+    z = bot;
+  }
+  return out;
+}
+
 function calcPfahlsicherung(){
   // Ergebnis in rechte Sidebar (pfahl-result-panel), nicht mehr im Tab
   const box = document.getElementById('pfahl-result-panel');
@@ -8789,11 +8922,15 @@ function calcPfahlsicherung(){
   const n       = +gi('pfahl_anzahl') || 2;
   const L       = +gi('pfahl_l')      || 4.0;
   const s_abst  = +gi('pfahl_s')      || 0.5;
-  const alpha   = (() => { const v = +gi('pfahl_alpha'); return isFinite(v) ? v : 60; })();  // signiert (kann < 0)
   const e_last  = +(document.getElementById('pfahl_e')?.value ?? '0');
   const d_abst  = +gi('pfahl_abstand')|| 2.0;
-  // h_s live aktualisieren
+  // α aus der Geometrie ableiten — MUSS vor dem Lesen von pfahl_alpha laufen (Aug 2026, Bugfix):
+  // α ist ein readonly-Feld, das _updatePfahlGeomHint() aus d/e/h_s/H_Kopf/ü berechnet. Vorher wurde
+  // `alpha` VOR diesem Aufruf gelesen → die Berechnung lief mit dem α des VORHERIGEN Renders
+  // (verifiziert: Feld 5.7°, verwendet 4.8°). Folge: F_s, V_Pfahl und η_Axial hingen an der
+  // Aufrufreihenfolge statt allein an der Geometrie (~2 % Streuung, Ergebnis nicht reproduzierbar).
   _updatePfahlGeomHint();
+  const alpha   = (() => { const v = +gi('pfahl_alpha'); return isFinite(v) ? v : 60; })();  // signiert (kann < 0)
   const d_mass  = +gi('pfahl_dm')    || 5;
   const d_krit  = +gi('pfahl_dk')    || 15;
   // h_mess entfernt — mm/m = tan α × 1000 = direkte Neigungsangabe (h_Referenz = 1m)
@@ -8907,7 +9044,11 @@ function calcPfahlsicherung(){
   const quer_gov = worst ? Math.abs(worst.Hxd) >= Math.abs(worst.Hyd) : true;
   let fall_zug = false;
   if(worst && quer_gov){
-    const _dirX = ((worst.Hxd !== 0 ? worst.Hxd : (worst.Md_ext_y ?? 0)) >= 0) ? 1 : -1;
+    // Bewegungsrichtung aus dem signierten Kippmoment der massgebenden Kombination (konsistent zum
+    // Zustand-A-Loop). Fallback auf H, falls das Feld fehlt (Altprojekte/Modellwechsel).
+    const _mokS = worst.M_ok_x_signed;
+    const _dirX = ((isFinite(_mokS) && _mokS !== 0) ? _mokS
+                  : (worst.Hxd !== 0 ? worst.Hxd : (worst.Md_ext_y ?? 0))) >= 0 ? 1 : -1;
     fall_zug = _dirX === exSign_p;
   }
   const zugfest     = (gi('pfahl_zugfest') || 'ja') !== 'nein';
@@ -8955,7 +9096,7 @@ function calcPfahlsicherung(){
 
   // Gruppeneffekt (Pfahl↔Pfahl, abstandsabhängig)
   const sB   = s_abst / B;
-  const f_gr = sB < 3 ? 0.65 : sB < 5 ? 0.65 + (sB-3)/2*0.35 : 1.0;
+  const f_gr = latGroupFactor(sB);   // gemeinsame p-Multiplier-Kurve (auch im Pfahlfundament-Modul)
 
   // ── Wirkungsschatten Block → Pfahl (Rankine-Keil, tiefengestaffelt, GRUNDRISS-bewusst)
   // Blockkeil von der Sohlenvorderkante (Tiefe t_bl) unter 45°−φ/2 zur Oberfläche.
@@ -9264,11 +9405,10 @@ function calcPfahlsicherung(){
     </div>`;
   // Zahlenformat mit Grenzlast-Fall: divergierter p-y-Solve liefert Infinity (unbeschränkt)
   const nfx = (v, d=1) => isFinite(v) ? v.toFixed(d) : '≫ Grenzlast';
-  // Hinweiszeile, wenn der Pfahl im/über dem Grenzlastbereich liegt (p-y-Solve divergiert)
-  const divNote = `<div style="margin:4px 0 2px;padding:5px 8px;background:var(--fail-s);border-left:2px solid var(--fail);border-radius:3px;font-size:9px;color:var(--fail);line-height:1.5">
-        Pfahl im Grenzlastbereich der Bettung — die p-y-Verformung wächst unbeschränkt (Reese/Matlock).
-        Verformung und Biegemoment sind hier nicht nachweisbar; massgebend ist die Lateraltragfähigkeit (η_H).
-      </div>`;
+  // Hinweis, wenn der Pfahl im/über dem Grenzlastbereich liegt (p-y-Solve divergiert)
+  const divNote = wBox('fail', 'Pfahl im Grenzlastbereich der Bettung',
+    `Die p-y-Verformung wächst beim Erreichen der Grenzlast unbeschränkt (Reese/Matlock, API RP-2A).
+     Verformung und Biegemoment sind hier nicht nachweisbar; massgebend ist die Lateraltragfähigkeit (η_H).`);
 
   const warn_s = neig_mm_m >= d_krit
     ? `<div style="margin-top:6px;padding:6px 10px;background:var(--fail-s);border-left:2px solid var(--fail);border-radius:3px;font-size:9.5px;color:var(--fail);font-family:var(--f-mono)">Kritischer Grenzwert überschritten — Sofortmassnahme</div>`
@@ -9344,16 +9484,17 @@ function calcPfahlsicherung(){
               : needSich ? 'Sicherung erforderlich — Aushub ohne Massnahme nicht nachgewiesen'
               : 'Aushub ohne Massnahme rechnerisch zulässig'}
           </div>
-          ${dEx_degen ? `<div style="margin-top:4px;padding:5px 8px;border-left:2px solid var(--fail);background:var(--fail-s);font-size:9px;color:var(--fail);line-height:1.5">
-            <b>Steckner-Mechanismus degeneriert</b> — der Erdwiderstand oberhalb der Neutrallinie ist durch den
-            Aushub aufgezehrt, die NL wandert in die Sohle (Gl.64/65). Ab d = ${dEx_gov.toFixed(2)} m liefert
-            Gl.66 keine fallende Kapazität mehr (rechnerisch steigt M_u wieder an) → der Nachweis ist ausserhalb
-            seines Gültigkeitsbereichs. Es wird KEIN M_u,ex ausgewiesen und dem Block im Systemnachweis KEINE
-            Restkapazität angerechnet (Kragarm-/Stützwandproblem → gesonderter Nachweis erforderlich).
-          </div>` : ''}
-          ${warnDeep ? `<div style="margin-top:4px;padding:4px 8px;border-left:2px solid var(--fail);font-size:9px;color:var(--fail)">Aushub bis/unter Sohle — Steckner-Modell nicht mehr gültig, gesonderter Nachweis erforderlich</div>` : ''}
-          ${hasGW && z_gw < d_ex ? `<div style="margin-top:4px;padding:4px 8px;border-left:2px solid var(--warn);font-size:9px;color:var(--warn)">GW über Aushubsohle — Wasserhaltung vorausgesetzt; einseitiger Wasserdruck nicht modelliert</div>` : ''}
-          <div style="margin-top:4px;font-size:8px;color:var(--xdim);line-height:1.5">Näherungen: E₀-Seitenflächen unverändert · GZG D_eff = t − d_ex · Rankine-Keil ohne δ${dEx_side==='parallel'?' · Aushub parallel — Einfluss vernachlässigt':''}</div>
+          ${dEx_degen ? wBox('fail', 'Steckner-Mechanismus degeneriert — Nachweis nicht führbar',
+            `Der Erdwiderstand oberhalb der Neutrallinie ist durch den Aushub aufgezehrt, die NL wandert in die
+             Sohle (Gl.64/65). Ab d = ${dEx_gov.toFixed(2)} m liefert Gl.66 keine fallende Kapazität mehr
+             (rechnerisch steigt M_u wieder an) → ausserhalb des Gültigkeitsbereichs. Es wird KEIN M_u,ex
+             ausgewiesen und dem Block im Systemnachweis KEINE Restkapazität angerechnet
+             (Kragarm-/Stützwandproblem → gesonderter Nachweis erforderlich).`) : ''}
+          ${warnDeep ? wBox('fail', 'Aushub bis/unter Sohle',
+            'Steckner-Modell nicht mehr gültig — gesonderter Nachweis erforderlich.') : ''}
+          ${hasGW && z_gw < d_ex ? wBox('warn', 'GW über Aushubsohle',
+            'Wasserhaltung vorausgesetzt; einseitiger Wasserdruck ist nicht modelliert.') : ''}
+          <div style="margin-top:4px;font-size:8px;color:var(--xdim);line-height:1.5">Näherungen: GZG D_eff = t − d_ex · Rankine-Keil ohne δ${dEx_side==='parallel'?' · Aushub parallel: nur die freigelegte E₀-Seitenfläche angesetzt (passive Stirnflächen intakt)':''}</div>
         </div>`;
       })()}
 
@@ -9365,8 +9506,10 @@ function calcPfahlsicherung(){
 
       <!-- Richtungsfall Stütze — immer sichtbar -->
       ${fall_zug ? (pile_active
-        ? `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--warn);background:var(--warn-s);border-radius:3px;font-size:9.5px;color:var(--warn)">Momentrichtung zum Aushub — Richtstütze wirkt auf ZUG. Anschlüsse müssen zugfest ausgebildet sein (Annahme: zugfest).</div>`
-        : `<div style="margin:0 0 8px;padding:6px 10px;border-left:2px solid var(--fail);background:var(--fail-s);border-radius:3px;font-size:9.5px;color:var(--fail)">Momentrichtung zum Aushub + Anschluss nur druckfest (Kontaktstoss) — Pfahlsystem trägt in diesem Lastfall NICHT (M_Pfahl = 0).</div>`)
+        ? wBox('warn', 'Richtstütze wirkt auf ZUG',
+            'Momentrichtung zum Aushub — die Anschlüsse müssen zugfest ausgebildet sein (Annahme: zugfest).')
+        : wBox('fail', 'Pfahlsystem trägt in diesem Lastfall NICHT',
+            'Momentrichtung zum Aushub + Anschluss nur druckfest (Kontaktstoss) → M_Pfahl = 0.'))
         : ''}
 
       ${cardHd('Einwirkung + Lastverteilung', null, 'F_s = '+F_s.toFixed(1)+' kN '+(fall_zug?'(Zug)':'(Druck)'))}
@@ -9930,7 +10073,19 @@ function _doCalculate(inp){
     // (Nγ-Term + Formbeiwerte über B'/L' ≤ 1 — richtungsunabhängig, egal ob Ausmitte in x oder y)
     const B_eff=Math.min(Be,Le), L_eff=Math.max(Be,Le);
     const rBL = L_eff>0.01 ? B_eff/L_eff : 1;
-    const q0=gs*t;
+    // ── Auflastspannung q₀ neben der Sohle — EFFEKTIVE Vertikalspannung (Aug 2026, Bugfix).
+    // Vorher `gs*t` mit gs = avgGammaToDepth(t) = TOTALwichte → unter GW bis 2× zu hoch
+    // (verifiziert: t=2.0 m, γ=19/γ'=9.5, GW an GOK ⇒ q₀ 38 statt 19 kPa) und damit der
+    // Grundbruchwiderstand unkonservativ. `sigVeffTo(t)` integriert schichtweise mit γ' unter
+    // dem GW-Spiegel; ohne GW identisch zu gs·t (Golden unberührt).
+    const q0 = sigVeffTo(t);
+    // Wichte UNTER der Sohle für den Nγ-Term: der Prandtl-Bruchkörper reicht ~0.5·B′ unter die
+    // Sohle. Liegt der GW-Spiegel darüber, wirkt dort γ' (Auftrieb) — anteilig interpoliert
+    // (DIN 4017 / EC7: γ₂ = γ′ bei GW über Sohle, Übergang innerhalb der Bruchzone).
+    const _zgw   = gwDepth();
+    const _dBr   = Math.max(0.1, 0.5*B_eff);                       // Tiefe der Bruchzone
+    const _fSub  = Math.min(1, Math.max(0, (t + _dBr - _zgw)/_dBr)); // Anteil unter GW
+    const gs_b_e = gs_b*(1-_fSub) + gamEff(soil)*_fSub;
 
     // ── 2. GRUNDBRUCH
     let Rd, etaGB;
@@ -9941,7 +10096,7 @@ function _doCalculate(inp){
       const sq = 1 + rBL*Math.sin(phi_d);
       const sg = 1 - 0.3*rBL;
       const sc = sq - (1-sq)/(Nc*Math.tan(phi_d)||1);
-      const Rd_sohle = (c_d*Nc*ic*sc*gb_c + q0*Nq*iq*sq*gb_q + 0.5*gs_b*B_eff*Ng*ig*sg*gb_g);
+      const Rd_sohle = (c_d*Nc*ic*sc*gb_c + q0*Nq*iq*sq*gb_q + 0.5*gs_b_e*B_eff*Ng*ig*sg*gb_g);
       // Steckner-Zusatz: Mantelreibungsanteil (umgerechnet auf Flächenspannung)
       const Rd_mantel = Tf_total / A;
       Rd = Rd_sohle + Rd_mantel;
@@ -9960,7 +10115,7 @@ function _doCalculate(inp){
         dq_f = phi_d>0.001 ? 1+2*Math.tan(phi_d)*(1-Math.sin(phi_d))**2*Math.atan(tr) : 1;
         dc_f = phi_d>0.001 ? dq_f-(1-dq_f)/(Nc*Math.tan(phi_d)) : 1+0.4*tr;
       }
-      Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b*B_eff*Ng*ig*sgg*gb_g;
+      Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b_e*B_eff*Ng*ig*sgg*gb_g;
       etaGB = Rd / (smax>0 ? smax : 0.001);
     }
 
@@ -10030,6 +10185,7 @@ function _doCalculate(inp){
     // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
     let etaGZT_ex_=Infinity, Mu_GZT_ex_=0, komb_GZT_ex_=0, dEx_used_=0, dEx_side_='', dEx_gov_=0, yNL_ex_=0;
     let dEx_degen_=false;   // Steckner-Mechanismus im Aushubzustand degeneriert (s. Zustand-A-Loop)
+    let Mokx_sign_=0;       // signiertes Kippmoment (Quer) der massgebenden Kombination
     let etaGZG_ex_=Infinity, alpha_GZG_ex_=0, Mu_char_GZG_ex_=0;
     const mob = SETTINGS.mob ?? 0.25;  // ausserhalb if(isBlock) — wird im return-Objekt benötigt
     // Passivdruck über NL mobilisieren (Standard AN): E_p,mob = E_p0 + mob·(E_p − E_p0), E_p0 = Ruhedruck K0
@@ -10061,12 +10217,19 @@ function _doCalculate(inp){
       //                                   Ep-Integrale ab Aushubsohle, bid und pu reduziert
       //                 {dExA}          — Aushub auf der AKTIVSEITE: Ea (günstig) und E'p/R'p
       //                                   (ungünstig: E'w und Nu sinken) ab Aushubsohle
+      //                 {dExS}          — Aushub PARALLEL zur Bewegungsrichtung (Längsfall): legt
+      //                                   genau EINE der beiden Steckner-Seitenflächen frei →
+      //                                   Ruhedruck E0/E0' und damit R0/R'0 dort reduziert (Gl.34/35).
+      //                                   Geometrie: E0 wirkt auf die 2 Flächen PARALLEL zur Last
+      //                                   (Breite 2·A_pl); der gleisparallele Graben liegt genau an
+      //                                   einer davon, sobald die Längsrichtung massgebend ist.
       function computeGZT_dir(H_d_dir, M_ok_dir, A_pl, B_q, fac) {
         const _gEa = fac && fac.gEa !== undefined ? fac.gEa : gEa;
         const _gEp = fac && fac.gEp !== undefined ? fac.gEp : gEp;
         const _N   = fac && fac.N   !== undefined ? fac.N   : Nd;
         const _dExP = fac && fac.dExP > 0 ? Math.min(fac.dExP, t*0.99) : 0;
         const _dExA = fac && fac.dExA > 0 ? Math.min(fac.dExA, t*0.99) : 0;
+        const _dExS = fac && fac.dExS > 0 ? Math.min(fac.dExS, t*0.99) : 0;
         // Steckner-Erweiterung (Option): Böschungs-Abminderung des passiven Erdwiderstands.
         // fEp  → E_p (über NL, auf der Bewegungs-/Passivseite) · fEpp → E'_p (unter NL, Gegenseite).
         // Beide default 1 ⇒ Original-Steckner (β_a=β_p=0), bit-identisch.
@@ -10109,10 +10272,18 @@ function _doCalculate(inp){
           }
           const Epp_k = _fEpp * Math.max(0, intEarthPress(t, bidD,'pp',gph,gc_,true,true,dpf,_dExA).E
                                   - intEarthPress(h, bidD,'pp',gph,gc_,true,true,dpf,_dExA).E);
-          const E0_k  = Math.max(0, intEarthPress(h, 2*A_pl,'0',gph,gc_,true,false).E
-                                  - intEarthPress(ue,2*A_pl,'0',gph,gc_,true,false).E);
-          const E0p_k = Math.max(0, intEarthPress(t, 2*A_pl,'0',gph,gc_,true,false).E
-                                  - intEarthPress(h, 2*A_pl,'0',gph,gc_,true,false).E);
+          // Ruhedruck auf die 2 Seitenflächen (Gl.34/35), Breite 2·A_pl. Bei gleisparallelem Aushub
+          // (_dExS, Längsfall) ist genau EINE der beiden Flächen freigelegt → getrennt integrieren:
+          // eine Fläche voll (A_pl), eine ab Aushubsohle (A_pl mit zSurf). Ohne _dExS bit-identisch.
+          const _e0 = (zTo, zFrom) => _dExS > 0
+            ? Math.max(0, intEarthPress(zTo, A_pl,'0',gph,gc_,true,false).E
+                        - intEarthPress(zFrom, A_pl,'0',gph,gc_,true,false).E)
+            + Math.max(0, intEarthPress(zTo, A_pl,'0',gph,gc_,true,false,undefined,_dExS).E
+                        - intEarthPress(zFrom, A_pl,'0',gph,gc_,true,false,undefined,_dExS).E)
+            : Math.max(0, intEarthPress(zTo, 2*A_pl,'0',gph,gc_,true,false).E
+                        - intEarthPress(zFrom, 2*A_pl,'0',gph,gc_,true,false).E);
+          const E0_k  = _e0(h, ue);
+          const E0p_k = _e0(t, h);
           const tdp = Math.tan(dpf * phi_k_rad);
           // Reibungskräfte charakteristisch (Gl.38-42) — ST-verifiziert: Rp = Ep_k·tanδp
           const Ra  = Ea_k * tan_d1;                      // Gl.38 (δ₁ = 2/3φ)
@@ -10217,12 +10388,13 @@ function _doCalculate(inp){
       let best = null;
       for(const cb of COMBOS){
         const {Nd_c, Hxd_c, Hyd_c, Mokx_s, Moky_s} = comboLoads(cb);
-        const _dirXc = (Hxd_c !== 0 ? Hxd_c : Mokx_s) >= 0 ? 1 : -1;
+        // Richtung aus dem signierten Kippmoment (s. Zustand-A-Loop) — nicht aus H allein
+        const _dirXc = (Mokx_s !== 0 ? Mokx_s : Hxd_c) >= 0 ? 1 : -1;
         const rx_c = computeGZT_dir(Math.abs(Hxd_c), Math.abs(Mokx_s), B, L, Object.assign({N: Nd_c}, _slpF(_dirXc)));
         const ry_c = computeGZT_dir(Math.abs(Hyd_c), Math.abs(Moky_s), L, B, {N: Nd_c});
         const ux_c = Math.abs(Hxd_c) >= Math.abs(Hyd_c);
         const eta_c = ux_c ? rx_c.eta : ry_c.eta;
-        if(!best || eta_c < best.eta){ best = {eta:eta_c, nr:cb.nr, cb, rx:rx_c, ry:ry_c, ux:ux_c}; }
+        if(!best || eta_c < best.eta){ best = {eta:eta_c, nr:cb.nr, cb, rx:rx_c, ry:ry_c, ux:ux_c, mokx_s:Mokx_s}; }
       }
 
       // ── Zustand A: Aushub OHNE Massnahme (Sicherungs-Modul aktiv) ──────────
@@ -10256,13 +10428,23 @@ function _doCalculate(inp){
           const {Nd_c, Hxd_c, Hyd_c, Mokx_s, Moky_s} = comboLoads(cb);
           const ux_e = Math.abs(Hxd_c) >= Math.abs(Hyd_c);
           if(!ux_e){
-            // Längsrichtung massgebend: Aushub parallel — Einfluss vernachlässigt (Näherung)
-            const ry_e = computeGZT_dir(Math.abs(Hyd_c), Math.abs(Moky_s), L, B, {N: Nd_c});
-            if(!best_ex || ry_e.eta < best_ex.eta)
-              best_ex = {eta: ry_e.eta, nr: cb.nr, r: ry_e, ux: false, side: 'parallel', dGov: d_ex_sich};
+            // Längsrichtung massgebend: der gleisparallele Graben liegt PARALLEL zur Bewegungs-
+            // richtung. Die passiven Stirnflächen (y-normal) bleiben intakt — aber der Aushub legt
+            // genau EINE der beiden Steckner-Seitenflächen frei (x-normal, Breite A_pl je Fläche)
+            // → Ruhedruck E0/E0' und die Mantelreibungen R0/R'0 dort reduziert (fac.dExS).
+            // Vorher wurde der Aushub in dieser Richtung KOMPLETT vernachlässigt (unkonservativ).
+            for(const dyi of _exDepths){
+              const ry_e = computeGZT_dir(Math.abs(Hyd_c), Math.abs(Moky_s), L, B, {N: Nd_c, dExS: dyi});
+              if(!best_ex || ry_e.eta < best_ex.eta)
+                best_ex = {eta: ry_e.eta, nr: cb.nr, r: ry_e, ux: false, side: 'parallel', dGov: dyi};
+            }
             continue;
           }
-          const dirX = (Hxd_c !== 0 ? Hxd_c : Mokx_s) >= 0 ? 1 : -1;
+          // Bewegungsrichtung aus dem VORZEICHENBEHAFTETEN Kippmoment am OK Kopf (Mokx_s enthält
+          // bereits H·(H_Kopf+ü) + M_ext + N·e). Vorher wurde primär das Vorzeichen von Hxd_c
+          // genommen — bei gegenläufigem H und M_ext (z. B. H = +5, M_ext = −100) kippt der Block
+          // aber entgegen H, und Passiv-/Aktivseite waren VERTAUSCHT.
+          const dirX = (Mokx_s !== 0 ? Mokx_s : Hxd_c) >= 0 ? 1 : -1;
           const isP  = dirX === exSign;                   // Aushub auf Passivseite?
           let cbBest = null;                              // Pfad-Minimum DIESER Kombination
           for(const dxi of _exDepths){
@@ -10284,6 +10466,7 @@ function _doCalculate(inp){
         }
       }
       const rx = best.rx, ry = best.ry, use_x = best.ux;
+      Mokx_sign_ = best.mokx_s || 0;
       komb_GZT_ = isFinite(best.eta) ? best.nr : 0;
       etaGZT   = use_x ? rx.eta  : ry.eta;
       Mu_GZT   = use_x ? rx.Mu   : ry.Mu;
@@ -10424,7 +10607,7 @@ function _doCalculate(inp){
           } else {
             const exSign_g = (gi('pfahl_dex_seite') || 'gleis') === 'gleis' ? -1 : 1;
             const Mxk_s_g  = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk;
-            const dirX_g   = (Hxk_g !== 0 ? Hxk_g : Mxk_s_g) >= 0 ? 1 : -1;
+            const dirX_g   = (Mxk_s_g !== 0 ? Mxk_s_g : Hxk_g) >= 0 ? 1 : -1;   // signiertes Kippmoment
             const exPas    = dirX_g === exSign_g;   // Aushub auf Stirnseite (passiv)?
             // Stirnbettung nur bei Aushub auf der Stirnseite reduziert; aktivseitig intakt.
             // Wirksame Bettungshöhe ab UK Aushub: Aushub frisst von GOK her, Blockoberkante
@@ -10496,6 +10679,9 @@ function _doCalculate(inp){
       // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
       etaGZT_ex: etaGZT_ex_, Mu_GZT_ex: Mu_GZT_ex_, komb_GZT_ex: komb_GZT_ex_, y_NL_GZT_ex: yNL_ex_,
       dEx_degen: dEx_degen_,
+      // Signiertes Kippmoment am OK Kopf der massgebenden Kombination (Quer) — gibt die
+      // Bewegungs-/Passivseite vor (H allein reicht nicht, wenn M_ext gegenläufig ist)
+      M_ok_x_signed: Mokx_sign_,
       etaGZG_ex: etaGZG_ex_, alpha_GZG_ex: alpha_GZG_ex_, Mu_char_GZG_ex: Mu_char_GZG_ex_,
       dEx_used: dEx_used_, dEx_side: dEx_side_, dEx_gov: dEx_gov_,
       ue_GZT: isBlock ? ue : 0,
@@ -14406,7 +14592,10 @@ function renderResults(res,worst,g){
           : `GZG: C₁×(1+β/40) · GZT Gl.66: β_a=β_p=0 (Steckner) — Erweiterung „Böschung im GZT" in den Optionen`)
       : `Hansen: g_βq = g_βγ = (1−tan β)² · Grundbruch- und Gleitwiderstand reduziert`;
     const _bhB = +gi('bg_bhoehe')||0;
-    banner+=`<div style="font-family:var(--f-mono);font-size:9px;color:var(--warn);background:var(--warn-s);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r1);padding:5px 8px;margin-bottom:4px">Geländeneigung β = ${g.beta_deg}° · ${betaHint}${_bhB>0.05?` · h_β = ${_bhB} m (2. Ebene) — Abminderung anteilig h_β/D_ref abgemildert`:` · durchlaufende Böschung (h_β = 0) — volle Abminderung`}</div>`;
+    banner += wBox('warn', 'Geländeneigung β = '+g.beta_deg+'° — Widerstände abgemindert',
+      `${betaHint}${_bhB>0.05
+        ? ` · h_β = ${_bhB} m (2. Ebene) — Abminderung anteilig h_β/D_ref abgemildert`
+        : ` · durchlaufende Böschung (h_β = 0) — volle Abminderung`}`);
   }
   if(SCHICHTEN.length>1){
     banner+=`<div style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);padding:0 0 4px">${SCHICHTEN.length} Bodenschichten · massgebend: ${worst.soilName}</div>`;
@@ -14415,7 +14604,10 @@ function renderResults(res,worst,g){
   // Kernweite/klaffende Fuge beim Block informativ ausweisen (Sohldruck ist beim eingespannten
   // Block kein Versagenskriterium — Standsicherheit über Steckner GZT Gl.66).
   const blockKernHint = (g.isBlock && worst.inKern===false)
-    ? `<div style="margin-top:7px;padding:5px 8px;background:var(--s2);border-left:2px solid var(--dim);border-radius:3px;font-size:9px;color:var(--dim);font-family:var(--f-mono);line-height:1.4">Ausmitte ausserhalb der Kernweite (|e| &gt; B/6${worst.smin<0?' · σ_min &lt; 0 → klaffende Sohlfuge':''}). Beim eingespannten Block <b>informativ</b> — massgebend ist die Standsicherheit nach Steckner GZT (Gl. 66), nicht die Sohldruckverteilung.</div>`
+    ? wBox('info', 'Ausmitte ausserhalb der Kernweite (|e| > B/6)'+(worst.smin<0?' · klaffende Sohlfuge':''),
+        `σ_min = ${worst.smin.toFixed(1)} kPa${worst.smin<0?' &lt; 0 → die Sohlfuge klafft rechnerisch':''}.
+         Beim <b>eingespannten Block</b> ist das <b>informativ</b> — massgebend ist die Standsicherheit
+         nach Steckner GZT (Gl. 66), nicht die Sohldruckverteilung.`)
     : '';
   const sd=document.createElement('div');
   sd.innerHTML=`${banner}<div class="summary"><div class="summary-ttl">Massgebend — ${worst.name}</div>
@@ -15483,9 +15675,11 @@ function runSelfTest(){
   // SETTINGS-Parameter pinnen (in-memory, nichts persistieren), danach wiederherstellen
   const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
               stecknerSlope:SETTINGS.stecknerSlope, stecknerMob:SETTINGS.stecknerMob,
-              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat, nw:SETTINGS.nw };
+              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat,
+              pfahlLatGroup:SETTINGS.pfahlLatGroup, nw:SETTINGS.nw };
   SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
   SETTINGS.pfahlAlphaLat=0.30;     // Golden = konservativer Default (laterale Pfahlbettung)
+  SETTINGS.pfahlLatGroup=true;     // Golden = p-Multiplier AN (bei gespreizten Pfählen ohnehin 1.0)
   SETTINGS.stecknerSlope=false;   // Golden = Original-Steckner (β_a=β_p=0)
   SETTINGS.stecknerMob=true;      // Golden = Passivdruck mobilisiert (Standard AN)
   SETTINGS.nw = Object.assign({}, SETTINGS.nw, {bishop:true});   // Bishop-Golden (T7) braucht den aktiven Nachweis
@@ -15546,7 +15740,8 @@ function runSelfTest(){
   } finally {
     SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.pfahlRandMin=bak.pfahlRandMin;
     SETTINGS.stecknerSlope=bak.stecknerSlope; SETTINGS.stecknerMob=bak.stecknerMob;
-    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat; SETTINGS.nw=bak.nw;
+    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat;
+    SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.nw=bak.nw;
     window._SELFTEST_MODE = _stModeBak;
   }
   _renderSelfTest(T);
