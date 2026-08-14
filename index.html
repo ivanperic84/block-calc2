@@ -7,8 +7,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0e0f13">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Bibliotheken liegen LOKAL unter vendor/ (kein CDN):
+     · kein fremder Origin, der die App kompromittieren könnte — damit auch kein SRI nötig
+       (wer vendor/ ändern kann, kann ebenso index.html ändern)
+     · offline ab dem allerersten Start, unabhängig vom Service-Worker-Cache
+     Herkunft/Version: cdnjs — three.js r128, jsPDF 2.5.1; die Dateien wurden gegen die von
+     cdnjs veröffentlichten SHA-512-Hashes verifiziert (siehe vendor/README.md).
+     Beim Aktualisieren: Datei ersetzen, Hash erneut prüfen, Cache-Version in sw.js hochzählen. -->
+<script src="vendor/three.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════
@@ -689,8 +696,6 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 .tpl-icon { display:none; }
 .tpl-name { font-size:11px; font-weight:500; color:var(--on2); line-height:1.3; }
 .tpl-desc { font-size:9px; color:var(--xdim); font-family:var(--f-mono); margin-top:2px; }
-/* Projektfelder ausgegraut wenn kein Projekt gewählt */
-#proj-fields:disabled { opacity:0.38; pointer-events:none; user-select:none; }
 
 /* ═══════════════════════════════════════════
    STATUS BAR
@@ -1179,6 +1184,131 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div class="field"><label id="lbl-gbeton">γ Beton <em>kN/m³</em></label><input id="g_gbeton" type="number" value="24.0" step="0.5" oninput="scheduleCalc()"/></div>
           <div class="field"><label id="lbl-gauf">γ Auffüllung <em>kN/m³</em></label><input id="g_gauf" type="number" value="20.0" step="0.5" oninput="scheduleCalc()"/></div>
         </div>
+        <!-- Auto-Dimensionierung (U1/U2): kleinste B×L mit η ≥ 1.0, Sweep über den Pure-Rechenkern -->
+        <div class="lf-card" id="dim-card" style="margin-top:6px">
+          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
+            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Dimensionierung</span>
+            <span class="mat-card-summary">B×L-Vorschlag</span>
+            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
+          </div>
+          <div class="lf-card-body">
+            <div class="field"><label>B×L [m] — auto nach M_k, überschreibbar</label>
+              <input id="dim-bl" type="number" step="0.05" min="0.5" placeholder="auto"
+                onchange="_dimBLManual=this.value!==''"/></div>
+            <div class="hint" style="margin-top:4px">B×L wird aus dem <strong>resultierenden charakteristischen Moment</strong>
+              (ständig + veränderlich) vorbelegt: ≤ 80 kNm → 1.10 m · ≤ 135 → 1.20 m · ≤ 230 → 1.40 m.
+              Von Hand überschreibbar (Feld leeren = wieder automatisch). Gesucht wird die
+              <strong>kleinste Blocktiefe H</strong> mit η ≥ 1.0. Flach: kleinste B×L bis zum Limit (H fest).</div>
+            <button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="autoDimension()">Vorschlag berechnen</button>
+            <div id="dim-result" style="margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+
+        <!-- ══════ PFAHLBOCK (Mikropfähle, geneigt) ══════ -->
+        <div id="pfahlbock-section" style="display:none">
+          <div class="sec">Ausführung</div>
+          <div class="field"><label>Fundamentart</label><select id="pb_mode" onchange="onPbMode()">
+            <option value="gruppe" selected>Pfahlgruppe mit Bankett</option>
+            <option value="einzel">Einzelpfahl — Last am Pfahlkopf</option>
+          </select></div>
+          <div class="hint" id="pb_mode_hint" style="margin-top:0"></div>
+
+          <div id="pb-grp-block">
+          <div class="sec">Bankett (Pfahlkopfplatte)</div>
+          <div class="field"><label>B Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bx_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_bx',this.value);renderPfahlbock()"><input id="pb_bx" type="number" value="2.0" step="0.1" oninput="slSync('pb_bx',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>L Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_by_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_by',this.value);renderPfahlbock()"><input id="pb_by" type="number" value="2.0" step="0.1" oninput="slSync('pb_by',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Dicke <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bank_d_r" min="0.3" max="2.0" step="0.05" value="0.8" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"><input id="pb_bank_d" type="number" value="0.8" step="0.05" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"/></div></div>
+          <div id="pb_rand_msg" style="display:none"></div>
+
+          <div class="sec">Fundamentkopf</div>
+          <div class="field"><label>B_Kopf <em>m</em></label><input id="pb_kx" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>L_Kopf <em>m</em></label><input id="pb_ky" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>H_Kopf <em>m</em></label><input id="pb_hk" type="number" value="1.0" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="field"><label>Versatz e_x <em>m</em></label><input id="pb_ex" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in x (quer). Erzeugt zusätzliches Moment (N+G_Kopf)·e_x."/></div>
+          <div class="field"><label>Versatz e_y <em>m</em></label><input id="pb_ey" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in y (längs). Erzeugt zusätzliches Moment (N+G_Kopf)·e_y."/></div>
+          <div class="field"><label>Überdeckung ü <em>m</em></label><input id="pb_ue" type="number" value="0.4" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+          <div class="hint" style="margin-top:0">Hebel Lastangriff → UK Bankett = H_Kopf + Bankettdicke (automatisch). Bankett + Kopf als Eigengewicht angesetzt; ü = Überdeckung über OK Bankett.</div>
+          </div><!-- /pb-grp-block -->
+
+          <div id="pb-grp-layout">
+          <div class="sec">Pfahl-Anordnung</div>
+          <div class="field"><label>Anzahl Pfähle</label><select id="pb_n" onchange="renderPfahlbock()">
+            <option value="2">2 (Reihe quer)</option><option value="3">3 (Dreieck)</option>
+            <option value="4" selected>4 (2×2)</option><option value="6">6 (2×3)</option>
+            <option value="8">8 (2×4)</option><option value="9">9 (3×3)</option></select></div>
+          <div class="field"><label>Pfahlabstände</label><select id="pb_auto" onchange="renderPfahlbock()">
+            <option value="1" selected>automatisch (max. bei Mindest-Randabstand)</option>
+            <option value="0">manuell</option></select></div>
+          <div class="field"><label>Abstand quer s_x <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sx_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sx',this.value);renderPfahlbock()"><input id="pb_sx" type="number" value="1.20" step="0.1" oninput="slSync('pb_sx',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Abstand längs s_y <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sy_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sy',this.value);renderPfahlbock()"><input id="pb_sy" type="number" value="1.20" step="0.1" oninput="slSync('pb_sy',this.value);renderPfahlbock()"/></div></div>
+          <div class="hint" id="pb_sp_hint" style="margin-top:0"></div>
+          <div class="field"><label>Neigung quer α_x <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ax_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ax',this.value);renderPfahlbock()"><input id="pb_ax" type="number" value="12" step="1" oninput="slSync('pb_ax',this.value);renderPfahlbock()"/></div></div>
+          <div class="field"><label>Neigung längs α_y <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ay_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ay',this.value);renderPfahlbock()"><input id="pb_ay" type="number" value="12" step="1" oninput="slSync('pb_ay',this.value);renderPfahlbock()"/></div></div>
+          <div class="hint" style="margin-top:0">übliche Neigung 10–15°. α &gt; 0 = Pfahlfuss nach aussen.</div>
+          </div><!-- /pb-grp-layout -->
+
+          <div class="sec">Pfahl</div>
+          <div class="field"><label>Pfahllänge L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_L_r" min="0.5" max="20.0" step="0.5" value="10" oninput="slSync('pb_L',this.value);renderPfahlbock()"><input id="pb_L" type="number" value="10.00" step="0.5" oninput="slSync('pb_L',this.value);renderPfahlbock()"/></div></div>
+          <div class="field" id="pb-row-dG"><label>Verpresskörper-Ø <em>mm</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_dG_r" min="80" max="300" step="10" value="150" oninput="slSync('pb_dG',this.value);renderPfahlbock()"><input id="pb_dG" type="number" value="150" step="10" oninput="slSync('pb_dG',this.value);renderPfahlbock()"/></div></div>
+          <div class="field" id="pb-row-ueber" style="display:none"><label>Überstand über GOK <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_e_r" min="0" max="3.0" step="0.05" value="0" oninput="slSync('pb_e',this.value);renderPfahlbock()"><input id="pb_e" type="number" value="0" step="0.05" min="0" oninput="slSync('pb_e',this.value);renderPfahlbock()" title="Freie Pfahllänge oberhalb GOK (Überstand). Lasten greifen am Pfahlkopf oben an; über diese Länge wirkt keine Bettung → grösseres Biegemoment."/></div></div>
+
+          <div id="pb-grp-prof" style="display:none">
+            <div class="sec">Profil (Sicherungs-Katalog)</div>
+            <div class="field"><label>Pfahlprofil</label><select id="pb_prof" onchange="renderPfahlbock()">
+              <optgroup label="HEB (S355)">
+                <option value="HEB160">HEB 160</option><option value="HEB200" selected>HEB 200</option>
+                <option value="HEB220">HEB 220</option><option value="HEB240">HEB 240</option>
+                <option value="HEB260">HEB 260</option><option value="HEB300">HEB 300</option>
+              </optgroup>
+              <optgroup label="Krinner V (Stahlrohr S355, t=5 mm)">
+                <option value="KRV76">V 76</option><option value="KRV89">V 89</option>
+                <option value="KRV114">V 114</option><option value="KRV140">V 140</option>
+                <option value="KRV168">V 168</option>
+              </optgroup>
+            </select></div>
+            <div id="pb_prof_info" class="hint" style="margin-top:0"></div>
+          </div>
+
+          <div id="pb-grp-tendon">
+          <div class="sec">Tragglied (Mikropfahl-System)</div>
+          <div class="field"><label>System</label><select id="pb_sys" onchange="onPbSys()"></select></div>
+          <div class="field"><label>Tragglied</label><select id="pb_var" onchange="renderPfahlbock()"></select></div>
+          <div class="field"><label>Korrosionsschutz</label><select id="pb_korr" onchange="renderPfahlbock()"></select></div>
+          <div id="pb_tendon_info" class="hint" style="margin-top:0"></div>
+          <details style="margin-top:4px">
+            <summary style="font-size:9px;color:var(--xdim);cursor:pointer">Eigenes Tragglied erstellen</summary>
+            <div class="lf-grid3" style="margin-top:4px">
+              <div class="field"><label>Bezeichnung</label><input id="pbc_bez" type="text" value="Custom-1"/></div>
+              <div class="field"><label>Ø da <em>mm</em></label><input id="pbc_da" type="number" value="40" step="1"/></div>
+              <div class="field"><label>A_s <em>mm²</em></label><input id="pbc_As" type="number" value="800" step="10"/></div>
+              <div class="field"><label>R_t,k <em>kN</em></label><input id="pbc_Ryk" type="number" value="450" step="10"/></div>
+              <div class="field"><label>E <em>N/mm²</em></label><input id="pbc_E" type="number" value="210000" step="1000"/></div>
+            </div>
+            <button class="btn btn-tonal btn-xs" style="margin-top:4px" onclick="addCustomTendon()">+ Hinzufügen &amp; auswählen</button>
+            <div id="pbc_msg" style="font-size:8.5px;color:var(--xdim);margin-top:3px"></div>
+          </details>
+          </div><!-- /pb-grp-tendon -->
+
+          <div class="sec">Mantelreibung</div>
+          <div class="lf-grid3">
+            <div class="field"><label>Abminderung Verrohrung</label><input id="pb_skinfac" type="number" value="1.0" step="0.05" min="0.05" max="1" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>Zug-Abminderung</label><input id="pb_zugfac" type="number" value="1.0" step="0.05" min="0.05" max="1" oninput="renderPfahlbock()"/></div>
+          </div>
+          <div class="hint" style="margin-top:0">verpresst 1.0 · <b>verrohrt ≈ 0.40</b>. Zug-Abminderung für Herausziehen (oft 0.7–0.9). q_s,k je Schicht optional im Tab «Boden» (sonst Erfahrungswert EA-Pfähle/DIN 4128, bodenartabhängig).</div>
+
+          <div class="sec">Teilsicherheiten Pfahl</div>
+          <div class="lf-grid3">
+            <div class="field"><label>γ_R Mantel</label><input id="pb_gR" type="number" value="1.40" step="0.05" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>γ_s Stahl</label><input id="pb_gS" type="number" value="1.15" step="0.05" oninput="renderPfahlbock()"/></div>
+          </div>
+          <div class="hint" style="margin-top:4px"><b>Lasten + Lastbeiwerte γ_G/γ_Q</b> im Tab «Lasten» (Mastlasten am Lastangriff). Die <b>Einwirkungen auf UK Bankett</b> werden automatisch berechnet. Boden + GW im Tab «Boden». Kein Abrostzuschlag (SIA 267).</div>
+
+          <div class="sec">Pfahlanordnung &amp; Sohlkräfte</div>
+          <div id="pfahlbock-draufsicht"></div>
+          <div id="pfahlbock-sole" style="font-size:9px;color:var(--dim);font-family:var(--f-mono);line-height:1.6;margin-top:4px"></div>
+        </div>
+
       </div>
 
       <!-- BAUGRUND -->
@@ -1321,7 +1451,7 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
                   <option value="0.5">1/2 · φ — Stahl auf Beton</option>
                   <option value="0.333">1/3 · φ — glatt</option>
                 </select>
-                <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Gleitwiderstand R_gl = N_d · tan(δ_Sohle)</span>
+                <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.5">Gleitwiderstand R_gl = N_d · tan(δ_Sohle).<br>Für die <b>raue Ortbetonsohle</b> lässt SIA 267 Gl. 27 δ = φ′ zu (Praxis: auf ≤ 35° begrenzen). Die Voreinstellung 2/3 · φ′ ist auf Fertigteil-/Sauberkeitsschicht-Sohlen zugeschnitten und für Ortbeton konservativ.</span>
               </div>
               <!-- Berechnete Bemessungswerte (read-only, nach Berechnung befüllt) -->
               <div style="margin-top:10px;padding:8px 10px;background:var(--s2);border-radius:var(--r1);border:1px solid var(--ol)">
@@ -1376,135 +1506,10 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
               <div class="field"><label>γ_Ea  akt. Erddruck</label><input id="tw_Ea" type="number" value="1.35" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
               <div class="field"><label>γ_Ep  pass. Erddruck</label><input id="tw_Ep" type="number" value="1.40" step="0.05" oninput="_checkTWOverrides();scheduleCalc()"/></div>
             </div>
-            <div class="hint" style="margin-top:4px">Lastbeiwerte (γ_G, γ_Q) werden im Tab «Lasten» unter «Lastbeiwerte» geführt.</div>
+            <div class="hint" style="margin-top:4px">Für <b>Bauzustände</b> mit kurzer Standzeit lässt SIA 267 Ziff. 5.4.3.6 einen reduzierten Lastbeiwert zu (γ_G,red ≈ 1.20 statt 1.35) — im Tab «Lasten» unter «Lastbeiwerte» direkt eintragbar; bewusst kein Automatismus, da die Anwendungsbedingungen projektspezifisch nachzuweisen sind.<br>Lastbeiwerte (γ_G, γ_Q) werden im Tab «Lasten» unter «Lastbeiwerte» geführt.</div>
           </div>
         </div>
-        <!-- Auto-Dimensionierung (U1/U2): kleinste B×L mit η ≥ 1.0, Sweep über den Pure-Rechenkern -->
-        <div class="lf-card" id="dim-card" style="margin-top:6px">
-          <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
-            <span style="font-family:var(--f-ui);font-size:12px;font-weight:500;color:var(--on)">Dimensionierung</span>
-            <span class="mat-card-summary">B×L-Vorschlag</span>
-            <svg class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 2l4 4-4 4"/></svg>
-          </div>
-          <div class="lf-card-body">
-            <div class="field"><label>B×L [m] — auto nach M_k, überschreibbar</label>
-              <input id="dim-bl" type="number" step="0.05" min="0.5" placeholder="auto"
-                onchange="_dimBLManual=this.value!==''"/></div>
-            <div class="hint" style="margin-top:4px">B×L wird aus dem <strong>resultierenden charakteristischen Moment</strong>
-              (ständig + veränderlich) vorbelegt: ≤ 80 kNm → 1.10 m · ≤ 135 → 1.20 m · ≤ 230 → 1.40 m.
-              Von Hand überschreibbar (Feld leeren = wieder automatisch). Gesucht wird die
-              <strong>kleinste Blocktiefe H</strong> mit η ≥ 1.0. Flach: kleinste B×L bis zum Limit (H fest).</div>
-            <button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="autoDimension()">Vorschlag berechnen</button>
-            <div id="dim-result" style="margin-top:8px"></div>
-          </div>
-        </div>
-        </div><!-- /geo-standard -->
-
-        <!-- ══════ PFAHLBOCK (Mikropfähle, geneigt) ══════ -->
-        <div id="pfahlbock-section" style="display:none">
-          <div class="sec">Ausführung</div>
-          <div class="field"><label>Fundamentart</label><select id="pb_mode" onchange="onPbMode()">
-            <option value="gruppe" selected>Pfahlgruppe mit Bankett</option>
-            <option value="einzel">Einzelpfahl — Last am Pfahlkopf</option>
-          </select></div>
-          <div class="hint" id="pb_mode_hint" style="margin-top:0"></div>
-
-          <div id="pb-grp-block">
-          <div class="sec">Bankett (Pfahlkopfplatte)</div>
-          <div class="field"><label>B Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bx_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_bx',this.value);renderPfahlbock()"><input id="pb_bx" type="number" value="2.0" step="0.1" oninput="slSync('pb_bx',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>L Bankett <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_by_r" min="0.5" max="5.0" step="0.1" value="2.0" oninput="slSync('pb_by',this.value);renderPfahlbock()"><input id="pb_by" type="number" value="2.0" step="0.1" oninput="slSync('pb_by',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>Dicke <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_bank_d_r" min="0.3" max="2.0" step="0.05" value="0.8" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"><input id="pb_bank_d" type="number" value="0.8" step="0.05" oninput="slSync('pb_bank_d',this.value);renderPfahlbock()"/></div></div>
-          <div id="pb_rand_msg" style="display:none"></div>
-
-          <div class="sec">Fundamentkopf</div>
-          <div class="field"><label>B_Kopf <em>m</em></label><input id="pb_kx" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
-          <div class="field"><label>L_Kopf <em>m</em></label><input id="pb_ky" type="number" value="0.6" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
-          <div class="field"><label>H_Kopf <em>m</em></label><input id="pb_hk" type="number" value="1.0" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
-          <div class="field"><label>Versatz e_x <em>m</em></label><input id="pb_ex" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in x (quer). Erzeugt zusätzliches Moment (N+G_Kopf)·e_x."/></div>
-          <div class="field"><label>Versatz e_y <em>m</em></label><input id="pb_ey" type="number" value="0.0" step="0.05" oninput="renderPfahlbock()" title="Exzentrizität des Fundamentkopfes/Lastangriffs gegenüber der Bankettachse in y (längs). Erzeugt zusätzliches Moment (N+G_Kopf)·e_y."/></div>
-          <div class="field"><label>Überdeckung ü <em>m</em></label><input id="pb_ue" type="number" value="0.4" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
-          <div class="hint" style="margin-top:0">Hebel Lastangriff → UK Bankett = H_Kopf + Bankettdicke (automatisch). Bankett + Kopf als Eigengewicht angesetzt; ü = Überdeckung über OK Bankett.</div>
-          </div><!-- /pb-grp-block -->
-
-          <div id="pb-grp-layout">
-          <div class="sec">Pfahl-Anordnung</div>
-          <div class="field"><label>Anzahl Pfähle</label><select id="pb_n" onchange="renderPfahlbock()">
-            <option value="2">2 (Reihe quer)</option><option value="3">3 (Dreieck)</option>
-            <option value="4" selected>4 (2×2)</option><option value="6">6 (2×3)</option>
-            <option value="8">8 (2×4)</option><option value="9">9 (3×3)</option></select></div>
-          <div class="field"><label>Pfahlabstände</label><select id="pb_auto" onchange="renderPfahlbock()">
-            <option value="1" selected>automatisch (max. bei Mindest-Randabstand)</option>
-            <option value="0">manuell</option></select></div>
-          <div class="field"><label>Abstand quer s_x <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sx_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sx',this.value);renderPfahlbock()"><input id="pb_sx" type="number" value="1.20" step="0.1" oninput="slSync('pb_sx',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>Abstand längs s_y <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sy_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sy',this.value);renderPfahlbock()"><input id="pb_sy" type="number" value="1.20" step="0.1" oninput="slSync('pb_sy',this.value);renderPfahlbock()"/></div></div>
-          <div class="hint" id="pb_sp_hint" style="margin-top:0"></div>
-          <div class="field"><label>Neigung quer α_x <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ax_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ax',this.value);renderPfahlbock()"><input id="pb_ax" type="number" value="12" step="1" oninput="slSync('pb_ax',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>Neigung längs α_y <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ay_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ay',this.value);renderPfahlbock()"><input id="pb_ay" type="number" value="12" step="1" oninput="slSync('pb_ay',this.value);renderPfahlbock()"/></div></div>
-          <div class="hint" style="margin-top:0">übliche Neigung 10–15°. α &gt; 0 = Pfahlfuss nach aussen.</div>
-          </div><!-- /pb-grp-layout -->
-
-          <div class="sec">Pfahl</div>
-          <div class="field"><label>Pfahllänge L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_L_r" min="0.5" max="20.0" step="0.5" value="10" oninput="slSync('pb_L',this.value);renderPfahlbock()"><input id="pb_L" type="number" value="10.00" step="0.5" oninput="slSync('pb_L',this.value);renderPfahlbock()"/></div></div>
-          <div class="field" id="pb-row-dG"><label>Verpresskörper-Ø <em>mm</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_dG_r" min="80" max="300" step="10" value="150" oninput="slSync('pb_dG',this.value);renderPfahlbock()"><input id="pb_dG" type="number" value="150" step="10" oninput="slSync('pb_dG',this.value);renderPfahlbock()"/></div></div>
-          <div class="field" id="pb-row-ueber" style="display:none"><label>Überstand über GOK <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_e_r" min="0" max="3.0" step="0.05" value="0" oninput="slSync('pb_e',this.value);renderPfahlbock()"><input id="pb_e" type="number" value="0" step="0.05" min="0" oninput="slSync('pb_e',this.value);renderPfahlbock()" title="Freie Pfahllänge oberhalb GOK (Überstand). Lasten greifen am Pfahlkopf oben an; über diese Länge wirkt keine Bettung → grösseres Biegemoment."/></div></div>
-
-          <div id="pb-grp-prof" style="display:none">
-            <div class="sec">Profil (Sicherungs-Katalog)</div>
-            <div class="field"><label>Pfahlprofil</label><select id="pb_prof" onchange="renderPfahlbock()">
-              <optgroup label="HEB (S355)">
-                <option value="HEB160">HEB 160</option><option value="HEB200" selected>HEB 200</option>
-                <option value="HEB220">HEB 220</option><option value="HEB240">HEB 240</option>
-                <option value="HEB260">HEB 260</option><option value="HEB300">HEB 300</option>
-              </optgroup>
-              <optgroup label="Krinner V (Stahlrohr S355, t=5 mm)">
-                <option value="KRV76">V 76</option><option value="KRV89">V 89</option>
-                <option value="KRV114">V 114</option><option value="KRV140">V 140</option>
-                <option value="KRV168">V 168</option>
-              </optgroup>
-            </select></div>
-            <div id="pb_prof_info" class="hint" style="margin-top:0"></div>
-          </div>
-
-          <div id="pb-grp-tendon">
-          <div class="sec">Tragglied (Mikropfahl-System)</div>
-          <div class="field"><label>System</label><select id="pb_sys" onchange="onPbSys()"></select></div>
-          <div class="field"><label>Tragglied</label><select id="pb_var" onchange="renderPfahlbock()"></select></div>
-          <div class="field"><label>Korrosionsschutz</label><select id="pb_korr" onchange="renderPfahlbock()"></select></div>
-          <div id="pb_tendon_info" class="hint" style="margin-top:0"></div>
-          <details style="margin-top:4px">
-            <summary style="font-size:9px;color:var(--xdim);cursor:pointer">Eigenes Tragglied erstellen</summary>
-            <div class="lf-grid3" style="margin-top:4px">
-              <div class="field"><label>Bezeichnung</label><input id="pbc_bez" type="text" value="Custom-1"/></div>
-              <div class="field"><label>Ø da <em>mm</em></label><input id="pbc_da" type="number" value="40" step="1"/></div>
-              <div class="field"><label>A_s <em>mm²</em></label><input id="pbc_As" type="number" value="800" step="10"/></div>
-              <div class="field"><label>R_t,k <em>kN</em></label><input id="pbc_Ryk" type="number" value="450" step="10"/></div>
-              <div class="field"><label>E <em>N/mm²</em></label><input id="pbc_E" type="number" value="210000" step="1000"/></div>
-            </div>
-            <button class="btn btn-tonal btn-xs" style="margin-top:4px" onclick="addCustomTendon()">+ Hinzufügen &amp; auswählen</button>
-            <div id="pbc_msg" style="font-size:8.5px;color:var(--xdim);margin-top:3px"></div>
-          </details>
-          </div><!-- /pb-grp-tendon -->
-
-          <div class="sec">Mantelreibung</div>
-          <div class="lf-grid3">
-            <div class="field"><label>Abminderung Verrohrung</label><input id="pb_skinfac" type="number" value="1.0" step="0.05" min="0.05" max="1" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>Zug-Abminderung</label><input id="pb_zugfac" type="number" value="1.0" step="0.05" min="0.05" max="1" oninput="renderPfahlbock()"/></div>
-          </div>
-          <div class="hint" style="margin-top:0">verpresst 1.0 · <b>verrohrt ≈ 0.40</b>. Zug-Abminderung für Herausziehen (oft 0.7–0.9). q_s,k je Schicht optional im Tab «Boden» (sonst Erfahrungswert EA-Pfähle/DIN 4128, bodenartabhängig).</div>
-
-          <div class="sec">Teilsicherheiten Pfahl</div>
-          <div class="lf-grid3">
-            <div class="field"><label>γ_R Mantel</label><input id="pb_gR" type="number" value="1.40" step="0.05" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>γ_s Stahl</label><input id="pb_gS" type="number" value="1.15" step="0.05" oninput="renderPfahlbock()"/></div>
-          </div>
-          <div class="hint" style="margin-top:4px"><b>Lasten + Lastbeiwerte γ_G/γ_Q</b> im Tab «Lasten» (Mastlasten am Lastangriff). Die <b>Einwirkungen auf UK Bankett</b> werden automatisch berechnet. Boden + GW im Tab «Boden». Kein Abrostzuschlag (SIA 267).</div>
-
-          <div class="sec">Pfahlanordnung &amp; Sohlkräfte</div>
-          <div id="pfahlbock-draufsicht"></div>
-          <div id="pfahlbock-sole" style="font-size:9px;color:var(--dim);font-family:var(--f-mono);line-height:1.6;margin-top:4px"></div>
-        </div>
-
-      </div>
+        </div><!-- /tab-baugrund -->
 
       <!-- LASTEN -->
       <div id="tab-lasten" class="tab-panel">
@@ -2288,6 +2293,38 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           </div>
           <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.4">Steifigkeit der lateralen Pfahlbettung (Verformung η_V, Biegemoment η_Stahl, Knicken). <b>0.30</b> = konservativ/weich (Default) · <b>0.50</b> = moderat · <b>0.65</b> = Vesić-Mittel · höher = steifer/weniger konservativ. Ändert NUR Pfahlfundament + Sicherung, nicht den Block.</span>
         </div>
+        <div class="field" style="margin-top:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="set-bz-gred" style="accent-color:var(--acc)">
+            <span>Bauzustand: reduzierter Lastbeiwert γ_G,red</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <span style="font-family:var(--f-mono);font-size:10px;color:var(--xdim);white-space:nowrap">γ_G,red =</span>
+            <input id="set-bz-gred-val" type="number" value="1.20" step="0.05" min="1.0" max="1.5" style="flex:1"/>
+            <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);white-space:nowrap">statt 1.35</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px">
+            <input type="checkbox" id="set-bz-gred-spezial" style="accent-color:var(--acc)">
+            <span style="font-size:11.5px">Ausnahme: auch bei Spezialfundamenten zulassen</span>
+          </label>
+          <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:4px;display:block;line-height:1.5">Reduzierter Lastbeiwert für <b>Bauzustände</b> mit kurzer Standzeit (SIA 267 Ziff. 5.4.3.6). Wirkt auf den <b>ständigen</b> Anteil im Aushubzustand, in der Sicherungsbemessung und in der Dimensionierung — der Endzustand-Nachweis rechnet unverändert mit γ_G,sup. In der <b>Typenzulassungsstatik</b> wurde so gerechnet.<br><b>Für Spezialfundamente ist der Ansatz nicht zulässig</b> — er greift dort nur, wenn die Ausnahme oben gesetzt und projektspezifisch begründet ist. Voreinstellung: aus.</span>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>κ_e — Grenze Sohlexzentrizität (Aushubzustand)</label>
+          <select id="set-kappa-e">
+            <option value="0.1667">1/6 — klaffungsfrei (Kernweite)</option>
+            <option value="0.3333">1/3 — SIA 267 Ziff. 5.4.2.4</option>
+          </select>
+          <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.4">Grenzwert des Nachweises «Kernweite / Sohlexzentrizität» im Sicherungsmodul: <b>e ≤ κ_e · b</b>. Steckner Gl.66 lässt e → b/2 zu, solange der Boden p_u auf schmalem Streifen trägt — das ist ein Tragfähigkeits-, kein Robustheitslimit. <b>1/6</b> hält die Sohlfuge klaffungsfrei (Voreinstellung, für provisorische Zustände) · <b>1/3</b> ist die SIA-Grenze mit halbseitiger Klaffung. Wirkt nur bei aktivem Aushub.</span>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>L_crit — Wirksame Verpresslänge <em>m</em></label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="set-pfahl-lcrit" type="number" value="10" step="0.5" min="0" max="40" style="flex:1"/>
+            <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">0 = kein Deckel</span>
+          </div>
+          <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.4">Obergrenze der für die Mantelreibung angesetzten Länge: R_s,k = Σ q_s,k·U·Δz nur bis <b>L_eff = min(L, L_crit)</b>. Ohne Deckel wüchse R_s,k unbegrenzt linear mit L — real entbindet der Verpresskörper fortschreitend, und die q_s,k-Erfahrungswerte (EA-Pfähle/DIN 4128) sind für übliche Verpresslängen kalibriert. <b>Konstruktive Bemessungsregel, keine Normformel.</b> 10 m = Default · 6–8 m bei bindigem Baugrund üblich · massgebend bleibt die Probebelastung.</span>
+        </div>
         <div class="toggle-row" style="margin-top:6px">
           <div><div class="toggle-label">GZG-Verdrehung entkoppeln</div><div class="toggle-sub">Verformung ohne Schrägstellungs-Kopplung: Moment → reine Verdrehung, Horizontalkraft → reine Verschiebung. Vereinfachung; Kraftberechnung bleibt gekoppelt. Standard: an (entkoppelt) — abschalten für das gekoppelte Modell.</div></div>
           <label class="sw"><input type="checkbox" id="set-pfahl-decouple" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
@@ -2495,7 +2532,9 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
 </div>
 
 <!-- Import-Dialog -->
-<div id="imp-dialog" style="display:none;position:fixed;inset:0;z-index:70;background:var(--scrim);align-items:center;justify-content:center">
+<!-- Sichtbarkeit steuert ausschliesslich die Klasse .open (CSS oben) — ein Inline-display:none
+     hätte höhere Spezifität als #imp-dialog.open und liesse den Dialog nie erscheinen. -->
+<div id="imp-dialog" style="position:fixed;inset:0;z-index:70;background:var(--scrim);align-items:center;justify-content:center">
   <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r3);padding:20px;min-width:280px;max-width:360px;width:90%">
     <div style="font-family:var(--f-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--xdim);margin-bottom:12px">Import</div>
     <div id="imp-dialog-body"></div>
@@ -2549,6 +2588,97 @@ async function dbInit(){
     req.onerror=()=>fallback();
   });
 }
+// ── Selektiver Datenaustausch (Optionen → Datenaustausch) ───────────────────────
+// Ergänzt das Komplett-Backup um eine gezielte Auswahl: nur die angehakten Bereiche
+// werden exportiert. Der Import zeigt erst eine Übersicht des Dateiinhalts (inkl.
+// Kollisionswarnung) und schreibt erst nach Bestätigung.
+const _EXCHANGE_PARTS = [
+  { cb:'exp-projects',    label:'Projekte',          keys:()=>dbKeys().filter(k=>k.startsWith('proj_')) },
+  { cb:'exp-templates',   label:'Projekt-Templates', keys:()=>['bc_tpls'] },
+  { cb:'exp-bgTemplates', label:'Bodenprofile',      keys:()=>['bc_bg_tpls','bc_bgp_over'] },
+  { cb:'exp-loadLevels',  label:'Lastniveaus',       keys:()=>['bc_load_lvls'] },
+  { cb:'exp-settings',    label:'Einstellungen',     keys:()=>['bc_settings'] },
+];
+function exportData(){
+  const store={}, summary=[];
+  _EXCHANGE_PARTS.forEach(p=>{
+    const cb=document.getElementById(p.cb);
+    if(!cb || !cb.checked) return;
+    let n=0;
+    p.keys().forEach(k=>{ const v=dbGet(k); if(v!==undefined && v!==null){ store[k]=v; n++; } });
+    if(n) summary.push(p.label+' ('+n+')');
+  });
+  if(!Object.keys(store).length){ toast('Nichts ausgewählt oder keine Daten vorhanden'); return; }
+  const data={ _type:'blockcalc-export', _v:1, _date:new Date().toISOString(), store };
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='BlockCalc_Export_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Exportiert: '+summary.join(' · '));
+}
+let _impPending=null;
+function openImportDialog(){
+  const f=document.getElementById('imp-file');
+  if(f){ f.value=''; f.click(); }   // value leeren: sonst feuert change bei gleicher Datei nicht
+}
+function handleImportFile(ev){
+  const file = ev && ev.target && ev.target.files && ev.target.files[0];
+  if(!file) return;
+  file.text().then(txt=>{
+    let data; try{ data=JSON.parse(txt); }catch(_){ toast('Keine gültige JSON-Datei'); return; }
+    let store=null;
+    if(data && data.store && (data._type==='blockcalc-export' || data._type==='blockcalc-backup')){
+      store=data.store;                                   // Export- oder Backup-Datei
+    } else if(Array.isArray(data) || data.p_name || data.g_bx){
+      store={};                                           // reine Projekt-JSON (Altformat / Share-Export)
+      (Array.isArray(data)?data:[data]).forEach(st=>{
+        if(!st || (!st.p_name && !st.g_bx)) return;
+        const k='proj_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+        st._k=k; st._d=st._d||new Date().toLocaleDateString('de-CH');
+        store[k]=st;
+      });
+    }
+    if(!store || !Object.keys(store).length){ toast('Datei enthält keine BlockCalc-Daten'); return; }
+    _impPending=store;
+    const keys=Object.keys(store);
+    const rows=[];
+    const nProj=keys.filter(k=>k.startsWith('proj_')).length;
+    if(nProj) rows.push(['Fundamente', nProj]);
+    [['bc_tpls','Projekt-Templates'],['bc_bg_tpls','Bodenprofile (eigene)'],
+     ['bc_bgp_over','Bodenprofile (angepasst)'],['bc_load_lvls','Lastniveaus'],
+     ['bc_micropiles','Eigene Tragglieder'],['bc_settings','Einstellungen']]
+      .forEach(([k,l])=>{ if(k in store) rows.push([l,'ja']); });
+    const collide=keys.filter(k=>dbGet(k)!==undefined && dbGet(k)!==null).length;
+    document.getElementById('imp-dialog-body').innerHTML=
+      '<div style="font-size:11px;color:var(--on2);line-height:1.9">'+
+      rows.map(r=>'<div style="display:flex;justify-content:space-between;gap:14px">'+
+        '<span>'+esc(r[0])+'</span>'+
+        '<span style="font-family:var(--f-mono);color:var(--dim)">'+esc(r[1])+'</span></div>').join('')+
+      '</div>'+
+      (data._date ? '<div class="hint" style="margin-top:8px">Datei vom '+esc(String(data._date).slice(0,10))+'</div>' : '')+
+      (collide ? '<div class="hint" style="margin-top:6px;color:var(--warn)">'+collide+
+                 ' vorhandene Einträge werden überschrieben.</div>' : '');
+    document.getElementById('imp-dialog').classList.add('open');
+  }).catch(err=>toast('Import: '+err.message));
+}
+function doImport(){
+  const dlg=document.getElementById('imp-dialog');
+  if(!_impPending){ if(dlg) dlg.classList.remove('open'); return; }
+  const keys=Object.keys(_impPending);
+  const onlyProjects=keys.every(k=>k.startsWith('proj_'));
+  Object.entries(_impPending).forEach(([k,v])=>dbSet(k,v));
+  _impPending=null;
+  if(dlg) dlg.classList.remove('open');
+  if(onlyProjects){
+    renderProjList();                                     // Projekte sind ohne Neuladen sichtbar
+    toast(keys.length+' Fundament'+(keys.length!==1?'e':'')+' importiert');
+  } else {
+    // Einstellungen/Templates/Lastniveaus wirken erst nach einem Neuaufbau der UI
+    toast(keys.length+' Einträge importiert — App lädt neu');
+    setTimeout(()=>location.reload(), 700);
+  }
+}
+
 // A8: Komplett-Backup — ALLE Daten (Projekte, Templates, Bodenprofile, Lastniveaus,
 // eigene Tragglieder, Einstellungen, Entwurf) als eine Datei; Wiederherstellen merged
 // per Schlüssel (überschreibt Gleiches, löscht nichts) und lädt die App neu.
@@ -2588,7 +2718,8 @@ let SETTINGS = {
   gbx:1.0, gby:1.0, ghb:1.8, gkx:0.6, gky:0.6, ghk:1.0,
   tG:1.35, tQ:1.5, tph:1.20, tc:1.5, tEa:1.35, tEp:1.40,
   bgphi:27, bgc:0, bggamma:20, bgme:25, uberd:0.40,
-  mob:0.25, alphaZul:0.005, pfahlGzgDecouple:true,   // GZG-Verformung Standard: entkoppelt (Schrägstellung vernachlässigt)
+  mob:0.25, alphaZul:0.005, pfahlGzgDecouple:true, kappaE:1/6,
+  bauzustandGred:false, bauzustandGredVal:1.20, bauzustandGredSpezial:false,   // GZG-Verformung Standard: entkoppelt (Schrägstellung vernachlässigt)
   nw:{sohlsp:true, grundb:true, gleiten:true, kippen:true, gzg:true, gzt:true},
   gz_labels:{
     t2_block:'Grundbruch · Gleiten · Sohlsp. · Steckner GZT',
@@ -2657,6 +2788,12 @@ function loadSettings(){
   chk('set-steckner-slope', SETTINGS.stecknerSlope===true);   // Standard aus (Original-Steckner)
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
   set('set-pfahl-alat', SETTINGS.pfahlAlphaLat??0.30);
+  set('set-pfahl-lcrit', SETTINGS.pfahlLcrit??10);
+  { const _ke=document.getElementById('set-kappa-e');
+    if(_ke) _ke.value = ((SETTINGS.kappaE ?? (1/6)) > 0.25) ? '0.3333' : '0.1667'; }
+  chk('set-bz-gred', SETTINGS.bauzustandGred===true);
+  set('set-bz-gred-val', SETTINGS.bauzustandGredVal??1.20);
+  chk('set-bz-gred-spezial', SETTINGS.bauzustandGredSpezial===true);
   chk('set-pfahl-decouple', SETTINGS.pfahlGzgDecouple);
   chk('set-pfahl-latgrp', SETTINGS.pfahlLatGroup!==false);   // Standard an (p-Multiplier)
   // _bgKoernig / _c1Methode sind PROJEKT-Zustand (FDS-Array, via applyState wiederhergestellt) und werden
@@ -2775,6 +2912,14 @@ function applySettings(){
   SETTINGS.stecknerSlope = gc('set-steckner-slope');
   SETTINGS.pfahlRandMin = gv('set-pfahl-randmin');
   SETTINGS.pfahlAlphaLat = Math.min(1.0, Math.max(0.1, gv('set-pfahl-alat')||0.30));   // laterale Bettung k_s
+  // 0 = kein Deckel (bewusst zugelassen), sonst auf einen sinnvollen Bereich geklemmt
+  { const _lc = gv('set-pfahl-lcrit'); SETTINGS.pfahlLcrit = (_lc>0) ? Math.min(40, Math.max(1, _lc)) : 0; }
+  // Kernweite-Grenze: nur die zwei normativ sinnvollen Stufen (1/6 klaffungsfrei, 1/3 SIA)
+  { const _ke=document.getElementById('set-kappa-e');
+    SETTINGS.kappaE = (_ke && +_ke.value > 0.25) ? (1/3) : (1/6); }
+  SETTINGS.bauzustandGred        = gc('set-bz-gred');
+  SETTINGS.bauzustandGredVal     = Math.min(1.5, Math.max(1.0, gv('set-bz-gred-val')||1.20));
+  SETTINGS.bauzustandGredSpezial = gc('set-bz-gred-spezial');
   SETTINGS.pfahlGzgDecouple = gc('set-pfahl-decouple');
   SETTINGS.pfahlLatGroup = gc('set-pfahl-latgrp');   // lateraler Gruppeneffekt (p-Multiplier)
   // bg_koernig / c1_methode NICHT in SETTINGS spiegeln — sie sind Projekt-Zustand (FDS/applyState).
@@ -2953,7 +3098,7 @@ function renderTemplates(){
     d.innerHTML = `<div class="tpl-icon" style="font-size:16px;margin-bottom:4px">
       <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="8" width="14" height="9" rx="1"/><rect x="6" y="5" width="3" height="3"/><path d="M3 12h14"/></svg>
     </div>
-    <div class="tpl-name">${tpl.name}</div>
+    <div class="tpl-name">${esc(tpl.name)}</div>
     <div class="tpl-desc">${tpl.desc||''}</div>`;
     // Löschen nur für eigene Templates (nicht Built-ins: empty, ref_typ*)
     const isBuiltin = BUILTIN_TPLS.some(b=>b.id===tpl.id);
@@ -5693,7 +5838,7 @@ function schichtPresetDropdown(i){
     <optgroup label="Standard">${g('std')}</optgroup>
     <optgroup label="Sonderböden">${g('spec')}</optgroup>
     <optgroup label="Modellboden">${g('modell')}</optgroup>
-    ${tpls.length?`<optgroup label="Gespeichert">${tpls.map(t=>`<option value="__tpl__${t.id}" ${cur===t.id?'selected':''}>${t.name}</option>`).join('')}</optgroup>`:''}
+    ${tpls.length?`<optgroup label="Gespeichert">${tpls.map(t=>`<option value="__tpl__${t.id}" ${cur===t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`:''}
     ${isCustom?`<option value="" selected>—</option>`:''}
   </select>`;
 }
@@ -5926,7 +6071,7 @@ function renderBGTplTable(){
       const me  = tpl.data?.bg_me    ?? tpl.me    ?? 20;
       const kuerzel = tpl.kuerzel ?? '';
       return `<tr>
-        <td><input class="ll-inp ll-name" value="${tpl.name}" style="width:80px"
+        <td><input class="ll-inp ll-name" value="${esc(tpl.name)}" style="width:80px"
           onchange="bgTplField('${tpl.id}','name',this.value)"/></td>
         <td><input class="ll-inp" value="${kuerzel}" style="width:54px" placeholder="—"
           onchange="bgTplField('${tpl.id}','kuerzel',this.value)"/></td>
@@ -6730,7 +6875,7 @@ function _pbResultHTML(r, piles, n){
       ${r.skinFac<0.999?row('Abminderung Verrohrung', '×'+r.skinFac.toFixed(2)):''}
       ${row('|N|_max (P'+(r.govPile+1)+', '+(govZug?'Zug':'Druck')+')', govF.toFixed(1)+' kN')}
       ${etaRow('η Geotechnik', r.etaGeo, 'η = R_s,d '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(govZug?r.Rskin_dZ:r.Rskin_d).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
-      <div style="font-size:8px;color:var(--xdim);margin-top:2px">q_s,k Erfahrungswert je Schicht (EA-Pfähle/DIN 4128, Verpresspfahl, tiefenkonstant — Vordimensionierung) · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · <b>Spitzendruck NICHT angesetzt</b> (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand) · kritische Tiefe vernachlässigt</div>
+      <div style="font-size:8px;color:var(--xdim);margin-top:2px">q_s,k Erfahrungswert je Schicht (EA-Pfähle/DIN 4128, Verpresspfahl, tiefenkonstant — Vordimensionierung) · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · <b>Spitzendruck NICHT angesetzt</b> (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand) · wirksame Verpresslänge L_eff = ${(r.skinLeff||0).toFixed(2)} m${r.skinCapped?' (auf L_crit = '+(r.skinLcrit||0).toFixed(2)+' m gedeckelt)':(r.skinLcrit?' (unter L_crit = '+(r.skinLcrit||0).toFixed(2)+' m)':' (kein Deckel)')}</div>
       ${(() => {
         // q_s,k-Plausibilität: Preset-Tabellenwert vs. eingegebenes φ' (unkonservative Richtung)
         const mm = (typeof _qsPlausibility==='function') ? _qsPlausibility(r.L||0) : [];
@@ -6744,11 +6889,15 @@ function _pbResultHTML(r, piles, n){
            Abhilfe: q_s,k je Schicht im Tab «Boden» manuell setzen (Tabelle/Probebelastung) oder ein
            passenderes Bodenprofil wählen.`);
       })()}
-      ${(r.L||0) > 15 ? wBox('warn', 'Lange Einbindung — R_s,k wächst linear mit L',
-        `Die Mantelreibung ist tiefenkonstant angesetzt (Erfahrungswert), eine <b>kritische Tiefe</b> ist
-         nicht modelliert → R_s,k steigt unbegrenzt mit der Länge (L = ${(r.L||0).toFixed(1)} m).
-         Bei grossen Verpresslängen ist die Spannungsübertragung real begrenzt (fortschreitendes Entbinden);
-         die wirksame Verpresslänge ist gesondert zu beurteilen bzw. durch Probebelastung zu belegen.`) : ''}
+      ${r.skinCapped ? wBox('warn', 'Wirksame Verpresslänge gedeckelt — L_eff = '+(r.skinLeff||0).toFixed(2)+' m von '+(r.L||0).toFixed(2)+' m',
+        `Die Mantelreibung ist tiefenkonstant angesetzt (Erfahrungswert EA-Pfähle/DIN 4128); ohne Deckel
+         wüchse R_s,k <b>unbegrenzt linear</b> mit der Länge. Angesetzt wird daher nur
+         <b>L_eff = min(L, L_crit) = ${(r.skinLeff||0).toFixed(2)} m</b> (L_crit = ${(r.skinLcrit||0).toFixed(2)} m),
+         die restlichen ${((r.L||0)-(r.skinLeff||0)).toFixed(2)} m bleiben unberücksichtigt.
+         Grund: der Verpresskörper entbindet fortschreitend, und die q_s,k-Tabellen sind für übliche
+         Verpresslängen kalibriert.<br>
+         <b>Konstruktive Bemessungsregel, keine Normformel</b> — L_crit ist in den Optionen einstellbar
+         (0 = kein Deckel); massgebend bleibt die Probebelastung.`) : ''}
       ${diagWrap('_pbdiag_axial', buildPbAxialDiagram(r,n,_gztExpanded))}
     ${CARD_END}
 
@@ -6801,8 +6950,37 @@ function _pbResultHTML(r, piles, n){
 
     ${cardHd('Schiefstellung & Verschiebung', r.etaGZG, null, govName==='GZG')}
       <div class="nw-formula">θ ≤ 1:100 (st+ver) · 1:200 (ver quer)${n<=2?' · u ≤ ±20/±10 mm':''}</div>
-      ${g?row('Schiefstellung st+ver', (1000*Math.max(g.tiltQuer,g.tiltLaengs)).toFixed(1)+' ‰ ≤ 10 (1:100)'):''}
-      ${gv?row('Schiefstellung quer (ver)', (1000*gv.tiltQuer).toFixed(1)+' ‰ ≤ 5 (1:200)'):''}
+      ${(()=>{
+        // Massgebende Kombination: gzgEval prüft je Lastfall eine charakteristische Kombination
+        // (st+ver = G+Q mit γ=1 · ver = nur Q) und meldet den grössten Wert — hier wird sichtbar
+        // gemacht, WELCHE davon den massgebenden Ausschlag gab.
+        const gq = g && (g.tiltQuer>=g.tiltLaengs ? g.govTiltQuer : g.govTiltLaengs);
+        const ax = g && (g.tiltQuer>=g.tiltLaengs ? 'quer' : 'längs');
+        if(!g && !gv) return '';
+        // Zahlenvergleich statt Erklärtext: je Kriterium der massgebende Lastfall + sein Wert.
+        const cr = (lbl, komb, val, unit, grenz) =>
+          `<div style="display:flex;gap:8px;padding:1px 0">
+             <span style="width:92px;color:var(--dim)">${lbl}</span>
+             <span style="width:132px;color:var(--acc)">${esc(komb||'—')}</span>
+             <span style="color:var(--on2)">${val} ${unit}</span>
+             <span style="color:var(--xdim)">&nbsp;/ ${grenz}</span></div>`;
+        const det =
+          (g ? cr('θ st+ver', gq, (1000*Math.max(g.tiltQuer,g.tiltLaengs)).toFixed(2)+' ‰ ('+ax+')', '', '10 ‰') : '') +
+          (gv ? cr('θ quer, ver', gv.govTiltQuer, (1000*gv.tiltQuer).toFixed(2)+' ‰', '', '5 ‰') : '') +
+          ((g&&n<=2) ? cr('u st+ver', (g.uQuer>=g.uLaengs?g.govUQuer:g.govULaengs), Math.max(g.uQuer,g.uLaengs).toFixed(2), 'mm', '20 mm') : '') +
+          ((gv&&n<=2) ? cr('u quer, ver', gv.govUQuer, gv.uQuer.toFixed(2), 'mm', '10 mm') : '') +
+          `<div style="margin-top:4px;color:var(--xdim)">Charakteristische Kombinationen (γ = 1.00):
+            <b>st+ver</b> = ständig + veränderlich${g&&g.nCombos?' über '+g.nCombos+' Lastfall'+(g.nCombos!==1?'e':''):''} ·
+            <b>ver</b> = nur veränderlich. Kleinstes η massgebend.</div>`;
+        const lbl = gq ? gq+' · '+ax : '—';
+        return `<div class="nw-row clickable" onclick="toggleGZTFormula('fml-pbGzgKomb',this)">
+          <span>Massgebende Kombination</span><span>${esc(lbl)}</span></div>
+          <div class="nw-row-formula" id="fml-pbGzgKomb"><div class="f-num">${det}</div></div>`;
+      })()}
+      ${g?row('Schiefstellung st+ver', (1000*Math.max(g.tiltQuer,g.tiltLaengs)).toFixed(1)+' ‰ ≤ 10 (1:100)'
+             + (g.govTiltQuer||g.govTiltLaengs ? '  ·  '+esc((g.tiltQuer>=g.tiltLaengs?g.govTiltQuer:g.govTiltLaengs)||'') : '')):''}
+      ${gv?row('Schiefstellung quer (ver)', (1000*gv.tiltQuer).toFixed(1)+' ‰ ≤ 5 (1:200)'
+             + (gv.govTiltQuer ? '  ·  '+esc(gv.govTiltQuer) : '')):''}
       ${(g&&n<=2)?row('Horiz.versch. st+ver', Math.max(g.uQuer,g.uLaengs).toFixed(1)+' mm ≤ 20'):''}
       ${(gv&&n<=2)?row('Horiz.versch. quer (ver)', gv.uQuer.toFixed(1)+' mm ≤ 10'):''}
       ${n>2?'<div style="font-size:8px;color:var(--xdim);padding:2px 0">Verschiebungslimit ±20/±10 mm gilt für 1-/2-Pfahlfundamente</div>':''}
@@ -7816,8 +7994,11 @@ function bishopStability(opts){
   const gwd    = gwDepth();                 // GW-Tiefe [m u. GOK], Infinity = kein GW
   const gamW   = 10;
   // Teilsicherheiten Scherfestigkeit (SIA 267)
-  const gph    = Math.max(1, +gi('tph') || 1.2);
-  const gc     = Math.max(1, +gi('tc')  || 1.5);
+  // Feld-IDs sind tw_phi/tw_c (wie im gesamten übrigen Rechenkern) — die früheren
+  // Kurznamen 'tph'/'tc' existieren im DOM NICHT und liessen Bishop still auf die
+  // hartkodierten Defaults zurückfallen, d. h. Nutzeränderungen an γ_φ/γ_c wirkten nicht.
+  const gph    = Math.max(1, +gi('tw_phi') || 1.2);
+  const gc     = Math.max(1, +gi('tw_c')   || 1.5);
 
   // Geländeoberfläche (Elevation) als Funktion von x
   const surfY = x => {
@@ -8539,16 +8720,24 @@ function microQsExp(s){
   if(c >= 15 && phi <= 27) return Math.min(100, Math.max(40, 3.5*c));   // bindig: aus c (Ton/Schluff)
   return Math.min(220, Math.max(100, 100 + (phi-30)*12.5));             // nichtbindig: φ als Dichte-Proxy
 }
-function microSkinFriction(L, dG, skinFac, alphaC){
+function microSkinFriction(L, dG, skinFac, alphaC, Lcrit){
   const U = Math.PI * dG, sf = (skinFac > 0 ? skinFac : 1);
-  // Schichtweise EXAKT an den Schichtgrenzen (innerhalb der Einbindelänge [0,L], Tiefe ab Pfahlkopf/GOK)
-  // → Widerstand je Schicht + Verlauf über die Tiefe. q_s,k: explizit (Tabelle/Probebelastung, s.qs) hat
-  // Vorrang, sonst Erfahrungswert (tiefenkonstant je Schicht). dRk je Schicht inkl. Verrohrung sf.
+  // WIRKSAME VERPRESSLÄNGE (Aug 2026): q_s,k ist ein tiefenkonstanter Erfahrungswert (EA-Pfähle/
+  // DIN 4128) — ohne Deckel wüchse R_s,k unbegrenzt linear mit L. Real ist die mitwirkende Länge
+  // begrenzt: der Verpresskörper entbindet fortschreitend (die elastische Dehnung des Traggliedes
+  // wächst schneller als die Verschiebung, bei der die Mantelreibung ihr Maximum erreicht), und die
+  // q_s,k-Tabellen sind für übliche Verpresslängen kalibriert, nicht für beliebige Extrapolation.
+  // Umsetzung als KONSTRUKTIVE OBERGRENZE L_eff = min(L, L_crit) — bewusst eine transparente
+  // Bemessungsregel, KEINE Normformel; L_crit in den Optionen einstellbar (0 = kein Deckel).
+  const Lc = (Lcrit > 0) ? Math.min(L, Lcrit) : L;
+  // Schichtweise EXAKT an den Schichtgrenzen (innerhalb der wirksamen Länge [0,L_eff], Tiefe ab
+  // Pfahlkopf/GOK) → Widerstand je Schicht + Verlauf über die Tiefe. q_s,k: explizit (Tabelle/
+  // Probebelastung, s.qs) hat Vorrang, sonst Erfahrungswert. dRk je Schicht inkl. Verrohrung sf.
   const layers = []; let z = 0;
-  for(let k=0; k<SCHICHTEN.length && z < L-1e-6; k++){
+  for(let k=0; k<SCHICHTEN.length && z < Lc-1e-6; k++){
     const s = SCHICHTEN[k], isLast = (k===SCHICHTEN.length-1);
-    const bot = (s.d===999 || isLast) ? L : Math.min(L, z + (+s.d||0));
-    const z0 = z, z1 = Math.min(L, bot);
+    const bot = (s.d===999 || isLast) ? Lc : Math.min(Lc, z + (+s.d||0));
+    const z0 = z, z1 = Math.min(Lc, bot);
     if(z1 > z0 + 1e-6){
       let qs = (s.qs != null && +s.qs > 0) ? +s.qs : microQsExp(s); qs = Math.max(0, qs);
       layers.push({ name:(s.name||''), preset:(s.preset||''), z0, z1, dz:z1-z0, qs, dRk: qs*U*(z1-z0)*sf });
@@ -8556,9 +8745,10 @@ function microSkinFriction(L, dG, skinFac, alphaC){
     z = bot;
   }
   const Rk = layers.reduce((a,l)=>a + l.dRk, 0);
-  const qsAvg = L>0 ? layers.reduce((a,l)=>a + l.qs*l.dz, 0)/L : 0;
+  const qsAvg = Lc>0 ? layers.reduce((a,l)=>a + l.qs*l.dz, 0)/Lc : 0;
   const qsArr = layers.map(l=>l.qs);
-  return { Rk, qsAvg, qsMin: qsArr.length?Math.min(...qsArr):0, qsMax: qsArr.length?Math.max(...qsArr):0, layers };
+  return { Rk, qsAvg, qsMin: qsArr.length?Math.min(...qsArr):0, qsMax: qsArr.length?Math.max(...qsArr):0,
+           layers, L, Leff: Lc, Lcrit: (Lcrit>0?Lcrit:0), capped: Lc < L - 1e-6 };
 }
 
 // ── Axiale Kopfsteifigkeit Mikropfahl: Lastübertragung (t-z, Randolph) ───────────
@@ -8656,7 +8846,9 @@ function pfahlbockAnalyse(cfg){
   const skinFac = Math.min(1, Math.max(0.05, cfg.skinFac ?? 1));
   const zugFac  = Math.min(1, Math.max(0.05, cfg.zugFac ?? 1));
   const alphaC  = +(SETTINGS.pfahlAlphaC ?? 1.0);
-  const _sk      = microSkinFriction(L, dG, skinFac, alphaC);
+  // Wirksame Verpresslänge: Deckel auf die mitwirkende Mantelfläche (Optionen, 0 = aus)
+  const _Lcrit   = Math.max(0, +(SETTINGS.pfahlLcrit ?? 10));
+  const _sk      = microSkinFriction(L, dG, skinFac, alphaC, _Lcrit);
   const Rskin_k  = _sk.Rk * grp.eta;                            // Druck (charakteristisch), η_g-reduziert
   const Rskin_kZ = Rskin_k * zugFac;                            // Zug (Herausziehen)
   const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
@@ -8781,7 +8973,9 @@ function pfahlbockAnalyse(cfg){
   const gzgEval = combos => {
     const arr = Array.isArray(combos) ? combos : (combos ? [{load:combos}] : []);
     if(!arr.length) return null;
-    let tQ=0,tL=0,uQ=0,uL=0,w=0, any=false, govSol=null, govT=-1, govLd=null;
+    let tQ=0,tL=0,uQ=0,uL=0,w=0, any=false, govSol=null, govT=-1, govLd=null, govLbl=null;
+    // Zusätzlich mitschreiben, WELCHE Kombination den jeweiligen Maximalwert liefert (Anzeige)
+    let lblTQ=null, lblTL=null, lblUQ=null, lblUL=null;
     // Standard (Optionen): Verformung ohne Schrägstellungs-Kopplung (entkoppelt). Kräfte (s.F) bleiben
     // gekoppelt. Default entkoppelt → nur explizites false schaltet auf das gekoppelte Modell.
     const dec = (typeof SETTINGS==='undefined') || SETTINGS.pfahlGzgDecouple!==false;
@@ -8789,11 +8983,15 @@ function pfahlbockAnalyse(cfg){
       const s = solvePfahlbock(piles, c.load || {}); if(!s) return;
       const sD = dec ? (solvePfahlbock(piles, c.load || {}, true) || s) : s;   // Verformung (ggf. entkoppelt)
       any=true;
-      tQ=Math.max(tQ,Math.abs(sD.q[4])); tL=Math.max(tL,Math.abs(sD.q[3]));
-      uQ=Math.max(uQ,Math.abs(sD.q[0])*1000); uL=Math.max(uL,Math.abs(sD.q[1])*1000); w=Math.max(w,Math.abs(sD.q[2])*1000);
+      const _lb = c.label || c.lf || '';
+      if(Math.abs(sD.q[4])      > tQ){ tQ=Math.abs(sD.q[4]);      lblTQ=_lb; }
+      if(Math.abs(sD.q[3])      > tL){ tL=Math.abs(sD.q[3]);      lblTL=_lb; }
+      if(Math.abs(sD.q[0])*1000 > uQ){ uQ=Math.abs(sD.q[0])*1000; lblUQ=_lb; }
+      if(Math.abs(sD.q[1])*1000 > uL){ uL=Math.abs(sD.q[1])*1000; lblUL=_lb; }
+      w=Math.max(w,Math.abs(sD.q[2])*1000);
       // massgebende GZG-Lösung (max. Quer-Schiefstellung) für die Systemverformungs-Figur:
       // entkoppelte Verformung (sD.q, konsistent zu den gemeldeten Werten), Kräfte gekoppelt (s.F)
-      if(Math.abs(sD.q[4]) >= govT){ govT=Math.abs(sD.q[4]); govSol={q:sD.q, F:s.F, FLat:s.FLat}; govLd=c.load||{}; } });
+      if(Math.abs(sD.q[4]) >= govT){ govT=Math.abs(sD.q[4]); govSol={q:sD.q, F:s.F, FLat:s.FLat}; govLd=c.load||{}; govLbl=_lb; } });
     // Quer-Horizontalverschiebung (q[0]) der massgebenden Kombo in Anteil aus HORIZONTALLAST und aus
     // MOMENT zerlegen (lineare Superposition, gleicher gekoppelt/entkoppelt-Zustand). Im gekoppelten
     // Modell wirken die Anteile gegensinnig (Kompensation) → resultierend uH+uM; entkoppelt uM≈0.
@@ -8803,7 +9001,9 @@ function pfahlbockAnalyse(cfg){
       govSol.uH = sH ? sH.q[0]*1000 : 0;   // [mm] Anteil aus Horizontallast
       govSol.uM = sM ? sM.q[0]*1000 : 0;   // [mm] Anteil aus Moment
     }
-    return any ? { tiltQuer:tQ, tiltLaengs:tL, uQuer:uQ, uLaengs:uL, w_mm:w, sol:govSol } : null;
+    return any ? { tiltQuer:tQ, tiltLaengs:tL, uQuer:uQ, uLaengs:uL, w_mm:w, sol:govSol,
+                   gov:govLbl, govTiltQuer:lblTQ, govTiltLaengs:lblTL, govUQuer:lblUQ, govULaengs:lblUL,
+                   nCombos:arr.length } : null;
   };
   const gFull = gzgEval(cfg.gzgFull || cfg.loadGZG_full), gVar = gzgEval(cfg.gzgVar || cfg.loadGZG_var);
   const aZul = cfg.alphaZul ?? 0.01, aZulV = cfg.alphaZulVar ?? 0.005;
@@ -8820,6 +9020,8 @@ function pfahlbockAnalyse(cfg){
            skinFac:+skinFac.toFixed(2), zugFac:+zugFac.toFixed(2), alphaC:+alphaC.toFixed(2),
            qsAvg:+_sk.qsAvg.toFixed(1), qsMin:+_sk.qsMin.toFixed(1), qsMax:+_sk.qsMax.toFixed(1),
            qsTab: SCHICHTEN.some(s=>s.qs!=null && +s.qs>0),
+           // Wirksame Verpresslänge (konstruktiver Deckel, Optionen)
+           skinLeff:+_sk.Leff.toFixed(2), skinLcrit:_sk.Lcrit, skinCapped:_sk.capped,
            // Widerstand je Schicht über die Tiefe (char η_g-reduziert · Bemessung Druck/Zug) — Diagramm + Drill-down
            skinLayers: _sk.layers.map(l=>({ name:l.name, preset:l.preset, z0:+l.z0.toFixed(2), z1:+l.z1.toFixed(2),
              dz:+l.dz.toFixed(2), qs:Math.round(l.qs),
@@ -8906,6 +9108,131 @@ function _qsPlausibility(L){
     z = bot;
   }
   return out;
+}
+
+// ══ Reduzierter Lastbeiwert für Bauzustände (SIA 267 Ziff. 5.4.3.6) ════════════════
+// γ_G,red (typ. 1.20 statt 1.35) für Zustände mit kurzer Standzeit. So wurde in der
+// Typenzulassungsstatik gerechnet. Für SPEZIALFUNDAMENTE ist der Ansatz nicht zulässig —
+// dort greift er nur über die ausdrückliche Ausnahme.
+// Abgrenzung: typengeprüft ist das Standard-BLOCKfundament; Flach- und Pfahlfundament
+// gelten hier als Spezialfundament.
+function _bzSpezialfundament(){
+  return (typeof CALC_MODEL !== 'undefined') && CALC_MODEL !== 'block';
+}
+function _bzGredActive(){
+  if(!SETTINGS || SETTINGS.bauzustandGred !== true) return false;
+  if(_bzSpezialfundament() && SETTINGS.bauzustandGredSpezial !== true) return false;
+  return true;
+}
+// Wird für Spezialfundamente unterdrückt, obwohl eingeschaltet? → für den Warnhinweis
+function _bzGredBlocked(){
+  return SETTINGS && SETTINGS.bauzustandGred === true
+      && _bzSpezialfundament() && SETTINGS.bauzustandGredSpezial !== true;
+}
+// Effektiver ständiger Lastbeiwert im Bauzustand; gGsup = der reguläre Wert (γ_G,sup).
+// Nie grösser als gGsup — die Option darf nur reduzieren, nie erhöhen.
+function _bzGred(gGsup){
+  const g = Math.max(1, +gGsup || 1.35);
+  if(!_bzGredActive()) return g;
+  return Math.min(g, Math.max(1.0, +(SETTINGS.bauzustandGredVal ?? 1.20)));
+}
+
+// ══ Starrkörperbilanz um die Fusskante (Zweitmodell zu Steckner Gl.66) ═════════════
+// Klassisches Kippen des freigelegten Blocks um die Aushubkante O an der Unterkante:
+//   treibend  M_t,d = M_d + H_d·z_H + E_a,d·z_a
+//   haltend   M_h,d = E_p,d·z_p + V_d,inf·b/2
+// Warum das zusätzlich zu Gl.66 gerechnet wird (Aug 2026, aus dem Vergleich mit dem
+// MaFuSi-Konzept der Aegerter & Bosshardt AG für die SBB):
+//   (a) Gl.66 setzt eine Nulllinie IM Block voraus. Zehrt ein tiefer einseitiger Aushub
+//       den Erdwiderstand über der NL auf, verlässt die Formel ihren Gültigkeitsbereich
+//       (`dEx_degen`) und liefert gar kein Ergebnis mehr. Diese Bilanz bleibt bis zum
+//       vollständigen Freilegen (h_p = 0) gültig und geht dort stetig in den freien,
+//       von der Sicherung gehaltenen Körper über.
+//   (b) Sie liefert die Sohlexzentrizität e und damit den Kernweite-Nachweis, den Gl.66
+//       nicht kennt: dort ist e → b/2 zulässig, solange der Boden p_u auf schmalem
+//       Streifen trägt (Tragfähigkeitslimit). e ≤ κ_e·b ist dagegen ein Robustheitslimit.
+//   (c) Sie ist durchgehend konservativer als Gl.66 (alle dort zusätzlich angesetzten
+//       Terme — Seitenflächen-Erddruck, Wandreibungen, Widerstand unter der NL — wirken
+//       netto stabilisierend). Als Zweitmeinung zeigt sie, wie viel Kapazität aus ihnen stammt.
+// Erddruck über `intEarthPress` → Schichtung und Grundwasser wirken wie im übrigen Kern
+// (das Vergleichswerkzeug rechnet hier mit einer homogenen Schicht ohne GW).
+function rigidBlockBalance(cfg){
+  cfg = cfg || {};
+  const b   = Math.max(0.05, +cfg.b   || 1);      // Breite in Lastrichtung
+  const LF  = Math.max(0.05, +cfg.LF  || 1);      // Länge quer dazu
+  const hF  = Math.max(0.05, +cfg.hF  || 1);      // Blockhöhe
+  const ue  = Math.max(0,    +cfg.ue  || 0);      // Überdeckung über OK Block
+  const t   = hF + ue;                            // Einbindetiefe UK Block ab GOK
+  const hA  = Math.min(t, Math.max(0, +cfg.hA || 0));   // einseitige Aushubtiefe ab GOK
+  const hp  = Math.max(0, t - hA);                // Resteinbindung auf der Aushubseite
+  const gph = Math.max(1, +cfg.gPhi || 1.2), gc_ = Math.max(1, +cfg.gC || 1.5);
+  const gM  = Math.max(1, +cfg.gM   || 1.4);      // Widerstandsbeiwert Baugrund
+  const gGs = Math.max(1, +cfg.gGsup|| 1.35);
+  const etaP= Math.min(1, Math.max(0.05, cfg.etaP != null ? +cfg.etaP : 0.5));  // Mobilisierung E_p
+
+  // Resultierende UND Schwerpunkt zwischen zwei Tiefen. Der `cz`-Rückgabewert von
+  // intEarthPress ist die MITTE des Integrationsbereichs, nicht der Schwerpunkt der
+  // Druckfigur — für Hebelarme daher unbrauchbar. Hier wird der Schwerpunkt numerisch
+  // aus den Integralwerten gebildet (N Stufen), was Schichtung und Grundwasser mitnimmt.
+  const _res = (mode, zTop, zBot, zSurf) => {
+    if(zBot <= zTop + 1e-6) return {E:0, cz:(zTop+zBot)/2, arm:0};
+    const N = 24, Eat = z => intEarthPress(z, LF, mode, gph, gc_, true, true,
+                                           +cfg.dpFac || 0.5, zSurf || 0).E;
+    let E=0, M=0, prev = Eat(zTop);
+    for(let i=1;i<=N;i++){
+      const z  = zTop + (zBot-zTop)*i/N;
+      const zm = zTop + (zBot-zTop)*(i-0.5)/N;
+      const cur = Eat(z), dE = cur - prev;
+      E += dE; M += dE*zm; prev = cur;
+    }
+    const cz = E > 1e-9 ? M/E : (zTop+zBot)/2;
+    return {E:Math.max(0,E), cz, arm:Math.max(0, zBot - cz)};
+  };
+
+  // Aktiver Erddruck auf die Rückseite: von OK Block (Tiefe ü) bis UK (Tiefe t)
+  const _a  = _res('a', ue, t, 0);
+  const Ea_k = _a.E;
+  const za   = _a.arm;                              // Hebelarm über UK
+
+  // Passiver Erdwiderstand nur über die Resteinbindung h_p ab der Aushubsohle.
+  // zSurf = hA senkt die wirksame Oberfläche ab (gleiche Konvention wie Zustand A).
+  const _p   = hp > 1e-6 ? _res('p', hA, t, hA) : {E:0, cz:t, arm:0};
+  const Ep_k = _p.E * etaP;
+  const zp   = _p.arm;
+
+  const Ea_d = Ea_k * gGs;        // ungünstig
+  const Ep_d = Ep_k / gM;         // Widerstand
+
+  const Hd = Math.abs(+cfg.Hd || 0), Md = Math.abs(+cfg.Md || 0);
+  const zH = (+cfg.zH != null && +cfg.zH > 0) ? +cfg.zH : (t + Math.max(0, +cfg.hK || 0));
+  const Vinf = Math.max(0, +cfg.Vinf || 0), Vsup = Math.max(0, +cfg.Vsup || Vinf);
+
+  const Mt_d = Md + Hd*zH + Ea_d*za;                 // treibend um O
+  const Mh_d = Ep_d*zp + Vinf*(b/2);                 // haltend um O (ohne Sicherung)
+  const etaM = Mh_d > 1e-9 ? Mt_d / Mh_d : Infinity; // > 1 ⇒ Sicherung erforderlich
+
+  // Erforderliche Rückhaltekraft auf Höhe z_R über UK — zwei unabhängige Bedingungen
+  const zR   = Math.max(0.05, +cfg.zR || zH);
+  const kapE = Math.min(0.5, Math.max(0.01, +cfg.kappaE || (1/6)));
+  const HR_St   = Math.max(0, (Mt_d - Mh_d) / zR);
+  const HR_eLim = Math.max(0, (Mt_d - Ep_d*zp - kapE*b*Vinf) / zR);
+  const HR_tot  = Math.max(HR_St, HR_eLim);
+
+  // Sohlexzentrizität bei tatsächlich vorhandener Sicherungskraft H_R.
+  // M_t,d enthält nur Horizontalkräfte und das aufgebrachte Moment; deren Hebelarme sind
+  // vertikale Abstände und damit um Sohlmitte und Fusskante identisch → die Bilanz ist
+  // bezugspunktneutral, e folgt direkt aus dem Restmoment geteilt durch die Vertikallast.
+  const HR   = Math.max(0, +cfg.HR || 0);
+  const Vecc = Math.max(0.1, Vinf);
+  const e    = Math.abs(Mt_d - Ep_d*zp - HR*zR) / Vecc;
+  const eLim = kapE * b;
+  const etaE = e > 1e-9 ? eLim / e : Infinity;       // ≥ 1 ⇒ erfüllt (App-Konvention)
+
+  return { b, LF, hF, ue, t, hA, hp, Ea_k, Ea_d, za, Ep_k, Ep_d, zp, etaP,
+           zH, zR, Hd, Md, Vinf, Vsup, Mt_d, Mh_d, etaM,
+           HR_St, HR_eLim, HR_tot, HR, e, eLim, kappaE:kapE, etaE,
+           // Kapazität in der Konvention des übrigen Kerns (Widerstand/Einwirkung):
+           Mu_equiv: Mh_d, Md_equiv: Mt_d, eta_equiv: Mt_d > 1e-9 ? Mh_d/Mt_d : Infinity };
 }
 
 function calcPfahlsicherung(){
@@ -9359,9 +9686,49 @@ function calcPfahlsicherung(){
   // M_u,ex ist dort der eingefrorene Wert einer viel flacheren Grube (verifiziert: d_ex = 3.00 m von
   // t = 3.10 m liefert die Kapazität einer 0.75-m-Grube). Eine nicht berechenbare Kapazität darf im
   // Systemnachweis nicht angerechnet werden → das System trägt allein über die Pfähle.
-  const Mu_sys     = hasExState ? (dEx_degen ? 0 : Mu_block_ex) : Mu_block;
   const H_pf_full  = (H_d_bemessung + M_d_bemessung / arm_stuetze) * Math.cos(alpha_rad);
   const M_pile_cap = pile_active ? Math.min(H_pf_full, Hu_gruppe) * arm_stuetze : 0;
+
+  // ── Zweitmodell: Starrkörperbilanz um die Fusskante (immer mitgerechnet) ──────────
+  // Liefert (a) eine Kapazität, die auch bei degeneriertem Gl.66-Mechanismus gültig bleibt
+  // und (b) die Sohlexzentrizität für den Kernweite-Nachweis. Siehe rigidBlockBalance().
+  const _gGinf_s = Math.max(0, +gi('lw_G_inf') || 0.80);
+  // Bauzustand (Option): reduzierter ständiger Lastbeiwert für die Sicherungsbemessung.
+  // Wirkt auf die treibende Seite der Starrkörperbilanz und auf V_d,sup; die Endzustand-
+  // Nachweise oben bleiben unberührt. Option aus ⇒ _gGsup_s === γ_G,sup wie bisher.
+  const _gGsupFull = Math.max(1, +gi('lw_G') || 1.35);
+  const _gGsup_s = _bzGred(_gGsupFull);
+  const bzAktiv  = Math.abs(_gGsup_s - _gGsupFull) > 1e-9;
+  const bzBlockiert = _bzGredBlocked();
+  const _gBet_s  = Math.max(1, +gi('g_gbeton') || 25);
+  const _NG_s    = Math.max(0, +gi('l_NG')     || 0);
+  // Eigengewicht wie im Hauptkern: Block immer, Kopf nur wenn eingerechnet
+  const _kopfIn  = document.getElementById('kopf_in_gk')?.checked !== false;
+  const _Gblk    = G_bx * by_blk * G_hb_b * _gBet_s
+                 + (_kopfIn ? Math.max(0,+gi('g_kx')||0) * Math.max(0,+gi('g_ky')||0)
+                              * (G_hk_b + G_ue_b) * _gBet_s : 0);
+  const _HR_vorh = arm_stuetze > 0.05 ? M_pile_cap / arm_stuetze : 0;   // vorhandene Rückhaltekraft
+  const rb = rigidBlockBalance({
+    b: G_bx, LF: by_blk, hF: G_hb_b, ue: G_ue_b, hK: G_hk_b, hA: d_ex,
+    Hd: H_d_bemessung, Md: M_d_bemessung,
+    zH: G_hb_b + G_ue_b + G_hk_b, zR: arm_stuetze, HR: _HR_vorh,
+    Vinf: _gGinf_s * (_NG_s + _Gblk), Vsup: _gGsup_s * (_NG_s + _Gblk),
+    gPhi: +gi('tw_phi') || 1.2, gC: +gi('tw_c') || 1.5,
+    gM: +gi('tw_Ep') || 1.4, gGsup: _gGsup_s,
+    dpFac: +gi('bg_delta_fac') || 0.5,
+    kappaE: SETTINGS.kappaE ?? (1/6)
+  });
+  // E1 — Kernweite-Nachweis: nur im Aushubzustand geführt. Beim voll eingebundenen Block
+  // deckt Steckner Gl.66 die Standsicherheit ab und der Sohldruck ist dort bewusst nur
+  // informativ; freigelegt trägt dieses Argument nicht mehr.
+  const eccActive = hasExState;
+  const eta_ecc   = eccActive ? rb.etaE : Infinity;
+
+  // E2 — bei degeneriertem Gl.66-Mechanismus tritt die Starrkörperbilanz an seine Stelle,
+  // statt dem Block gar keine Kapazität zuzugestehen. Der Wechsel wird im Panel ausgewiesen.
+  const sysErsatz  = hasExState && dEx_degen && rb.Mu_equiv > 0.01;
+  const Mu_sys     = hasExState ? (dEx_degen ? (sysErsatz ? rb.Mu_equiv : 0) : Mu_block_ex)
+                                : Mu_block;
   const eta_sys = (isFinite(etaGZT_block) && Md_Hst_block >= 0.1)
     ? (Mu_sys + M_pile_cap) / Math.max(0.1, Md_Hst_block)
     : Infinity;
@@ -9386,7 +9753,7 @@ function calcPfahlsicherung(){
   // (Jul 2026; das Pfahlfundament-Modul führt η_GZG seit je in eta_massg → jetzt konsistent).
   const _etas = [['System', eta_sys], ['Tragf.', eta_H], ['Verform.', eta_V],
                  ['Stahl', etaStahl], ['Axial', eta_ax], ['Knick Stütze', eta_knick_stab],
-                 ['GZG System', eta_GZG_sys]];
+                 ['GZG System', eta_GZG_sys], ['Kernweite', eta_ecc]];
   let eta_massgebend = Infinity, nw_massgebend = '—';
   for(const [_nm, _ev] of _etas){
     if(isFinite(_ev) && _ev < eta_massgebend){ eta_massgebend = _ev; nw_massgebend = _nm; }
@@ -9642,12 +10009,21 @@ function calcPfahlsicherung(){
               <span style="font-family:var(--f-mono);color:${eta_blk_c}">${Mu_block.toFixed(1)} kNm · η=${etaGZT_block.toFixed(2)}</span>
             </div>
             ${hasExState ? (dEx_degen ? `<div style="display:flex;justify-content:space-between;padding:3px 0">
-              <span style="color:var(--fail)">M_u,ex Block (Aushub${dEx_side?', '+dEx_side:''})</span>
-              <span style="font-family:var(--f-mono);color:var(--fail)">nicht anrechenbar · 0.0 kNm</span>
+              <span style="color:var(--warn)">M_u,ex Block — Gl.66 ungültig${dEx_side?' ('+dEx_side+')':''}</span>
+              <span style="font-family:var(--f-mono);color:var(--warn)">${sysErsatz ? 'Ersatzmodell' : 'nicht anrechenbar · 0.0 kNm'}</span>
             </div>
-            <div style="font-size:8px;color:var(--fail);padding:0 0 3px;line-height:1.5">Mechanismus degeneriert (NL in Sohle) → das System trägt allein über die Pfähle</div>` : `<div style="display:flex;justify-content:space-between;padding:3px 0">
+            ${sysErsatz ? `<div style="display:flex;justify-content:space-between;padding:3px 0">
+              <span style="color:var(--dim)">M_u aus Starrkörperbilanz (Fusskante)</span>
+              <span style="font-family:var(--f-mono);color:${rb.eta_equiv>=1?'var(--ok)':'var(--fail)'}">${rb.Mu_equiv.toFixed(1)} kNm · η=${isFinite(rb.eta_equiv)?rb.eta_equiv.toFixed(2):'n.m.'}</span>
+            </div>
+            <div style="font-size:8px;color:var(--warn);padding:0 0 3px;line-height:1.5">Steckner Gl.66 verlässt bei diesem Aushub den Gültigkeitsbereich (NL in Sohle). Angerechnet wird stattdessen die <b>Starrkörperbilanz um die Fusskante</b> — durchgehend konservativer, aber bis h_p = 0 gültig.</div>`
+            : `<div style="font-size:8px;color:var(--fail);padding:0 0 3px;line-height:1.5">Mechanismus degeneriert (NL in Sohle) → das System trägt allein über die Pfähle</div>`}` : `<div style="display:flex;justify-content:space-between;padding:3px 0">
               <span style="color:var(--dim)">M_u,ex Block (Aushub${dEx_side?', '+dEx_side:''})</span>
               <span style="font-family:var(--f-mono);color:${eta_ex_c}">${Mu_block_ex.toFixed(1)} kNm · η=${isFinite(etaGZT_ex)?etaGZT_ex.toFixed(2):'n.m.'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:9.5px">
+              <span style="color:var(--xdim)">Zweitmeinung Starrkörperbilanz (Fusskante)</span>
+              <span style="font-family:var(--f-mono);color:var(--xdim)">${rb.Mu_equiv.toFixed(1)} kNm · η=${isFinite(rb.eta_equiv)?rb.eta_equiv.toFixed(2):'n.m.'}</span>
             </div>`) : ''}
             ${pile_active
               ? row('M_Pfahl = min(H_voll, H_u,Gruppe) × arm'+(capped?' — kapazitätsgedeckelt':''), M_pile_cap.toFixed(1), 'kNm')
@@ -9664,6 +10040,55 @@ function calcPfahlsicherung(){
             <div style="font-size:8px;color:var(--xdim);margin-top:3px">Kapazitätssumme: Blockwiderstand im Aushubzustand + kapazitätsgedeckelter Pfahlbeitrag vs. volle Bemessungslast</div>
         ` + CARD_END;
       })()}
+
+      ${eccActive ? (()=>{
+        // ── E1: Kernweite / Sohlexzentrizität im Aushubzustand ────────────────────
+        // Steckner Gl.66 lässt e → b/2 zu, solange der Boden p_u auf schmalem Streifen trägt
+        // (Tragfähigkeitslimit). e ≤ κ_e·b ist ein davon unabhängiges ROBUSTHEITSlimit: es hält
+        // die Sohlfuge klaffungsfrei bzw. innerhalb der SIA-Grenze und verhindert, dass die
+        // Ersatzfläche nach Meyerhof rechnerisch verschwindet.
+        return cardHd('Kernweite / Sohlexzentrizität (Aushubzustand)', eta_ecc, null,
+                      nw_massgebend==='Kernweite') + `
+            <div class="nw-formula">e = |M_t,d − E_p,d·z_p − H_R·z_R| / V_d,inf ≤ κ_e · b</div>
+            ${row('M_t,d treibend (M_d + H_d·z_H + E_a,d·z_a)', rb.Mt_d.toFixed(1), 'kNm')}
+            ${row('E_p,d · z_p (Resteinbindung h_p = '+rb.hp.toFixed(2)+' m)', (rb.Ep_d*rb.zp).toFixed(1), 'kNm')}
+            ${row('H_R · z_R (vorhandene Sicherung)', (rb.HR*rb.zR).toFixed(1), 'kNm')}
+            ${row('V_d,inf', rb.Vinf.toFixed(1), 'kN')}
+            <div style="display:flex;justify-content:space-between;padding:3px 0">
+              <span style="color:var(--dim)">e vorhanden</span>
+              <span style="font-family:var(--f-mono)">${rb.e.toFixed(3)} m = b/${rb.e>1e-6?(rb.b/rb.e).toFixed(1):'∞'}</span>
+            </div>
+            ${row('e_zul = κ_e · b  (κ_e = 1/'+(1/rb.kappaE).toFixed(0)+')', rb.eLim.toFixed(3), 'm')}
+            <div style="display:flex;justify-content:space-between;padding:5px 0;margin-top:4px;border-top:1px solid var(--ol);font-weight:500">
+              <span>η_Kernweite = e_zul / e</span>
+              <span style="font-family:var(--f-mono);color:${eta_ecc>=1?'var(--ok)':'var(--fail)'}">η = ${isFinite(eta_ecc)?eta_ecc.toFixed(2):'∞'}</span>
+            </div>
+            ${rb.HR_tot > rb.HR + 0.05 ? `<div style="font-size:9px;color:var(--warn);padding:4px 0 0;line-height:1.5">
+              Erforderliche Rückhaltekraft aus dieser Bedingung: <b>${rb.HR_eLim.toFixed(1)} kN</b>
+              (aus der reinen Momentenbilanz: ${rb.HR_St.toFixed(1)} kN) — vorhanden ${rb.HR.toFixed(1)} kN.</div>` : ''}
+            <div style="font-size:8px;color:var(--xdim);margin-top:3px">κ_e in den Optionen einstellbar: 1/6 = klaffungsfreie Kernweite (Voreinstellung, für provisorische Zustände) · 1/3 = SIA 267 Ziff. 5.4.2.4. Nur im Aushubzustand geführt — beim voll eingebundenen Block deckt Steckner Gl.66 die Standsicherheit ab.</div>
+        ` + CARD_END;
+      })() : ''}
+
+      ${bzAktiv ? wBox('warn', 'Bauzustand: γ_G,red = '+_gGsup_s.toFixed(2)+' angesetzt (statt '+_gGsupFull.toFixed(2)+')',
+        `Nach SIA 267 Ziff. 5.4.3.6 darf der ständige Lastbeiwert für Zustände mit kurzer Standzeit
+         reduziert werden; so wurde auch in der <b>Typenzulassungsstatik</b> gerechnet. Der Ansatz wirkt
+         auf den <b>Aushubzustand</b>, die <b>Sicherungsbemessung</b> und die <b>Dimensionierung</b> —
+         die Endzustand-Nachweise oben rechnen unverändert mit γ_G,sup = ${_gGsupFull.toFixed(2)}.<br>
+         ${_bzSpezialfundament()
+           ? '<b style="color:var(--fail)">Achtung: Spezialfundament.</b> Der Ansatz ist hier grundsätzlich '+
+             'nicht zulässig und nur über die ausdrücklich gesetzte Ausnahme aktiv — die Anwendungs&shy;'+
+             'bedingungen sind projektspezifisch nachzuweisen und im Bericht zu begründen.'
+           : 'Voraussetzung ist eine tatsächlich kurze Standzeit des Bauzustands; die Begründung gehört '+
+             'in den Nachweisbericht.'}`) : ''}
+      ${bzBlockiert ? wBox('fail', 'γ_G,red für Spezialfundamente unterdrückt',
+        `Der reduzierte Lastbeiwert für Bauzustände ist in den Optionen eingeschaltet, greift hier aber
+         <b>nicht</b>: Typengeprüft ist das Standard-Blockfundament — beim
+         ${CALC_MODEL==='flach'?'Flachfundament':'Pfahlfundament'} handelt es sich um ein
+         <b>Spezialfundament</b>, für das der Ansatz nicht zulässig ist. Gerechnet wird mit dem vollen
+         γ_G,sup = ${_gGsupFull.toFixed(2)}.<br>
+         Soll er dennoch angewandt werden, ist in den Optionen zusätzlich die Ausnahme zu setzen und
+         projektspezifisch zu begründen.`) : ''}
 
       <!-- Globale Böschungsstandsicherheit (Bishop) hier entfernt (Jul 2026, Nutzerentscheid, ohne
            Hinweiszeile): beim eingespannten Blockfundament läge die Gleitfläche teilweise im Betonkörper
@@ -10066,9 +10491,19 @@ function _doCalculate(inp){
     const iq=Math.max(0,1-0.7*al)**5;
     const ig=Math.max(0,1-al)**5;
 
-    // Effektive Fläche (Meyerhof) — Be/Le = effektive Abmessung in x bzw. y
-    const Be=Math.max(0.1,B-2*Math.abs(ex_));
-    const Le=Math.max(0.1,L-2*Math.abs(ey_));
+    // Effektive Fläche (Meyerhof) — Be/Le = effektive Abmessung in x bzw. y.
+    // GÜLTIGKEIT (Aug 2026): der Clamp auf 0.1 m täuschte bei sehr grosser Ausmitte eine Rest-
+    // fläche vor, die es physikalisch nicht gibt → R_d fror ein statt gegen 0 zu gehen
+    // (verifiziert: M = 60 und 120 kNm lieferten beide R_d = 169.97). Liegt die Resultierende
+    // AUSSERHALB der Sohlfläche (|e| ≥ B/2 bzw. L/2), existiert keine effektive Fläche mehr —
+    // der Grundbruchnachweis ist dann nicht führbar (das Fundament kippt, Gleichgewicht in der
+    // Sohle unmöglich). Zusätzlich wird die EC7/DIN-4017-Anwendungsgrenze |e|/B > 1/3 markiert,
+    // ab der die Meyerhof-Ersatzfläche als Näherung gilt.
+    const _eRx = Math.abs(ex_)/Math.max(1e-9, B), _eRy = Math.abs(ey_)/Math.max(1e-9, L);
+    const effAusserhalb = _eRx >= 0.5 || _eRy >= 0.5;      // Resultierende ausserhalb der Sohle
+    const effUeberDrittel = !effAusserhalb && (_eRx > 1/3 || _eRy > 1/3);
+    const Be=Math.max(0.01,B-2*Math.abs(ex_));
+    const Le=Math.max(0.01,L-2*Math.abs(ey_));
     // Bruchmechanik-Breite: kleinere effektive Abmessung (Hansen B'), grössere = L'
     // (Nγ-Term + Formbeiwerte über B'/L' ≤ 1 — richtungsunabhängig, egal ob Ausmitte in x oder y)
     const B_eff=Math.min(Be,Le), L_eff=Math.max(Be,Le);
@@ -10118,6 +10553,12 @@ function _doCalculate(inp){
       Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b_e*B_eff*Ng*ig*sgg*gb_g;
       etaGB = Rd / (smax>0 ? smax : 0.001);
     }
+    // Resultierende ausserhalb der Sohlfläche ⇒ keine effektive Fläche ⇒ Nachweis NICHT führbar.
+    // Kein Zahlenwert ausweisen (der geklemmte R_d wäre frei erfunden) → η = 0 (nicht erfüllt).
+    // NUR beim FLACHFUNDAMENT: dort ist der Sohldruck ein echtes Versagenskriterium. Beim
+    // eingespannten BLOCK ist die Sohldruckverteilung explizit informativ (Standsicherheit läuft
+    // über Steckner Gl.66) und |e| ≥ B/2 ist dort der Regelfall — ein η_GB = 0 wäre irreführend.
+    if(effAusserhalb && !isBlock){ Rd = 0; etaGB = 0; }
 
     // ── 3. GLEITEN — SIA 267 Typ 2
     // Gleitwiderstand mit γ_G,inf (günstig → kleines N = konservativer Widerstand)
@@ -10168,6 +10609,8 @@ function _doCalculate(inp){
     let etaGZG = Infinity, alpha_GZG_calc = 0;
     let tan_a1_GZG=0, tan_a2_GZG=0, M1_GZG_val=0, M2_GZG_val=0;
     let Malpha_GZG_val=0, Mu_char_GZG=0, M_ok_char_GZG=0;
+    // Massgebende GZG-Kombination (Anzeige): Richtung + Vergleichswerte + Lastbeiwerte
+    let gzgDir_='—', gzgHxk_=0, gzgHyk_=0, gzgMxk_=0, gzgMyk_=0, gzgGamG_=1, gzgGamQ_=1;
     let H_k_GZG=0, N_k_GZG=0, gzgBettungKollaps=false;
 
     // ── 7. GZT STANDSICHERHEIT STECKNER (Nulllinie + Grenzmoment)
@@ -10182,6 +10625,7 @@ function _doCalculate(inp){
     let Epa_GZT_=0, Ra_v_GZT_=0, Rp_va_GZT_=0, Rp_vb_GZT_=0;
     let u_ecc_GZT_=0, arm_v_GZT_=0, arm_vp_GZT_=0;
     let komb_GZT_=0;   // massgebende Lastfall-Kombination (1-8, 0 = n/a)
+    let bzGred_=0, bzGredAktiv_=false;   // Bauzustand: effektiver γ_G im Aushubzustand
     // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
     let etaGZT_ex_=Infinity, Mu_GZT_ex_=0, komb_GZT_ex_=0, dEx_used_=0, dEx_side_='', dEx_gov_=0, yNL_ex_=0;
     let dEx_degen_=false;   // Steckner-Mechanismus im Aushubzustand degeneriert (s. Zustand-A-Loop)
@@ -10346,8 +10790,11 @@ function _doCalculate(inp){
       // M_d an OK Block (= GOK − ü) für Steckner GZT — Arm von Lastangriff (OK Kopf) bis OK Block
       // Quer  (x): H_xd×(H_Kopf+ü) + M_Gy_d + M_Wy_d
       // Längs (y): H_yd×(H_Kopf+ü) + M_Gx_d + M_Wx_d
-      const M_ok_x = Math.abs(Hxd*(Hk+ue) + gG*MGy_lf + gW*MWy_lf + Nd*eyk);
-      const M_ok_y = Math.abs(Hyd*(Hk+ue) + gG*MGx_lf + gW*MWx_lf + Nd*exk);
+      // N·e: der Versatz QUER (e_x) erzeugt das Moment um die y-Achse = Quer-Kippen ⇒ gehört zu
+      // M_ok_x (das mit Hxd/MGy gepaart ist); e_y entsprechend zu M_ok_y. Vorher vertauscht
+      // (Aug 2026, Bugfix — wirkte nur bei asymmetrischem Mastversatz e_x ≠ e_y).
+      const M_ok_x = Math.abs(Hxd*(Hk+ue) + gG*MGy_lf + gW*MWy_lf + Nd*exk);
+      const M_ok_y = Math.abs(Hyd*(Hk+ue) + gG*MGx_lf + gW*MWx_lf + Nd*eyk);
 
       // ── Lastfall-Kombinationen (ST-Fundament-konform, SIA 260):
       // Komb 1-8 = EG ∈ {γ_G,inf, γ_G,sup} × Ständig ∈ {inf, sup} × Variabel ∈ {0, γ_Q}
@@ -10357,13 +10804,25 @@ function _doCalculate(inp){
       { let _k = 1;
         for(const fE of [_gGi_c, gG]) for(const fG of [_gGi_c, gG]) for(const fQ of [0, gW])
           COMBOS.push({nr:_k++, fE, fG, fQ}); }
+      // Bauzustand (Option, SIA 267 Ziff. 5.4.3.6): im AUSHUBZUSTAND darf der ständige
+      // Lastbeiwert reduziert werden (γ_G,red ≈ 1.20). Der Endzustand-Nachweis oben bleibt
+      // unberührt — deshalb ein eigener Kombinationssatz nur für den Zustand-A-Loop.
+      // Option aus ⇒ _gG_bz === gG ⇒ COMBOS_EX ist mit COMBOS identisch (bit-gleich).
+      const _gG_bz = _bzGred(gG);
+      bzGred_ = _gG_bz; bzGredAktiv_ = Math.abs(_gG_bz - gG) > 1e-9;
+      const COMBOS_EX = (Math.abs(_gG_bz - gG) < 1e-9) ? COMBOS : (() => {
+        const A = []; let _k = 1;
+        for(const fE of [_gGi_c, _gG_bz]) for(const fG of [_gGi_c, _gG_bz]) for(const fQ of [0, gW])
+          A.push({nr:_k++, fE, fG, fQ});
+        return A;
+      })();
       // Kombinationslasten — vorzeichenbehaftet (Vorzeichen → Bewegungsrichtung/Passivseite)
       const comboLoads = cb => {
         const Nd_c  = cb.fG*NG_lf + cb.fE*Gk + cb.fG*N_auf_k;
         const Hxd_c = cb.fG*HGx_lf + cb.fQ*HWx_lf;
         const Hyd_c = cb.fG*HGy_lf + cb.fQ*HWy_lf;
-        const Mokx_s = Hxd_c*(Hk+ue) + cb.fG*MGy_lf + cb.fQ*MWy_lf + Nd_c*eyk;
-        const Moky_s = Hyd_c*(Hk+ue) + cb.fG*MGx_lf + cb.fQ*MWx_lf + Nd_c*exk;
+        const Mokx_s = Hxd_c*(Hk+ue) + cb.fG*MGy_lf + cb.fQ*MWy_lf + Nd_c*exk;   // Quer: e_x
+        const Moky_s = Hyd_c*(Hk+ue) + cb.fG*MGx_lf + cb.fQ*MWx_lf + Nd_c*eyk;   // Längs: e_y
         return {Nd_c, Hxd_c, Hyd_c, Mokx_s, Moky_s};
       };
       // ── Steckner-Erweiterung (Option SETTINGS.stecknerSlope): Böschungswinkel im GZT
@@ -10424,7 +10883,7 @@ function _doCalculate(inp){
         const _exDepths = [];
         for(let _dz = 0.25; _dz < d_ex_sich - 0.01; _dz += 0.25) _exDepths.push(_dz);
         _exDepths.push(d_ex_sich);
-        for(const cb of COMBOS){
+        for(const cb of COMBOS_EX){
           const {Nd_c, Hxd_c, Hyd_c, Mokx_s, Moky_s} = comboLoads(cb);
           const ux_e = Math.abs(Hxd_c) >= Math.abs(Hyd_c);
           if(!ux_e){
@@ -10511,12 +10970,19 @@ function _doCalculate(inp){
         const Hyk_g  = gGz_*HGy_lf + gQz_*HWy_lf;
         const Nk_g   = gGz_*NG_lf + Gk;   // G_k Eigengewicht: γ=1.00 (SIA 267 §4.4.3, GZG)
         // Momente an OK-Block mit GZG-Beiwerten (korrekte Richtungs-Zuordnung)
-        const Mxk_g = Math.abs(Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk);
-        const Myk_g = Math.abs(Hyk_g*(Hk+ue) + gGz_*MGx_lf + gQz_*MWx_lf + Nk_g*exk);
+        const Mxk_g = Math.abs(Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*exk);   // Quer: e_x
+        const Myk_g = Math.abs(Hyk_g*(Hk+ue) + gGz_*MGx_lf + gQz_*MWx_lf + Nk_g*eyk);   // Längs: e_y
         const ux_g  = Math.abs(Hxk_g) >= Math.abs(Hyk_g);
         const H_kg  = ux_g ? Math.abs(Hxk_g) : Math.abs(Hyk_g);
         const M_ok_g= ux_g ? Mxk_g : Myk_g;
         M_ok_char_GZG = M_ok_g;
+        // Massgebende Kombination für die Anzeige: Richtung (quer/längs) + die beiden Vergleichswerte
+        // und die verwendeten GZG-Lastbeiwerte. Anders als der GZT (8 γ-Kombinationen) kennt der GZG
+        // nur EINEN Lastansatz je Lastfall — die „Kombination" ist hier die gewählte RICHTUNG.
+        gzgDir_ = ux_g ? 'quer' : 'längs';
+        gzgHxk_ = Math.abs(Hxk_g); gzgHyk_ = Math.abs(Hyk_g);
+        gzgMxk_ = Mxk_g;           gzgMyk_ = Myk_g;
+        gzgGamG_ = gGz_;           gzgGamQ_ = gQz_;
         const N_al  = Math.max(0.1, Nk_g);
         H_k_GZG = H_kg; N_k_GZG = N_al;
 
@@ -10578,7 +11044,7 @@ function _doCalculate(inp){
           const _Ag = ux_g ? B : L, _Bq = ux_g ? L : B;
           // Böschungs-Erweiterung (Option) auch im GZG-Deckel: gleicher Mechanismus wie GZT,
           // nur in Querrichtung (Böschung liegt in x), Richtung aus dem char. Lastvorzeichen.
-          const _MxkG = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk;
+          const _MxkG = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*exk;   // Quer: e_x
           const _slpG = ux_g ? _slpF((Hxk_g !== 0 ? Hxk_g : _MxkG) >= 0 ? 1 : -1) : null;
           Mu_c = Math.max(0.001,
             computeGZT_dir(H_kg, Math.max(0.001, M_ok_g), _Ag, _Bq,
@@ -10606,7 +11072,7 @@ function _doCalculate(inp){
             etaGZG_ex_ = etaGZG; alpha_GZG_ex_ = alpha_GZG_calc; Mu_char_GZG_ex_ = Mu_char_GZG;
           } else {
             const exSign_g = (gi('pfahl_dex_seite') || 'gleis') === 'gleis' ? -1 : 1;
-            const Mxk_s_g  = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*eyk;
+            const Mxk_s_g  = Hxk_g*(Hk+ue) + gGz_*MGy_lf + gQz_*MWy_lf + Nk_g*exk;   // Quer: e_x
             const dirX_g   = (Mxk_s_g !== 0 ? Mxk_s_g : Hxk_g) >= 0 ? 1 : -1;   // signiertes Kippmoment
             const exPas    = dirX_g === exSign_g;   // Aushub auf Stirnseite (passiv)?
             // Stirnbettung nur bei Aushub auf der Stirnseite reduziert; aktivseitig intakt.
@@ -10655,10 +11121,13 @@ function _doCalculate(inp){
     return {
       name:lf.name, comp:lf.comp, nw:_lfNW, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y,
       ex:ex_, ey:ey_, inKern, smax, smin, s0, Wx:Wx_, Wy:Wy_,
+      effAusserhalb, effUeberDrittel, eRx:+_eRx.toFixed(3), eRy:+_eRy.toFixed(3),
       ex_kipp, ey_kipp,
       etaGB, etaGL, etaKx, etaKy, eta_klaf, klaf_val, ea_a, eb_b, etaSIG, etaGZG, etaGZT,
       tan_a1_GZG, tan_a2_GZG, M1_GZG_val, M2_GZG_val,
       Malpha_GZG_val, Mu_char_GZG, M_ok_char_GZG, alpha_GZG_calc, gzgBettungKollaps,
+      gzgDir:gzgDir_, gzgHxk:gzgHxk_, gzgHyk:gzgHyk_, gzgMxk:gzgMxk_, gzgMyk:gzgMyk_,
+      gzgGamG:gzgGamG_, gzgGamQ:gzgGamQ_,
       H_k_GZG, N_k_GZG, C1_GZG: C1_kN,
       Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d,
       gb_q, gb_g, q0, soilName:soil.name, govSoilName:govHB.phi+'°',
@@ -10676,6 +11145,7 @@ function _doCalculate(inp){
       arm_v_GZT:  arm_v_GZT_,
       arm_vp_GZT: arm_vp_GZT_,
       komb_GZT:   komb_GZT_,
+      bzGred: bzGred_, bzGredAktiv: bzGredAktiv_,
       // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
       etaGZT_ex: etaGZT_ex_, Mu_GZT_ex: Mu_GZT_ex_, komb_GZT_ex: komb_GZT_ex_, y_NL_GZT_ex: yNL_ex_,
       dEx_degen: dEx_degen_,
@@ -10686,10 +11156,10 @@ function _doCalculate(inp){
       dEx_used: dEx_used_, dEx_side: dEx_side_, dEx_gov: dEx_gov_,
       ue_GZT: isBlock ? ue : 0,
       Hxk: Hxk_lf, Hyk: Hyk_lf,
-      M_ok_x_k: Math.abs(Hxk_lf*(Hk+ue) + (MGy_lf + MWy_lf) + (NG_lf+Gk)*eyk),
-      M_ok_y_k: Math.abs(Hyk_lf*(Hk+ue) + (MGx_lf + MWx_lf) + (NG_lf+Gk)*exk),
-      M_ok_x_d: isBlock ? Math.abs(Hxd*(Hk+ue) + gG*MGy_lf + gW*MWy_lf + Nd*eyk) : 0,
-      M_ok_y_d: isBlock ? Math.abs(Hyd*(Hk+ue) + gG*MGx_lf + gW*MWx_lf + Nd*exk) : 0,
+      M_ok_x_k: Math.abs(Hxk_lf*(Hk+ue) + (MGy_lf + MWy_lf) + (NG_lf+Gk)*exk),   // Quer: e_x
+      M_ok_y_k: Math.abs(Hyk_lf*(Hk+ue) + (MGx_lf + MWx_lf) + (NG_lf+Gk)*eyk),   // Längs: e_y
+      M_ok_x_d: isBlock ? Math.abs(Hxd*(Hk+ue) + gG*MGy_lf + gW*MWy_lf + Nd*exk) : 0,
+      M_ok_y_d: isBlock ? Math.abs(Hyd*(Hk+ue) + gG*MGx_lf + gW*MWx_lf + Nd*eyk) : 0,
       gG_lf: gG, gW_lf: gW,
       phi_k_GZT: isBlock ? Math.atan(Math.tan(phi_d) * gph) : 0,
       // Bodenparameter für Spannungsdarstellung im Diagramm
@@ -10773,6 +11243,23 @@ let _dimBLManual=false;   // true = Nutzer hat das B×L-Feld von Hand gesetzt (l
 function _autoDimensionRun(out){
   const base=collectCalcInputs();
   const step=0.05;
+  // C₁ LIVE je Sweep-Schritt (Aug 2026 — vorher eingefroren auf der Eingangsgeometrie).
+  // c1AutoValue() liest die Geometrie aus dem DOM, also wird die Suchgeometrie vor jedem Schritt
+  // gesetzt und am Ende wieder hergestellt. Wirkt nur im GZG-/Böschungs-Ast (der GZT ist C₁-frei).
+  // ACHTUNG Richtung: der eingefrorene Wert konnte je nach Startgeometrie zu GROSS sein (Start
+  // tiefer als die Lösung ⇒ C₁ überschätzt ⇒ zu kleines H vorgeschlagen = unkonservativ) oder zu
+  // klein. Verifiziert β=−30°/M_E=20: Start H=2.20 ⇒ eingefroren H_req 1.60, live 1.75 m.
+  // Gleiches Muster wie runBemessung.
+  // Bauzustand (Option): mit reduziertem ständigem Lastbeiwert dimensionieren. Der Sweep läuft
+  // über den Pure-Kern, der lw_G aus dem Snapshot liest — deshalb wird der Wert dort ersetzt.
+  const _dimGfull = Math.max(1, +base.raw.lw_G || 1.35);
+  const _dimGred  = _bzGred(_dimGfull);
+  const _dimBz    = Math.abs(_dimGred - _dimGfull) > 1e-9;
+  if(_dimBz) base.raw = { ...base.raw, lw_G: String(_dimGred) };
+  const _dimBak={ g_bx:gi('g_bx'), g_by:gi('g_by'), g_hblock:gi('g_hblock') };
+  const _dimRestore=()=>{ si('g_bx',_dimBak.g_bx); si('g_by',_dimBak.g_by); si('g_hblock',_dimBak.g_hblock); };
+  const liveC1=fb=>{ try{ return c1AutoValue().c1_eff; }catch(_){ return fb; } };
+  const c1For=()=> base.c1_manual ? base.c1_auto_eff : liveC1(base.c1_auto_eff);
   const snap=v=>+(Math.round(v/step)*step).toFixed(2);
   // Resultierendes charakteristisches Moment aus den Mastlasten (MG + MW, quer/längs vektoriell)
   const MresK=Math.hypot((+base.raw.l_MGx||0)+(+base.raw.l_MWx||0), (+base.raw.l_MGy||0)+(+base.raw.l_MWy||0));
@@ -10785,6 +11272,13 @@ function _autoDimensionRun(out){
   const fmt=v=>v.toFixed(2), fe=e=>!isFinite(e)?'n.m.':e.toFixed(2);
   const row=(l,v,c)=>`<div style="display:flex;justify-content:space-between;gap:10px;font-family:var(--f-mono);font-size:10.5px;padding:2px 0"><span style="color:var(--dim)">${l}</span><span style="color:${c||'var(--on2)'}">${v}</span></div>`;
   let html='';
+  if(_dimBz) html+='<div class="hint" style="margin:0 0 6px;color:var(--warn);line-height:1.5">'
+    +'<b>Bauzustand:</b> dimensioniert mit γ_G,red = '+_dimGred.toFixed(2)+' statt '+_dimGfull.toFixed(2)
+    +' (SIA 267 Ziff. 5.4.3.6). <b>Nicht für den Endzustand verwenden</b> — dafür die Option in den '
+    +'Einstellungen ausschalten und neu rechnen.</div>';
+  else if(_bzGredBlocked()) html+='<div class="hint" style="margin:0 0 6px;color:var(--fail);line-height:1.5">'
+    +'γ_G,red ist eingeschaltet, greift hier aber nicht: Spezialfundament (nur Standard-Blockfundament '
+    +'ist typengeprüft). Dimensioniert mit vollem γ_G,sup.</div>';
 
   if(CALC_MODEL==='block'){
     // ── BLOCK: B×L fest auf dem Limit — bemessen wird NUR die Blocktiefe H (Nutzerwunsch Jul 2026)
@@ -10794,7 +11288,9 @@ function _autoDimensionRun(out){
     }
     const calcH=H=>{
       const Hs=snap(H);
-      const r=_doCalculate({ ...base, raw:{ ...base.raw, g_bx:String(blLim), g_by:String(blLim), g_hblock:String(Hs) }, _pure:true });
+      si('g_bx',String(blLim)); si('g_by',String(blLim)); si('g_hblock',String(Hs));   // DOM setzen → C₁ live
+      const r=_doCalculate({ ...base, c1_auto_eff:c1For(),
+        raw:{ ...base.raw, g_bx:String(blLim), g_by:String(blLim), g_hblock:String(Hs) }, _pure:true });
       return { H:Hs, eta:_dimEtaMin(r), gov:_dimGovName(r) };
     };
     // Aktuell = echte eingegebene Geometrie (unverändert)
@@ -10821,10 +11317,11 @@ function _autoDimensionRun(out){
       if(below) html+=row('Sensitivität H −0.05 m ('+fmt(below.H)+')','η = '+fe(below.eta),'var(--fail)');
       html+=row('Sensitivität H +0.05 m ('+fmt(above.H)+')','η = '+fe(above.eta),'var(--ok)');
       html+=`<button class="btn btn-tonal btn-full btn-sm" style="margin-top:6px" onclick="_dimApply(${blLim},${blLim},${found.H})">Übernehmen (${fmt(blLim)} × ${fmt(blLim)} · H ${fmt(found.H)} m)</button>`;
-      html+='<div class="hint" style="margin-top:4px">Nach Übernehmen rechnet die App exakt (C₁ live) — massgebende Ampel prüfen.</div>';
+      html+='<div class="hint" style="margin-top:4px">C₁ wird je Suchschritt live nachgeführt (folgt der Blocktiefe t = H + ü). Vorher galt der C₁ der Eingangsgeometrie für den ganzen Sweep — je nach Startwert zu gross oder zu klein, bei grosser Startgeometrie <b>unkonservativ</b>.</div>';
     } else {
       html+='<div class="hint" style="margin-top:4px">Keine Lösung bis H = '+fmt(Hmax)+' m bei B×L = '+fmt(blLim)+' m — Limit erhöhen oder Boden/Lasten prüfen.</div>';
     }
+    _dimRestore();               // Suchgeometrie zurücknehmen (die Felder waren nur Rechenvehikel)
     out.innerHTML=html;
     return;
   }
@@ -10889,7 +11386,7 @@ function openBemessung(){
         <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--on2)">
           <input type="checkbox" class="bem-lvl-cb" data-i="${i}" checked style="accent-color:var(--acc)">
           <span style="cursor:pointer" onclick="const d=document.getElementById('bem-lvl-d${i}');d.style.display=d.style.display==='none'?'':'none'">
-            <span style="color:var(--xdim)">▸</span> ${ll.name||('Niveau '+(i+1))}</span>
+            <span style="color:var(--xdim)">▸</span> ${esc(ll.name||('Niveau '+(i+1)))}</span>
         </div>
         <div id="bem-lvl-d${i}" style="display:none;font-family:var(--f-mono);font-size:9.5px;color:var(--dim);padding:2px 0 4px 24px;line-height:1.7">
           N_G ${ll.NG} kN · H_G ${ll.HGx}/${ll.HGy} kN · M_G ${ll.MGx}/${ll.MGy} kNm<br>
@@ -10966,7 +11463,7 @@ function _bemSoilHTML(){
   const th='padding:3px 8px;text-align:left;font-size:8px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap';
   const td='padding:3px 8px;color:var(--on2)';
   const rows=SCHICHTEN.map((s,i)=>`<tr>
-    <td style="${td}">${i+1}</td><td style="${td}">${s.name||'—'}</td>
+    <td style="${td}">${i+1}</td><td style="${td}">${esc(s.name||'—')}</td>
     <td style="${td}">${s.d===999?'∞':s.d}</td><td style="${td}">${s.phi}</td>
     <td style="${td}">${s.c}</td><td style="${td}">${s.gamma} / ${s.gamma2}</td>
     <td style="${td}">${s.me??'—'}</td></tr>`).join('');
@@ -11266,9 +11763,9 @@ function printBemessung(){
       @media print { body{ margin:10mm; } }
     </style></head><body>
     <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (Hansen / SIA 267)'}</span>
-      <span style="font-size:11px">${(SETTINGS.firma||'BlockCalc')}</span></div>
-    <div class="meta">Projekt: ${st.p_name||'–'} · Fundament: ${st.p_fundname||'–'} · Nr. ${st.p_nr||'–'} ·
-      Bearbeiter: ${st.p_bearbeiter||SETTINGS.bearbeiter||'–'} · ${now}</div>
+      <span style="font-size:11px">${esc(SETTINGS.firma||'BlockCalc')}</span></div>
+    <div class="meta">Projekt: ${esc(st.p_name||'–')} · Fundament: ${esc(st.p_fundname||'–')} · Nr. ${esc(st.p_nr||'–')} ·
+      Bearbeiter: ${esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')} · ${now}</div>
     <div class="sh">Baugrund und Parameter</div>
     ${fix(_bemLast.soil)}
     <div class="sh" style="margin-top:16px">Diagramm</div>
@@ -11328,7 +11825,7 @@ function exportFundamentliste(){
     : '<span style="color:'+(v>=1?'#2f9e54':'#a02020')+';font-weight:600">'+v.toFixed(2)+'</span>';
   const nOk=rows.filter(r=>r.e.ok).length;
   const trs=rows.map(({p,e})=>`<tr>
-      <td>${p.p_fundname||'–'}</td><td>${p.p_km||''}</td><td>${p.p_mastnr||''}</td>
+      <td>${esc(p.p_fundname||'–')}</td><td>${esc(p.p_km||'')}</td><td>${esc(p.p_mastnr||'')}</td>
       <td>${modelLbl[e.model]||e.model||'–'}</td><td>${e.dims}</td>
       <td style="text-align:right">${etaTxt(e.etaT)}</td>
       <td style="text-align:right">${etaTxt(e.etaG)}</td>
@@ -11351,7 +11848,7 @@ function exportFundamentliste(){
       @media print { body{ margin:10mm; } }
     </style></head><body>
     <div class="hd"><span class="t">Fundamentliste — Dimensionierung</span>
-      <span style="font-size:11px">${(SETTINGS.firma||'BlockCalc')}</span></div>
+      <span style="font-size:11px">${esc(SETTINGS.firma||'BlockCalc')}</span></div>
     <div class="meta">Projekt: ${curName||'(alle)'} · ${rows.length} Fundament${rows.length!==1?'e':''} · ${nOk}/${rows.length} erfüllt ·
       Bearbeiter: ${(gi('p_bearbeiter')||SETTINGS.bearbeiter||'–')} · ${now} · SIA 267</div>
     <table>
@@ -11567,10 +12064,46 @@ function toggleGZTFormula(id, row) {
 // Baut HTML der GZG kv-Zeilen — klickbare Zeilen mit Formel-Aufschlüsselung (wie GZT)
 function buildGZGRows(R, G){
   const tanZul = SETTINGS.alphaZul ?? 0.005;
+  // Massgebende Kombination — bewusst als ZAHLENVERGLEICH statt als Erklärtext: der GZG wählt
+  // zwischen den beiden Richtungen (grösseres |H_k| ⇒ grösseres M_ok). Eine γ-Variation wie im
+  // GZT (8 Kombinationen aus γ_G sup/inf × γ_Q) gibt es hier nicht — der GZG ist nach SIA 267
+  // die charakteristische Kombination mit γ = 1.00; das steht als EIN Satz darunter.
+  const dir = R.gzgDir || '—';
+  const cmpRow = (lbl, H, M, gov) =>
+    `<div style="display:flex;gap:8px;padding:1px 0;color:${gov?'var(--acc)':'var(--dim)'}">
+       <span style="width:44px">${gov?'▸ ':'&nbsp;&nbsp;'}${lbl}</span>
+       <span style="width:118px">|H_k| = ${H.toFixed(1)} kN</span>
+       <span>M_ok = ${M.toFixed(1)} kNm</span></div>`;
+  const kombDetail =
+    cmpRow('quer',  R.gzgHxk||0, R.gzgMxk||0, dir==='quer') +
+    cmpRow('längs', R.gzgHyk||0, R.gzgMyk||0, dir==='längs') +
+    `<div style="margin-top:4px;color:var(--xdim)">GZG = charakteristische Kombination
+      (γ_G = ${(R.gzgGamG??1).toFixed(2)} · γ_Q = ${(R.gzgGamQ??1).toFixed(2)}, SIA 267) — anders als
+      im GZT keine γ-Variation; gewählt wird die Richtung.</div>`;
   const rows = [
+    ['gzgKomb',  'Massgebende Kombination',  dir, kombDetail],
     ['gzgHk',    'H_k  (charakteristisch)',  (R.H_k_GZG||0).toFixed(1)+' kN'],
     ['gzgNk',    'N_k  (inkl. G_k)',         (R.N_k_GZG||0).toFixed(1)+' kN'],
     ['gzgC1',    'C₁  Bettungsziffer',       ((R.C1_GZG||0)/1000).toFixed(1)+' MN/m³'],
+    // E4 — zweite, unabhängige Herleitung als Vergleichswert (reine Anzeige, geht NICHT in die
+    // Rechnung ein). EAB EB 102: k_h = f_h · M_E / t mit f_h = 0.5 (horizontal weicher als
+    // vertikal). Weicht die Steckner-Bettungsziffer stark davon ab, ist das ein Prüfsignal —
+    // beide Herleitungen sind etabliert, EB 102 stammt aber aus dem Baugrubenwandbau.
+    ['gzgKh',    'k_h Vergleich (EAB EB 102)', (()=>{
+        const t_ = Math.max(0.1, (G&&G.Hb) || 0);
+        const me = Math.max(0.3, +gi('bg_me') || 10);
+        const kh = 0.5 * me / t_;
+        const c1 = (R.C1_GZG||0)/1000;
+        const q  = kh > 0.01 ? (c1/kh) : 0;
+        return kh.toFixed(1)+' MN/m³'+(q>0?'  ·  C₁/k_h = '+q.toFixed(1):'');
+      })(),
+      `Unabhängige Abschätzung der horizontalen Bettungsziffer:
+       <b>k_h = f_h · M_E / t</b> mit f_h = 0.50 (EAB EB 102, horizontal weicher als vertikal),
+       M_E = ${(+gi('bg_me')||10).toFixed(0)} MN/m², t = ${(((G&&G.Hb)||0)).toFixed(2)} m.<br>
+       Dient nur dem Quervergleich zu C₁ (Steckner Gl.3/4) — die Rechnung nutzt ausschliesslich C₁.
+       Die beiden Ansätze integrieren unterschiedlich (C₁ über die Blockhöhe, EB 102 über die
+       Einbindetiefe), ein Faktor in dieser Grössenordnung ist daher normal; ein Vielfaches wäre
+       ein Anlass, die Baugrundkennwerte zu prüfen.`],
     ['gzgTa1',   'tan α₁  (Gl.11)',          (R.tan_a1_GZG||0).toFixed(5)],
     ['gzgTa2',   'tan α₂  (Gl.12)',          (R.tan_a2_GZG||0).toFixed(5)],
     ['gzgM1',    'M₁  (Gl.13–15)',           (R.M1_GZG_val||0).toFixed(1)+' kNm'],
@@ -11591,11 +12124,13 @@ function buildGZGRows(R, G){
         Schiefstellungsmodell nicht mehr anwenden (globale Böschungs-/Gleitkreis­standsicherheit
         massgebend).</div>`
     : '';
-  return warn + rows.map(([id,k,v])=>{
+  return warn + rows.map(([id,k,v,d])=>{
     const fDef = NW_FORMULAS[id];
+    // Aufklapp-Inhalt: entweder die hinterlegte Formel oder ein zeilen-eigener Erklärtext (4. Element)
     const fHtml = fDef ? `<div class="nw-row-formula" id="fml-${id}">
       <div class="f-sym">${fDef.sym}</div>
-      <div class="f-num">= ${fDef.num(R,G)}</div></div>` : '';
+      <div class="f-num">= ${fDef.num(R,G)}</div></div>`
+      : (d ? `<div class="nw-row-formula" id="fml-${id}"><div class="f-num">${d}</div></div>` : '');
     return `<div class="nw-row clickable" onclick="toggleGZTFormula('fml-${id}',this)">
       <span>${k}</span><span>${v}</span></div>${fHtml}`;
   }).join('');
@@ -11793,7 +12328,7 @@ function _npEta(eta,inf){
 }
 function _npPH(st,datStr){
   const firma=SETTINGS.firma?`<strong>${SETTINGS.firma}</strong> &ensp;`:'';
-  return `<div class="np-ph">${firma}${st.p_name||'–'}&ensp;·&ensp;Nr.&thinsp;${st.p_nr||'–'}<span>SIA 267:2013 &ensp;·&ensp; ${(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='pfahlbock')?'Pfahlfundament (Mikropfähle)':(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='flach')?'Flachfundament (Hansen)':'Steckner Blockfundament'} &ensp;·&ensp; ${datStr}</span></div>`;
+  return `<div class="np-ph">${firma}${esc(st.p_name||'–')}&ensp;·&ensp;Nr.&thinsp;${esc(st.p_nr||'–')}<span>SIA 267:2013 &ensp;·&ensp; ${(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='pfahlbock')?'Pfahlfundament (Mikropfähle)':(typeof CALC_MODEL!=='undefined'&&CALC_MODEL==='flach')?'Flachfundament (Hansen)':'Steckner Blockfundament'} &ensp;·&ensp; ${datStr}</span></div>`;
 }
 
 // ── Vollständiges Standsicherheitsdokument aufbauen
@@ -11834,18 +12369,18 @@ function buildNachweisDoc(results,G){
   // TITELBLATT
   // ────────────────────────────────────────────────────────────────
   var cover='<div class="np-page np-pb">'+ph()+_npLogo()+
-    '<div class="np-firma">'+(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
+    '<div class="np-firma">'+esc(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
     '<div class="np-ct">Standsicherheitsnachweis</div>'+
     '<div class="np-ct" style="font-size:13px;margin-bottom:4px">Blockfundament nach Steckner (1989) / SIA 267:2013</div>'+
     '<div class="np-cs">Nachweis der Standsicherheit (GZT) und Gebrauchstauglichkeit (GZG) für ein eingespanntes Blockfundament</div>'+
     '<div class="np-cblock">'+
       '<div class="np-cmeta">'+
-        '<span class="k">Bauteil / Objekt</span><span class="v">'+(st.p_name||'–')+'</span>'+
-        '<span class="k">Projektnummer</span><span class="v">'+(st.p_nr||'–')+'</span>'+
-        '<span class="k">Bearbeiter</span><span class="v">'+(st.p_bearbeiter||SETTINGS.bearbeiter||'–')+'</span>'+
+        '<span class="k">Bauteil / Objekt</span><span class="v">'+esc(st.p_name||'–')+'</span>'+
+        '<span class="k">Projektnummer</span><span class="v">'+esc(st.p_nr||'–')+'</span>'+
+        '<span class="k">Bearbeiter</span><span class="v">'+esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')+'</span>'+
         '<span class="k">Datum</span><span class="v">'+datStr+'</span>'+
         '<span class="k">Berechnungsmodell</span><span class="v">Steckner Blockfundament</span>'+
-        '<span class="k">Bemerkung</span><span class="v">'+(st.p_bemerk||'–')+'</span>'+
+        '<span class="k">Bemerkung</span><span class="v">'+esc(st.p_bemerk||'–')+'</span>'+
       '</div>'+
       '<div class="np-sh2" style="margin-top:18px">Normgrundlagen</div>'+
       '<table class="np-tbl" style="margin-bottom:14px">'+
@@ -11872,7 +12407,7 @@ function buildNachweisDoc(results,G){
       '</div>':'')+
       '<table class="np-tbl" style="width:55%">'+
         '<tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr>'+
-        '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
+        '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+esc(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
       '</table>'+
     '</div>'+
   '</div>';
@@ -11885,7 +12420,7 @@ function buildNachweisDoc(results,G){
   var gwTyp=gi('bg_gw')||'nein';
   var schRows=SCHICHTEN.map(function(s,i){
     var dStr=s.d===999?'∞':_npN(s.d)+' m';
-    return '<tr><td>'+(i+1)+'</td><td>'+(s.name||'Schicht '+(i+1))+'</td>'+
+    return '<tr><td>'+(i+1)+'</td><td>'+esc(s.name||'Schicht '+(i+1))+'</td>'+
       '<td class="r">'+_npN(s.phi)+'°</td><td class="r">'+_npN(s.c)+'</td>'+
       '<td class="r">'+_npN(s.gamma)+'</td><td class="r">'+_npN(s.gamma||0)+'</td>'+
       '<td class="r">'+_npN(s.me||0)+'</td><td>'+dStr+'</td></tr>';
@@ -12383,18 +12918,18 @@ function buildNachweisDocFlach(results, G){
 
   // ── Titelblatt ─────────────────────────────────────────────────
   var cover = '<div class="np-page np-pb">'+ph()+_npLogo()+
-    '<div class="np-firma">'+(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
+    '<div class="np-firma">'+esc(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
     '<div class="np-ct">Standsicherheitsnachweis</div>'+
     '<div class="np-ct" style="font-size:13px;margin-bottom:4px">'+mat+' · Starre Methode · SIA 267:2013</div>'+
     '<div class="np-cs">Nachweis der Standsicherheit (GZT) für ein Flachfundament nach starrer Methode (Hansen-Tragfähigkeitsformel)</div>'+
     '<div class="np-cblock">'+
       '<div class="np-cmeta">'+
-        '<span class="k">Bauteil / Objekt</span><span class="v">'+(st.p_name||'–')+'</span>'+
-        '<span class="k">Projektnummer</span><span class="v">'+(st.p_nr||'–')+'</span>'+
-        '<span class="k">Bearbeiter</span><span class="v">'+(st.p_bearbeiter||SETTINGS.bearbeiter||'–')+'</span>'+
+        '<span class="k">Bauteil / Objekt</span><span class="v">'+esc(st.p_name||'–')+'</span>'+
+        '<span class="k">Projektnummer</span><span class="v">'+esc(st.p_nr||'–')+'</span>'+
+        '<span class="k">Bearbeiter</span><span class="v">'+esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')+'</span>'+
         '<span class="k">Datum</span><span class="v">'+datStr+'</span>'+
-        '<span class="k">Fundamentbezeichnung</span><span class="v">'+(st.p_fundname||'–')+'</span>'+
-        '<span class="k">Bemerkung</span><span class="v">'+(st.p_bemerk||'–')+'</span>'+
+        '<span class="k">Fundamentbezeichnung</span><span class="v">'+esc(st.p_fundname||'–')+'</span>'+
+        '<span class="k">Bemerkung</span><span class="v">'+esc(st.p_bemerk||'–')+'</span>'+
       '</div>'+
       sh2('Normgrundlagen')+
       '<table class="np-tbl" style="margin-bottom:14px">'+
@@ -12414,7 +12949,7 @@ function buildNachweisDocFlach(results, G){
       (isStahl?'Stahlplatte γ=78.5 kN/m³, keine Tiefenbeiwerte (t/B << 1). ':'')+'</div>'+
       '<table class="np-tbl" style="width:55%">'+
         '<tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr>'+
-        '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
+        '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+esc(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
       '</table>'+
     '</div>'+
   '</div>';
@@ -12451,7 +12986,7 @@ function buildNachweisDocFlach(results, G){
     '<table class="np-tbl" style="margin-bottom:10px">'+
       '<tr><th>Schicht</th><th>Bezeichnung</th><th class="r">φ\' [°]</th><th class="r">c\' [kPa]</th><th class="r">γ [kN/m³]</th><th class="r">d [m]</th><th class="r">M_E [MN/m²]</th></tr>'+
       SCHICHTEN.map(function(s,i){
-        return '<tr><td>'+(i+1)+'</td><td>'+s.name+'</td><td class="r">'+s.phi+'</td><td class="r">'+s.c+'</td><td class="r">'+s.gamma+'</td><td class="r">'+(s.d===999?'∞':s.d.toFixed(2))+'</td><td class="r">'+s.me+'</td></tr>';
+        return '<tr><td>'+(i+1)+'</td><td>'+esc(s.name)+'</td><td class="r">'+s.phi+'</td><td class="r">'+s.c+'</td><td class="r">'+s.gamma+'</td><td class="r">'+(s.d===999?'∞':s.d.toFixed(2))+'</td><td class="r">'+s.me+'</td></tr>';
       }).join('')+
     '</table>'+
     sh2('Bemessungswerte (GZT Typ 2)')+
@@ -12752,7 +13287,7 @@ function buildNachweisDocPfahl(r, piles, n){
 
   // ── Deckblatt
   const cover=`<div class="np-page np-pb">${ph()}${_npLogo()}
-    <div class="np-firma">${SETTINGS.firma||'BlockCalc SIA 267'}</div>
+    <div class="np-firma">${esc(SETTINGS.firma||'BlockCalc SIA 267')}</div>
     <div class="np-ct">Standsicherheitsnachweis</div>
     <div class="np-ct" style="font-size:13px;margin-bottom:4px">Pfahlfundament · Mikropfahl-Gruppe · SIA 267:2013</div>
     <div class="np-cs">${_pbEinzel()
@@ -12760,10 +13295,10 @@ function buildNachweisDocPfahl(r, piles, n){
       : 'Standsicherheit (GZT) und Gebrauchstauglichkeit (GZG) eines starren Banketts auf geneigten Mikropfählen (Mantelreibung)'}</div>
     <div class="np-cblock">
       <div class="np-cmeta">
-        <span class="k">Bauteil / Objekt</span><span class="v">${st.p_name||'–'}</span>
-        <span class="k">Fundamentbezeichnung</span><span class="v">${st.p_fundname||'–'}</span>
-        <span class="k">Projektnummer</span><span class="v">${st.p_nr||'–'}</span>
-        <span class="k">Bearbeiter</span><span class="v">${st.p_bearbeiter||SETTINGS.bearbeiter||'–'}</span>
+        <span class="k">Bauteil / Objekt</span><span class="v">${esc(st.p_name||'–')}</span>
+        <span class="k">Fundamentbezeichnung</span><span class="v">${esc(st.p_fundname||'–')}</span>
+        <span class="k">Projektnummer</span><span class="v">${esc(st.p_nr||'–')}</span>
+        <span class="k">Bearbeiter</span><span class="v">${esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')}</span>
         <span class="k">Datum</span><span class="v">${datStr}</span>
         <span class="k">${_pbEinzel()?'Profil':'Tragglied'}</span><span class="v">${(sys.grade||'')}${tdn.bez?' · '+tdn.bez:''}</span>
       </div>
@@ -12786,7 +13321,7 @@ function buildNachweisDocPfahl(r, piles, n){
       Nachweis η = Widerstand / Einwirkung ≥ 1.0. Bei geneigtem Gelände wird die laterale Bettung talseitig abgemindert.
       </div>
       ${modelImg?`<div class="np-fig" style="margin:6px 0 14px;text-align:center"><img src="${modelImg}" style="max-width:74%;border:1px solid var(--ol);border-radius:3px"/><div style="font-size:8px;color:var(--xdim);margin-top:3px">Abb. 1 — 3D-Modell (aktuelle Ansicht)</div></div>`:''}
-      <table class="np-tbl" style="width:55%"><tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr><tr><td>0</td><td>${datStr}</td><td>Erstausgabe</td><td>${st.p_bearbeiter||SETTINGS.bearbeiter||''}</td></tr></table>
+      <table class="np-tbl" style="width:55%"><tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr><tr><td>0</td><td>${datStr}</td><td>Erstausgabe</td><td>${esc(st.p_bearbeiter||SETTINGS.bearbeiter||'')}</td></tr></table>
     </div>
   </div>`;
 
@@ -12827,7 +13362,7 @@ function buildNachweisDocPfahl(r, piles, n){
   </div>`;
 
   // ── Kap 2: Baugrund
-  const schRows=SCHICHTEN.map((s,i)=>`<tr><td>${i+1}</td><td>${s.name||'Schicht '+(i+1)}</td><td class="r">${N(s.phi)}</td><td class="r">${N(s.c)}</td><td class="r">${N(s.gamma)}</td><td class="r">${s.d===999?'∞':N(s.d)}</td><td class="r">${N(s.me||0)}</td></tr>`).join('');
+  const schRows=SCHICHTEN.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(s.name||'Schicht '+(i+1))}</td><td class="r">${N(s.phi)}</td><td class="r">${N(s.c)}</td><td class="r">${N(s.gamma)}</td><td class="r">${s.d===999?'∞':N(s.d)}</td><td class="r">${N(s.me||0)}</td></tr>`).join('');
   const skL=r.skinLayers||[];
   const skRows=skL.map((l,i)=>`<tr><td>${l.name||l.preset||'Schicht '+(i+1)}</td><td class="r">${N(l.z0)}–${N(l.z1)} m</td><td class="r">${l.qs}</td><td class="r">${N(l.dz)} m</td><td class="r">${N(l.dRk)}</td></tr>`).join('');
   const page2=`<div class="np-page np-pb">${ph()}
@@ -14655,7 +15190,7 @@ function renderResults(res,worst,g){
       : "R_d = c'_d·Nc·ic + q·Nq·iq + 0.5·γ·B'·Nγ·iγ";
     const grundbRows = [
       ['Schicht',r.soilName],
-      ['R_d',r.Rd.toFixed(1)+' kPa'],
+      ['R_d', r.effAusserhalb ? 'n. führbar' : r.Rd.toFixed(1)+' kPa'],   // Karte nur beim Flach
       ...(g.isBlock?[['T_mantel/A',(r.Tf_total/g.B/g.L).toFixed(1)+' kPa'],
                      ['Kp',r.Kp.toFixed(2)],
                      ['δ_d',(r.delta_d*180/Math.PI).toFixed(1)+'°']]:[] ),
@@ -14677,6 +15212,21 @@ function renderResults(res,worst,g){
          svg: (()=>{ try{ return buildSohlDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildSohlDiagram'},
         {id:'grundb',t:'Grundbruch',e:r.etaGB,f:grundbFormula,rows:grundbRows,
+         // (Die Grundbruch-Karte existiert nur beim Flachfundament — beim Block wird η_GB lediglich
+         //  in der Berichts-Zusammenfassung geführt, dort greift der !isBlock-Guard im Rechenkern.)
+         note: r.effAusserhalb
+           ? wBox('fail','Resultierende ausserhalb der Sohlfläche — Nachweis nicht führbar',
+               `|e_x|/B = ${r.eRx} bzw. |e_y|/L = ${r.eRy} ≥ 0.50: die Lastresultierende liegt
+                <b>ausserhalb</b> der Sohlfläche, eine effektive Ersatzfläche (Meyerhof) existiert nicht
+                mehr. Es wird <b>kein R_d</b> ausgewiesen — das Fundament kippt, ein Sohlgleichgewicht
+                ist unmöglich. Massgebend ist der Kippnachweis; die Abmessung ist zu vergrössern bzw.
+                die Ausmitte zu reduzieren.`)
+           : (r.effUeberDrittel
+               ? wBox('warn','Grosse Ausmitte — Meyerhof-Ersatzfläche als Näherung',
+                   `|e_x|/B = ${r.eRx} bzw. |e_y|/L = ${r.eRy} &gt; 1/3. Ausserhalb der üblichen
+                    Anwendungsgrenze (EC7/DIN 4017) ist die Ersatzflächen-Näherung nur noch bedingt
+                    zutreffend — R_d ist hier mit Vorbehalt zu lesen; der Kippnachweis ist massgebend.`)
+               : ''),
          svg:(()=>{ try{ return buildGrundbDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildGrundbDiagram'},
         {id:'gleiten',t:'Gleiten',e:r.etaGL,f:gleitenFormula,rows:gleitenRows},
@@ -14739,6 +15289,7 @@ function renderResults(res,worst,g){
         ${_utilBar}
         <div class="nw-bd">
           <div class="nw-formula">${card.f}</div>
+          ${card.note||''}
           ${rowsHtml}
           ${card.svg
             ? `<div class="gzt-diagram" style="position:relative;margin-top:6px;border-radius:var(--r1);overflow:hidden;border:1px solid var(--ol)"
@@ -15116,7 +15667,6 @@ function doSaveDlg(){
   const st=collectState(); st._k=k; st._d=new Date().toLocaleDateString('de-CH');
   dbSet(k,st); renderProjList();
   const selEl=document.getElementById('proj-sel'); if(selEl){ selEl.value=k; }
-  const fs=document.getElementById('proj-fields'); if(fs) fs.disabled=false;
   updateSaveBtnTitle();
   closeOverlay('ov-save-dlg');
   toast('Gespeichert: '+st.p_name+(projSel?' → Projekt '+projSel:''));
@@ -15301,7 +15851,7 @@ function renderProjList(){
     card.className='lf-card open';
     card.innerHTML=`
       <div class="lf-card-head" onclick="this.closest('.lf-card').classList.toggle('open')">
-        <span class="proj-grp-name" contenteditable="true" spellcheck="false" title="Klicken zum Umbenennen des Projekts" style="font-weight:500;font-size:11px;outline:none;cursor:text;border-radius:3px;padding:1px 3px">${grp.name||'Projekt'}</span>
+        <span class="proj-grp-name" contenteditable="true" spellcheck="false" title="Klicken zum Umbenennen des Projekts" style="font-weight:500;font-size:11px;outline:none;cursor:text;border-radius:3px;padding:1px 3px">${esc(grp.name||'Projekt')}</span>
         <span style="flex:1"></span>
         <span style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);margin-right:6px">${grp.entries.length} Fundament${grp.entries.length!==1?'e':''}</span>
         <svg class="lf-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M6 8l4 4 4-4"/></svg>
@@ -15345,7 +15895,7 @@ function renderProjList(){
            class="proj-ed"
            onblur="saveProjField('${k}','${field}',this.textContent.trim())"
            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
-           >${val||''}</td>`;
+           >${esc(val||'')}</td>`;
       tr.innerHTML=`
         ${ec('p_fundname',p.p_fundname,'var(--on2)')}
         ${ec('p_km',p.p_km,'var(--dim)')}
@@ -15383,7 +15933,6 @@ function delProj(k){
     if(k===_currentProjKey){
       _currentProjKey=null;
       const sel=document.getElementById('proj-sel'); if(sel) sel.value='';
-      const fs=document.getElementById('proj-fields'); if(fs) fs.disabled=true;
     }
     dbDel(k); renderProjList(); updateSaveBtnTitle();
   });
@@ -15415,7 +15964,6 @@ function doReset(){
   closeOverlay('ov-reset');
   loadTemplate('empty');
   const sel=document.getElementById('proj-sel'); if(sel) sel.value='__new__';
-  const fs=document.getElementById('proj-fields'); if(fs) fs.disabled=false;
   updateSaveBtnTitle();
   toast('Bereit für neues Fundament');
 }
@@ -15441,8 +15989,8 @@ function openShare(preselKeys){
       const row=document.createElement('label');
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r1);cursor:pointer;background:var(--s2);border:1px solid var(--ol);margin-bottom:3px';
       row.innerHTML=`<input type="checkbox" class="share-cb" data-key="${k}" style="accent-color:var(--acc)"${preselKeys&&preselKeys.includes(k)?' checked':''}>
-        <span style="flex:1;font-size:10.5px;color:var(--on2)">${p.p_name||'—'}</span>
-        <span style="font-family:var(--f-mono);font-size:9px;color:var(--dim)">${p.p_km||''} ${p.p_mastnr?'Mast '+p.p_mastnr:''}</span>`;
+        <span style="flex:1;font-size:10.5px;color:var(--on2)">${esc(p.p_name||'—')}</span>
+        <span style="font-family:var(--f-mono);font-size:9px;color:var(--dim)">${esc(p.p_km||'')} ${p.p_mastnr?'Mast '+esc(p.p_mastnr):''}</span>`;
       row.addEventListener('change', updateShareAll);
       sl.appendChild(row);
     });
@@ -15542,7 +16090,7 @@ function reassignProj(k){
   const sel=document.getElementById('reassign-sel');
   const names=[...new Set(dbKeys().filter(j=>j.startsWith('proj_')).map(j=>dbGet(j)?.p_name).filter(Boolean))];
   sel.innerHTML='<option value="">(kein Projekt)</option>'+
-    names.map(n=>`<option value="${n}"${n===p.p_name?' selected':''}>${n}</option>`).join('');
+    names.map(n=>`<option value="${esc(n)}"${n===p.p_name?' selected':''}>${esc(n)}</option>`).join('');
   // Freitextfeld auf aktuellen Projektnamen setzen
   document.getElementById('reassign-nr').value=p.p_name||'';
   // Sync: Dropdown → Freitext
@@ -15626,6 +16174,16 @@ function mobSwitch(view){
 // ════════════════════════════════════════════
 function gi(id){ return document.getElementById(id)?.value ?? '0'; }
 function si(id,v){ const el = document.getElementById(id); if(el) el.value = v; }
+// HTML-Maskierung für FREIE Nutzertexte (Projekt-/Fundament-/Schicht-/Traggliednamen, Bemerkungen,
+// Firma, KM, Mast-Nr.). Nötig überall dort, wo solche Werte per innerHTML/document.write in Markup
+// interpoliert werden — sowohl als Elementinhalt als auch in Attributen (daher auch " und ').
+// Zwei Gründe: (a) importierte Projekt-JSON aus fremder Quelle könnte Markup/Skript einschleusen,
+// (b) ein legitimes „B > 2 & L < 3" in einer Bemerkung zerlegte sonst das Layout.
+function esc(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 function switchTab(n){
   const ns=['geometrie','baugrund','lasten','sicherung'];   // 'projekt' liegt jetzt im Topbar-Banner
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',ns[i]===n));
@@ -15676,10 +16234,17 @@ function runSelfTest(){
   const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
               stecknerSlope:SETTINGS.stecknerSlope, stecknerMob:SETTINGS.stecknerMob,
               pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat,
-              pfahlLatGroup:SETTINGS.pfahlLatGroup, nw:SETTINGS.nw };
+              pfahlLatGroup:SETTINGS.pfahlLatGroup, pfahlLcrit:SETTINGS.pfahlLcrit,
+              kappaE:SETTINGS.kappaE, bzG:SETTINGS.bauzustandGred,
+              bzGv:SETTINGS.bauzustandGredVal, bzGs:SETTINGS.bauzustandGredSpezial,
+              nw:SETTINGS.nw };
   SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
   SETTINGS.pfahlAlphaLat=0.30;     // Golden = konservativer Default (laterale Pfahlbettung)
   SETTINGS.pfahlLatGroup=true;     // Golden = p-Multiplier AN (bei gespreizten Pfählen ohnehin 1.0)
+  SETTINGS.pfahlLcrit=10;          // Golden = Default-Deckel; T6-Pfahl hat L=10 m ⇒ kein Abzug
+  SETTINGS.kappaE=1/6;             // Golden = Voreinstellung (wirkt nur bei aktivem Aushub)
+  SETTINGS.bauzustandGred=false;   // Golden = voller γ_G,sup (Bauzustands-Reduktion ist opt-in)
+  SETTINGS.bauzustandGredSpezial=false;
   SETTINGS.stecknerSlope=false;   // Golden = Original-Steckner (β_a=β_p=0)
   SETTINGS.stecknerMob=true;      // Golden = Passivdruck mobilisiert (Standard AN)
   SETTINGS.nw = Object.assign({}, SETTINGS.nw, {bishop:true});   // Bishop-Golden (T7) braucht den aktiven Nachweis
@@ -15711,15 +16276,22 @@ function runSelfTest(){
       add('Block M_u [kNm]',              r.Mu_GZT, 270.44400872310837, 1e-3,'rel');
       add('Block GZG η (Schiefstellung)', r.etaGZG, 4.4150063488403495, 1e-3,'rel');
       add('Block N_d [kN]',               r.Nd,     190.575,           1e-3,'rel'); })();
-    // ── T5 Flach/Hansen (Golden, gleicher Zustand)
-    setModel('flach'); calculate();
+    // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
+    // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
+    // AUSSERHALB der Sohlfläche; dort ist die Meyerhof-Ersatzfläche nicht definiert. Der frühere
+    // Golden (η_GB 0.14457 / R_d 86.04) stammte aus dem auf Be = 0.1 m GEKLEMMTEN Wert und war damit
+    // ein Phantomwert — er hat die Hansen-Formel gar nicht geprüft. Mit 2.60 m (e_x/B = 0.131,
+    // Kippnachweis η = 4.37 erfüllt) liegt der Fall im Gültigkeitsbereich und T5 prüft die Formel.
+    setModel('flach'); si('g_bx','2.60'); si('g_by','2.60'); calculate();
     (()=>{ const r=_lastResults&&_lastResults[0]||{};
-      // Golden aktualisiert Jul 2026 nach Flach-Einbindetiefe-Umstellung: Sohltiefe = Feldwert direkt
-      // (t=ü, war t=H_Block+ü) → im ST-Zustand (H_Block=2.70/ü=0.40) sinkt t 3.10→0.40, q₀ entsprechend,
-      // dazu Erdüberdeckung max(0,ü−H_Block)=0 (weniger Auflast) → kleineres R_d/η_GB, leicht kleineres η_GL.
-      add('Flach Grundbruch η', r.etaGB, 0.14457026793431385, 1e-3,'rel');
-      add('Flach Gleiten η',    r.etaGL, 2.0441853688470344,  1e-3,'rel');
-      add('Flach R_d [kN]',     r.Rd,    86.04382122101026,   1e-3,'rel'); })();
+      add('Flach Grundbruch η', r.etaGB, 1.8021425590234563, 1e-3,'rel');
+      add('Flach Gleiten η',    r.etaGL, 6.307914382125573,  1e-3,'rel');
+      add('Flach R_d [kN]',     r.Rd,    249.50897507845121, 1e-3,'rel'); })();
+    // ── T5b Ausmitte-Guard: Resultierende ausserhalb der Sohlfläche ⇒ Grundbruch NICHT führbar
+    // (schützt den Aug-2026-Fix gegen Rückfall auf den geklemmten Phantomwert)
+    si('g_bx','1.30'); si('g_by','1.30'); calculate();
+    (()=>{ const r=_lastResults&&_lastResults[0]||{};
+      add('Flach Ausmitte-Guard: η_GB = 0 bei e/B ≥ 0.5', r.etaGB, 0, 1e-9,'abs'); })();
     // ── T6 Pfahlfundament (Golden; Result-Felder sind auf 2 Dez. gerundet → abs-Toleranz)
     setModel('pfahlbock');
     (()=>{ const r=window._pbReport&&window._pbReport.r||{};
@@ -15729,6 +16301,9 @@ function runSelfTest(){
       add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
       add('Pfahl R_s,d [kN]',            r.Rskin_d,  336.6, 0.5,'abs'); })();
     // ── T7 Bishop-Gleitkreis (Golden: Flach + Böschung β=−30°, h_β=3 m)
+    // Zustand frisch herstellen — T5/T5b haben g_bx/g_by verändert, und q_block des Gleitkreises
+    // hängt vom Footprint ab (sonst würde der Bishop-Golden mitwandern).
+    applyState(_ST_STATE);
     setModel('flach');
     si('bg_beta','-30'); si('bg_bhoehe','3'); si('bg_bfuss','1.0');
     (()=>{ const bt=document.getElementById('bg_btyp'); if(bt) bt.value='boeschung'; })();
@@ -15741,7 +16316,10 @@ function runSelfTest(){
     SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.pfahlRandMin=bak.pfahlRandMin;
     SETTINGS.stecknerSlope=bak.stecknerSlope; SETTINGS.stecknerMob=bak.stecknerMob;
     SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat;
-    SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.nw=bak.nw;
+    SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.pfahlLcrit=bak.pfahlLcrit;
+    SETTINGS.kappaE=bak.kappaE; SETTINGS.bauzustandGred=bak.bzG;
+    SETTINGS.bauzustandGredVal=bak.bzGv; SETTINGS.bauzustandGredSpezial=bak.bzGs;
+    SETTINGS.nw=bak.nw;
     window._SELFTEST_MODE = _stModeBak;
   }
   _renderSelfTest(T);
@@ -15771,7 +16349,7 @@ function _renderSelfTest(T){
           <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Status</th>
         </tr></thead>
         <tbody>${T.map(t=>`<tr style="border-bottom:1px solid var(--ol)">
-          <td style="padding:5px 8px;color:var(--on2)">${t.name}</td>
+          <td style="padding:5px 8px;color:var(--on2)">${esc(t.name)}</td>
           <td style="padding:5px 8px;text-align:right">${fmt(t.val)}</td>
           <td style="padding:5px 8px;text-align:right;color:var(--dim)">${fmt(t.exp)}</td>
           <td style="padding:5px 8px;text-align:right;color:var(--xdim)">${t.mode==='rel'?(+(t.tol*100).toPrecision(2))+'%':t.tol}</td>
@@ -15802,14 +16380,9 @@ document.addEventListener('keydown',e=>{
   }
 });
 document.addEventListener('DOMContentLoaded',async()=>{
-  // Strukturfix: tab-baugrund (Boden) war im Markup fälschlich in tab-geometrie verschachtelt
-  // (tab-geometrie schliesst ein </div> zu spät). Als Geschwister-Panel ausgliedern, damit der
-  // Boden-Tab korrekt sichtbar wird; pfahlbock-section bleibt korrekt in tab-geometrie.
-  (()=>{ const tg=document.getElementById('tab-geometrie'), tb=document.getElementById('tab-baugrund');
-    if(tg && tb && tb.parentElement===tg) tg.parentElement.insertBefore(tb, tg.nextSibling); })();
-  // Dimensionierungs-Karte gehört ans Ende von geo-standard (Markup-Verschachtelung s. o.)
-  (()=>{ const dc=document.getElementById('dim-card'), gs=document.getElementById('geo-standard');
-    if(dc && gs && dc.parentElement!==gs) gs.appendChild(dc); })();
+  // (Aug 2026) Die früheren Reparenting-Workarounds sind entfallen: tab-baugrund liegt jetzt als
+  // echtes Geschwister-Panel neben tab-geometrie und dim-card am Ende von geo-standard — direkt
+  // im Markup, nicht mehr erst zur Laufzeit korrigiert.
   await dbInit();
   loadSettings();
   updateSliderRanges();
