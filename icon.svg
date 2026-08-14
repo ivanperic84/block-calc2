@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <rect width="96" height="96" rx="18" fill="#0e0f13"/>
+  <!-- Mast -->
+  <rect x="45" y="14" width="6" height="26" rx="1.5" fill="#e8e8ee"/>
+  <!-- Fundamentkopf -->
+  <rect x="38" y="40" width="20" height="10" rx="2" fill="#7c8de0"/>
+  <!-- Block -->
+  <rect x="26" y="50" width="44" height="30" rx="3" fill="#e8e8ee"/>
+  <!-- GOK-Linie -->
+  <line x1="10" y1="50" x2="26" y2="50" stroke="#70727e" stroke-width="3" stroke-linecap="round"/>
+  <line x1="70" y1="50" x2="86" y2="50" stroke="#70727e" stroke-width="3" stroke-linecap="round"/>
+</svg>
