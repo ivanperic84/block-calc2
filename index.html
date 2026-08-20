@@ -1488,13 +1488,14 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <div class="lf-card-body">
             <!-- Block-spezifisch -->
             <div id="mat-block-params">
-              <div class="field"><label>Wandreibung δ</label>
-                <select id="bg_delta_fac" onchange="updateMatCardSummary()">
+              <div class="field" id="bg_delta_fac_field"><label>Wandreibung δ</label>
+                <select id="bg_delta_fac" onchange="updateMatCardSummary();_updateDeltaFacUI()">
                   <option value="0">0 — glatt</option>
                   <option value="0.5">φ / 2</option>
                   <option value="0.667" selected>2/3 · φ — Beton</option>
                   <option value="1.0">φ — rau</option>
                 </select>
+                <div class="hint" id="bg_delta_fac_hint"></div>
               </div>
               <div class="field">
                 <label>Bodenart (USCS-Klassifikation)</label>
@@ -1520,9 +1521,15 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
                   <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">informativ · nicht massgebend nach Steckner</span>
                 </div>
                 <div class="field">
-                  <label style="min-height:2.6em;display:flex;align-items:flex-end;gap:5px">M_E  Steifemodul <em style="margin-left:2px">MN/m²</em><span id="c1-zone-chip" class="c1-zone-chip"></span></label>
+                  <!-- Zonen-Chip NICHT im Label: dort lief er aus der schmalen g2-Spalte heraus und
+                       wurde abgeschnitten. Umbrechen im Label würde die Feldhöhen der beiden
+                       Spalten entkoppeln (min-height hält sie bündig) — daher unter das Feld. -->
+                  <label style="min-height:2.6em;display:flex;align-items:flex-end;gap:5px">M_E  Steifemodul <em style="margin-left:2px">MN/m²</em></label>
                   <input id="bg_me" type="number" value="20" step="1" readonly style="opacity:.5;cursor:default" title="Automatisch aus Bodenschichten berechnet"/>
-                  <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Automatisch aus Schicht-M_E berechnet</span>
+                  <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px">
+                    <span id="c1-zone-chip" class="c1-zone-chip"></span>
+                    <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">Automatisch aus Schicht-M_E berechnet</span>
+                  </div>
                 </div>
               </div>
               <div class="field">
@@ -1660,8 +1667,9 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
         </div>
 
         <div style="margin:10px 0 2px">
-          <button class="btn" style="width:100%" onclick="flipLastrichtung()"
+          <button class="btn btn-tonal btn-full btn-sm" style="margin-top:0" onclick="flipLastrichtung()"
             title="Kehrt das Vorzeichen aller Horizontalkräfte und Momente um (H_Gx/y, M_Gx/y, H_Wx/y, M_Wx/y). Die Normalkraft N_G bleibt unverändert. Wirkt nur dort auf das Ergebnis, wo die Richtung zählt — Böschung im GZT, Aushub/Sicherung, asymmetrischer Kopfversatz.">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h12M12 4l3 3-3 3"/><path d="M17 13H5M8 10l-3 3 3 3"/></svg>
             Lastrichtung umkehren
           </button>
           <div class="hint" id="flip-hint" style="margin-top:4px">Kehrt H und M um (N_G bleibt). Ohne Böschung, Aushub oder Kopfversatz ist der Nachweis richtungssymmetrisch — das Ergebnis ändert sich dann nicht.</div>
@@ -2378,9 +2386,16 @@ input.dim-active { box-shadow:0 0 0 2px var(--acc-s); border-color:var(--acc); }
           <span id="set-mob-hint" style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">Ew = E₀ + mob·(Ep − E₀) — mobilisierter Passivwiderstand über Nulllinie</span>
         </div>
         <div class="field" style="margin-top:8px">
-          <label>GZG Schiefstellung tan(α) zulässig</label>
+          <label>tan(α)_zul — ständig + veränderlich <em>1/100</em></label>
+          <input id="set-alpha-zul-full" type="number" value="0.010" step="0.001" min="0.001"/>
+        </div>
+        <div class="field">
+          <label>tan(α)_zul — veränderlich allein <em>1/200</em></label>
           <input id="set-alpha-zul" type="number" value="0.005" step="0.001" min="0.001"/>
-          <span style="font-size:9.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">SIA 267 Standard: 0.005 (= 1/200)</span>
+          <div class="hint">Zulässige Schiefstellung nach SBB 0161.1011.0007. Massgebend ist der
+            Lastbeiwert <b>γ_G,GZG</b> (Tab «Lasten»): grösser 0 ⇒ der ständige Anteil ist enthalten
+            ⇒ oberer Wert; genau 0 ⇒ reiner Veränderlich-Fall ⇒ unterer Wert. Beide gleich setzen
+            reproduziert das frühere Verhalten mit einem einzigen Grenzwert.</div>
         </div>
         <div class="toggle-row" style="margin-top:8px">
           <div><div class="toggle-label">Erweiterung: Böschung im GZT</div><div class="toggle-sub">E_p talseitig mit K_p,β statt K_p → Nachweis richtungsabhängig · über Steckner hinaus · Standard aus</div></div>
@@ -2899,7 +2914,7 @@ let SETTINGS = {
   gbx:1.0, gby:1.0, ghb:1.8, gkx:0.6, gky:0.6, ghk:1.0,
   tG:1.35, tQ:1.5, tph:1.20, tc:1.5, tEa:1.35, tEp:1.40,
   bgphi:27, bgc:0, bggamma:20, bgme:25, uberd:0.40,
-  mob:0.25, alphaZul:0.005, pfahlGzgDecouple:true, kappaE:1/6,
+  mob:0.25, alphaZul:0.005, alphaZulFull:0.010, pfahlGzgDecouple:true, kappaE:1/6,
   bauzustandGred:false, bauzustandGredVal:1.20, bauzustandGredSpezial:false,   // GZG-Verformung Standard: entkoppelt (Schrägstellung vernachlässigt)
   nw:{sohlsp:true, grundb:true, gleiten:true, kippen:true, gzg:true, gzt:true},
   gz_labels:{
@@ -2988,6 +3003,25 @@ function nwOn(sys, key){
   return s[key] !== false;
 }
 
+// Zulaessige Schiefstellung tan(α) — SBB 0161.1011.0007 kennt ZWEI Grenzwerte:
+// 1:100 fuer staendig+veraenderlich, 1:200 fuer die veraenderliche Last allein.
+// Welcher gilt, haengt am GZG-Lastbeiwert lw_G_gzg: > 0 ⇒ der staendige Anteil ist
+// enthalten ⇒ 1:100; = 0 ⇒ reiner Veraenderlich-Fall ⇒ 1:200.
+// Lastbeiwert lesen: `+gi(id) || 1.00` verschluckt eine eingegebene 0 (falsy) und liefert 1.00 —
+// wer γ_G,GZG = 0 setzt, um den reinen Veraenderlich-Fall zu rechnen, bekam still den vollen
+// staendigen Anteil. Nur ein LEERES Feld faellt auf die Vorgabe zurueck (wie bei gwDepth).
+function _gzgFac(id, dflt){
+  const el = document.getElementById(id);
+  const raw = el ? String(el.value).trim() : '';
+  if(raw === '') return dflt;
+  const v = +raw;
+  return isFinite(v) ? v : dflt;
+}
+
+function _tanZul(hasPermanent){
+  return hasPermanent ? (SETTINGS.alphaZulFull ?? 0.010) : (SETTINGS.alphaZul ?? 0.005);
+}
+
 function loadSettings(){
   const s = dbGet('bc_settings');
   if(s) SETTINGS = Object.assign(SETTINGS, s);
@@ -3010,6 +3044,7 @@ function loadSettings(){
   set('set-tEp',  SETTINGS.tEp??1.40);
   set('set-mob',     SETTINGS.mob??0.25);
   set('set-alpha-zul', SETTINGS.alphaZul??0.005);
+  set('set-alpha-zul-full', SETTINGS.alphaZulFull??0.010);
   chk('set-steckner-mob', SETTINGS.stecknerMob !== false);     // Standard AN (Passivdruck mobilisiert)
   _syncMobUI();   // mob-Eingabe an den Toggle koppeln (aus ⇒ ausgegraut, 100 %)
   _sichEnabled = SETTINGS.sichEnabled === true;                 // Sicherung/Aushub-Tab (Standard aus, selten)
@@ -3134,6 +3169,8 @@ function applySettings(){
   SETTINGS.tEa  = gv('set-tEa');  SETTINGS.tEp = gv('set-tEp');
   if(gc('set-steckner-mob')) SETTINGS.mob = gv('set-mob');   // nur bei aktiver Mobilisierung übernehmen (aus ⇒ Feld = 100 %, realer Wert bleibt erhalten)
   SETTINGS.alphaZul= gv('set-alpha-zul');
+  SETTINGS.alphaZulFull = gv('set-alpha-zul-full');
+  try{ _updateDeltaFacUI(); }catch(_){ }   // Reichweite haengt an nwOn('block','info')
   SETTINGS.stecknerMob = gc('set-steckner-mob');   // Passivdruck-Mobilisierung (Standard an)
   SETTINGS.stecknerSlope = gc('set-steckner-slope');
   SETTINGS.pfahlRandMin = gv('set-pfahl-randmin');
@@ -4710,14 +4747,19 @@ function buildStress(){
   // y_bot/y_top: vertikale Ausdehnung (Three.js Y)
   // sig_bot/sig_top: Spannung [kPa] an UK/OK der Zone
   // Gibt Eckpunkt-Daten zurück für Labels
-  function makeFin(face_x, dir, y_bot, y_top, sig_bot, sig_top, hexCol, alpha) {
+  // axis 'x' = Stirnfläche (⊥ zur Last), axis 'z' = Seitenfläche (∥ zur Last, Gl.34/35).
+  // `face` ist die Koordinate der Fläche, `dir` die Richtung der Auslenkung, `half` die halbe
+  // Ausdehnung längs der Fläche.
+  function makeFin(face, dir, y_bot, y_top, sig_bot, sig_top, hexCol, alpha, axis, half) {
+    axis = axis || 'x';
+    if(half == null) half = (axis === 'x') ? L/2 : B/2;
     const wb = sig_bot * sc * dir, wt = sig_top * sc * dir;
-    const hL = L/2;
+    const hL = half;
+    // P(w, y, s): w = Auslenkung senkrecht zur Fläche, s = Lauf entlang der Fläche
+    const P = (axis === 'x') ? (w,y,s)=>[face+w, y, s] : (w,y,s)=>[s, y, face+w];
     const v = new Float32Array([
-      face_x,    y_top,-hL,  face_x+wt, y_top,-hL,
-      face_x+wb, y_bot,-hL,  face_x,    y_bot,-hL,
-      face_x,    y_top, hL,  face_x+wt, y_top, hL,
-      face_x+wb, y_bot, hL,  face_x,    y_bot, hL,
+      ...P(0, y_top,-hL), ...P(wt, y_top,-hL), ...P(wb, y_bot,-hL), ...P(0, y_bot,-hL),
+      ...P(0, y_top, hL), ...P(wt, y_top, hL), ...P(wb, y_bot, hL), ...P(0, y_bot, hL),
     ]);
     const ix=[0,2,1,0,3,2, 4,5,6,4,6,7, 0,1,5,0,5,4, 3,6,2,3,7,6, 1,2,6,1,6,5];
     const geo=new THREE.BufferGeometry();
@@ -4728,17 +4770,20 @@ function buildStress(){
     // Umriss vordere Fläche
     grp.add(new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(face_x,y_top,-hL), new THREE.Vector3(face_x+wt,y_top,-hL),
-        new THREE.Vector3(face_x+wb,y_bot,-hL), new THREE.Vector3(face_x,y_bot,-hL),
-        new THREE.Vector3(face_x,y_top,-hL),
+        new THREE.Vector3(...P(0, y_top,-hL)), new THREE.Vector3(...P(wt, y_top,-hL)),
+        new THREE.Vector3(...P(wb, y_bot,-hL)), new THREE.Vector3(...P(0, y_bot,-hL)),
+        new THREE.Vector3(...P(0, y_top,-hL)),
       ]),
       new THREE.LineBasicMaterial({color:new THREE.Color(hexCol),opacity:0.9,transparent:true})
     ));
-    // Eckpunkte zurückgeben (Spannungsangabe nur am äusseren Rand)
-    return [
-      {x:face_x+wt, y:y_top, sig:sig_top, col:hexCol},
-      {x:face_x+wb, y:y_bot, sig:sig_bot, col:hexCol},
-    ];
+    // Eckpunkte zurückgeben (Spannungsangabe nur am äusseren Rand). Seitenflächen liefern
+    // zusätzlich z — der Label-Code setzt solche Beschriftungen auf x = 0.
+    const zn = (y_top <= y_nl3 + 1e-6) ? 'b' : 'a';   // Zone des KÖRPERS (unter/über NL)
+    return (axis === 'x')
+      ? [{x:face+wt, y:y_top, sig:sig_top, col:hexCol, zone:zn},
+         {x:face+wb, y:y_bot, sig:sig_bot, col:hexCol, zone:zn}]
+      : [{x:0, z:face+wt, y:y_top, sig:sig_top, col:hexCol, zone:zn},
+         {x:0, z:face+wb, y:y_bot, sig:sig_bot, col:hexCol, zone:zn}];
   }
 
   const cEa='#e05540', cEw='#4488cc', cEp='#44bb88', cE0='#888899', cNL='#ffcc44';
@@ -4759,16 +4804,22 @@ function buildStress(){
 
   let lbls = [];
 
-  // ── Passivseite (Richtung H): Ew + Ep (oben) ─────────────────────
+  // ── Stirnflächen (⊥ zur Last) ────────────────────────────────────
+  // Passivseite (Richtung H): mobilisierter Erdwiderstand über der NL
   lbls.push(...makeFin(fP, hSign, y_nl3, y_okb, ew_nl,  ew_okb, cEw, 0.55)); // Ew mobilisiert
-  lbls.push(...makeFin(fP, hSign, y_nl3, y_okb, e0a_nl, e0a_okb,cE0, 0.30)); // E0_a über NL (R₀)
-  // E'0 unter NL (R₀'): im Diagramm als Pfeil, nicht als Druckkörper → nicht dargestellt
-
-  // ── Aktivseite (entgegen H): Ea (oben) + E'p (unten) ──────────────
+  // Aktivseite (entgegen H): Ea über der NL, E'p darunter (Block dreht um die NL)
   lbls.push(...makeFin(fA, -hSign, y_nl3, y_okb, ea_nl, ea_okb, cEa, 0.50)); // Ea über NL
   lbls.push(...makeFin(fA, -hSign, y_uk,  y_nl3, epp_uk, epp_nl, cEp, 0.30)); // E'p unter NL (λ'_p, Gl.29)
 
-  // E0 auf ±z-Flächen: nicht dargestellt (Steckner-Berechnung ist 2D in x-Richtung)
+  // ── Seitenflächen (∥ zur Last): Ruhedruck E₀ / E'₀ — Gl.34/35 ────
+  // Diese Flächen liefern über die Reibung R₀ = E₀·tan δ₁ bzw. R'₀ den Beitrag zu Ew/E'w
+  // (Gl.41–44). Sie lagen bis Aug 2026 fälschlich als Keil auf der PASSIVEN Stirnfläche und
+  // überlagerten dort Ew; E'₀ unter der NL fehlte ganz.
+  [ 1, -1 ].forEach(sgn => {
+    const zf = sgn * L/2;
+    lbls.push(...makeFin(zf, sgn, y_nl3, y_okb, e0a_nl, e0a_okb, cE0, 0.30, 'z', B/2)); // E₀ über NL
+    lbls.push(...makeFin(zf, sgn, y_uk,  y_nl3, e0b_uk, e0b_nl,  cE0, 0.22, 'z', B/2)); // E'₀ unter NL
+  });
 
   // ── Drehpunkt (Nulllinie als Punkt + Kreuzmarker) ─────────────────
   const dpSph=new THREE.Mesh(new THREE.SphereGeometry(0.07,14,10),
@@ -4780,7 +4831,7 @@ function buildStress(){
     grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
       new THREE.LineBasicMaterial({color:0xffcc44,opacity:0.85,transparent:true})));
   });
-  mkLbl('Drehpunkt  y_NL='+y_nl.toFixed(3)+'m', B*0.9, y_nl3+0.10, 0);
+  mkLbl('Drehpunkt  y_NL='+y_nl.toFixed(3)+'m', 0, y_nl3+0.16, 0);   // mittig, nicht in der Label-Flucht
 
   // ── Spannungs-Labels an Eckpunkten (mit Kollisions-Absatz) ──────────
   // Pro Y-Position (gerundet), Seite UND Zone (über/unter NL) nur den grössten σ-Wert
@@ -4788,25 +4839,40 @@ function buildStress(){
   const yMax = new Map();
   lbls.forEach(l => {
     if(l.sig < 0.3) return;
-    const zone = l.y >= y_nl3 ? 'a' : 'b'; // a=über NL, b=unter NL
-    const yKey = Math.round(l.y*50)+':'+(l.x>=0?'r':'l')+':'+zone;
+    const zone = l.zone || (l.y >= y_nl3 ? 'a' : 'b'); // a=über NL, b=unter NL
+    // Seitenflächen ('s') bekommen einen eigenen Schlüssel — sonst verdrängt der grössere
+    // Stirnflächenwert (Ew) den Ruhedruck E₀ auf derselben Höhe.
+    const face = (l.z !== undefined) ? 's' : (l.x>=0?'r':'l');
+    // Auf den Seitenflächen läuft der Ruhedruck stetig durch die NL (gleiches K₀) — dort
+    // ohne Zone im Schlüssel, sonst stünde derselbe Wert an der NL doppelt. Vorn gibt es
+    // dagegen einen echten Sprung (Ea über der NL, E'p darunter), da bleibt die Zone drin.
+    const yKey = Math.round(l.y*50)+':'+face+(face==='s' ? '' : ':'+zone);
     if(!yMax.has(yKey)||l.sig>yMax.get(yKey).sig) yMax.set(yKey,l);
   });
   const lblCandidates = [];
-  yMax.forEach(l => {
-    const lz = l.z !== undefined ? l.z : zLbl;
-    const lx = l.z !== undefined ? 0 : (l.x>0?l.x+0.10:l.x-0.10);
-    lblCandidates.push({sig:l.sig, x:lx, y:l.y, z:lz});
+  yMax.forEach(l => lblCandidates.push({ sig:l.sig, y:l.y, x0:l.x,
+    z0:(l.z !== undefined ? l.z : null), extra:0,
+    grp:(l.z !== undefined ? 's'+(l.z>0?'+':'-') : (l.x>0?'r':'l')) }));
+  // Entzerrung GRUPPENWEISE (linke/rechte Stirnfläche, beide Seitenflächen). Labels auf
+  // verschiedenen Flächen stehen im Bild ohnehin auseinander — sie gegeneinander zu schieben
+  // trüge sie nur unnötig weit von ihrem Körper weg.
+  // Zusätzlich wird ein verschobenes Label seitlich VERSETZT (extra): der reine Höhenversatz
+  // reicht in der Perspektive nicht, wenn zwei Körper sehr unterschiedlich breit sind (Ea an
+  // der NL gegen E'p) — ein zu grosser Höhenabstand risse das Label dagegen vom Körper weg.
+  const minGap = 0.45;
+  ['l','r','s+','s-'].forEach(g => {
+    const G = lblCandidates.filter(l=>l.grp===g).sort((a,b)=>b.y-a.y);
+    for(let i=1;i<G.length;i++){
+      const prev=G[i-1], cur=G[i];
+      if(prev.y - cur.y < minGap){ cur.y = prev.y - minGap; cur.extra = prev.extra > 0 ? 0 : 0.36; }
+    }
   });
-  // Nach Y sortieren (oben → unten = positiv → negativ)
-  lblCandidates.sort((a,b)=>b.y-a.y);
-  // Mindestabstand 0.38m — zu nahe liegende Labels nach unten verschieben
-  const minGap = 0.38;
-  for(let i=1;i<lblCandidates.length;i++){
-    const prev=lblCandidates[i-1], cur=lblCandidates[i];
-    if(prev.y - cur.y < minGap) cur.y = prev.y - minGap;
-  }
-  lblCandidates.forEach(l=>mkLbl(l.sig.toFixed(1)+' kPa', l.x, l.y, l.z));
+  lblCandidates.forEach(l => {
+    const off = 0.10 + l.extra;
+    const lx = (l.z0 !== null) ? 0 : (l.x0>0 ? l.x0+off : l.x0-off);
+    const lz = (l.z0 !== null) ? (l.z0>0 ? l.z0+off : l.z0-off) : zLbl;
+    mkLbl(l.sig.toFixed(1)+' kPa', lx, l.y, lz);
+  });
 
   // Nu / Ru: im Layer "Resultierende Kräfte" enthalten → hier nicht doppelt darstellen
 
@@ -4892,6 +4958,7 @@ function _applySichEnabledUI(){
       try{ calculate(); rebuildScene(); }catch(_){ } }
     if(document.getElementById('tab-sicherung')?.classList.contains('active')) switchTab('geometrie');
   }
+  try{ _updateDeltaFacUI(); }catch(_){ }
 }
 function toggleSicherungAktiv(){
   showPfahl = !showPfahl;
@@ -5701,7 +5768,7 @@ function resetSIABodenbeiwerte(){
 // Lastbeiwerte für einen Lastfall ermitteln (aus Lastbeiwerte-Karte, nicht LF-Felder)
 function getGF(lf){
   if(lf.nw === 'gzg'){
-    return { gG: +gi('lw_G_gzg')||1.00, gW: +gi('lw_Q_gzg')||1.00 };
+    return { gG: _gzgFac('lw_G_gzg',1.00), gW: _gzgFac('lw_Q_gzg',1.00) };
   }
   // gzt, beide, undefined → Typ 2 / ST
   return { gG: +gi('lw_G')||1.35, gW: +gi('lw_Q')||1.50 };
@@ -5832,8 +5899,8 @@ function buildLFMatrix(){
   const gG1s = +gi('lw_G1_sup')|| 1.20;  // Typ 1 sup
   const gG1i = +gi('lw_G1_inf')|| 0.80;  // Typ 1 inf (N_G stabilisierend)
   const gQ1  = +gi('lw_Q1')    || 1.50;  // Typ 1 Q
-  const gGz  = +gi('lw_G_gzg') || 1.00;  // GZG
-  const gQz  = +gi('lw_Q_gzg') || 1.00;  // GZG Q
+  const gGz  = _gzgFac('lw_G_gzg', 1.00);  // GZG
+  const gQz  = _gzgFac('lw_Q_gzg', 1.00);  // GZG Q
   const gGe  = +gi('lw_G_eig') || 1.00;  // Eigengewicht Fundament G_k
 
   // Grenzzustände: modellabhängig + benutzerdefinierte Beschriftungen aus SETTINGS
@@ -6622,6 +6689,7 @@ function renderPfahlbock(){
     dGrout:_dGrout, tendon:tdn, E_steel:sys.E,
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
+    alphaZul:_tanZul(true), alphaZulVar:_tanZul(false),   // SBB 1:100 / 1:200 aus den Optionen
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
   // Böschungs-Status fürs Panel + Greifer
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
@@ -7363,6 +7431,7 @@ function setModel(m, silent){
   const mbp = document.getElementById('mat-block-params');
   const mfp = document.getElementById('mat-flach-params');
   if(mbp) mbp.style.display = isBlock ? '' : 'none';
+  try{ _updateDeltaFacUI(); }catch(_){ }
   if(mfp) mfp.style.display = isBlock ? 'none' : '';
   // q_u synchronisieren
   if(!isBlock){ const qf=document.getElementById('bg_qu_flach'); if(qf) qf.value=document.getElementById('bg_qu').value; }
@@ -7643,6 +7712,35 @@ function avgMeToDepth(t){
 }
 
 // Aktualisiert Zone-Chip, mehrzeiligen Hint und Methoden-Dropdown
+// Wandreibung δ (bg_delta_fac) — Reichweite im Blockfundament:
+//   · Steckner-GZT und GZG: KEIN Einfluss. computeGZT_dir startet mit fest dpf = 0.5
+//     (δ_p = ½·φ_k, Gl.49/50, nur bei N_u < 0 stufenweise reduziert) und nutzt für
+//     λ_a/R_a/R₀ fest δ₁ = ⅔·φ_k (Gl.8) — ST-/DC-kalibriert, bewusst nicht einstellbar.
+//   · Grundbruch: über den Mantelreibungszuschlag T = (c'_d + σ'_v,m·tan δ_d)·A_Mantel,
+//     beim Block aber ein INFORMATIVER Nachweis.
+//   · Sicherung/Aushub: dpFac in rigidBlockBalance (Starrkörperbilanz, Kernweite).
+// Sind beide Verbraucher aus, ist das Feld wirkungslos → ausgrauen statt still mitlaufen.
+function _updateDeltaFacUI(){
+  const sel  = document.getElementById('bg_delta_fac');
+  const fld  = document.getElementById('bg_delta_fac_field');
+  const hint = document.getElementById('bg_delta_fac_hint');
+  if(!sel || !fld || !hint) return;
+  const grundb = (typeof nwOn === 'function') ? nwOn('block', 'info') : true;
+  const sich   = (typeof _sichEnabled !== 'undefined') && _sichEnabled === true;
+  const wirkt  = grundb || sich;
+  sel.disabled   = !wirkt;
+  fld.style.opacity = wirkt ? '' : '0.5';
+  const ziele = [];
+  if(grundb) ziele.push('den <b>informativen</b> Grundbruch (Mantelreibungszuschlag)');
+  if(sich)   ziele.push('die Starrkörperbilanz im Aushubzustand');
+  hint.innerHTML = wirkt
+    ? 'Wirkt <b>nicht</b> auf GZT und GZG — der Steckner-Kern rechnet mit fest '
+      + 'δ_p = ½·φ_k (Gl. 49/50) und δ₁ = ⅔·φ_k (Gl. 8). Beeinflusst ' + ziele.join(' und ') + '.'
+    : '<b>Ohne Wirkung</b> auf die aktuelle Berechnung: GZT und GZG rechnen mit festem δ '
+      + '(Steckner), und die einzigen Verbraucher — Sohlgrössen/Grundbruch und Sicherung/Aushub '
+      + '— sind abgeschaltet.';
+}
+
 function _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w){
   const hint = document.getElementById('bg_c1_hint');
   const chip = document.getElementById('c1-zone-chip');
@@ -10038,7 +10136,7 @@ function calcPfahlsicherung(){
   const alpha_sys   = M_ok_char_g > 0.01
     ? M_ok_char_g / Math.max(1, K_block_rot + (pile_active ? K_pfahl_rot : 0)) : 0;
   const neig_sys_mm = alpha_sys * 1000;                     // [mm/m]
-  const tanZulS     = SETTINGS.alphaZul ?? 0.005;
+  const tanZulS     = _tanZul(_gzgFac('lw_G_gzg', 1.00) > 0.001);   // wie Block-GZG
   const eta_GZG_sys = alpha_sys > 1e-9 ? tanZulS / alpha_sys : Infinity;
 
   // ── Globale Böschungsstandsicherheit (Bishop) hier ENTFERNT (Jul 2026, Nutzerentscheid):
@@ -10926,6 +11024,7 @@ function _doCalculate(inp){
     let etaGZG = Infinity, alpha_GZG_calc = 0;
     let tan_a1_GZG=0, tan_a2_GZG=0, M1_GZG_val=0, M2_GZG_val=0;
     let Malpha_GZG_val=0, Mu_char_GZG=0, M_ok_char_GZG=0;
+    let tanZul_GZG_=0.005, gzgPerm_=true;   // verwendeter Grenzwert + Lastfalltyp (fuer Anzeige)
     // Massgebende GZG-Kombination (Anzeige): Richtung + Vergleichswerte + Lastbeiwerte
     let gzgDir_='—', gzgHxk_=0, gzgHyk_=0, gzgMxk_=0, gzgMyk_=0, gzgGamG_=1, gzgGamQ_=1;
     let H_k_GZG=0, N_k_GZG=0, gzgBettungKollaps=false;
@@ -11281,10 +11380,19 @@ function _doCalculate(inp){
       // M₂: Sohlenreaktionsmoment (Gl.16/17)
       // M_α = M₁ + M₂ − HD (Gl.18/19/20), begrenzt auf M_u,char (Gl.21)
       {
-        const tan_zul = SETTINGS.alphaZul ?? 0.005;
+        // Grenzwert nach Lastfalltyp: enthaelt die GZG-Kombination den staendigen Anteil
+        // (γ_G,GZG > 0), gilt 1:100, sonst der strengere Veraenderlich-Wert 1:200.
+        // NICHT _gzgFac() verwenden: das liest das DOM, hier gilt der Eingabe-Schnappschuss
+        // (gi ist in _doCalculate auf P.raw geschattet, damit die _pure-Sweeps greifen).
+        const _rawGz    = gi('lw_G_gzg');
+        const _gGzRaw   = (_rawGz == null || String(_rawGz).trim() === '') ? 1.00 : (+_rawGz || 0);
+        const _gzgPerm  = _gGzRaw > 0.001;
+        const tan_zul   = _tanZul(_gzgPerm);
+        tanZul_GZG_ = tan_zul; gzgPerm_ = _gzgPerm;
         // GZG-Lastbeiwerte aus Lastbeiwerte-Karte (Default 1.00 = charakteristisch, SIA)
-        const gGz_ = +gi('lw_G_gzg') || 1.00;
-        const gQz_ = +gi('lw_Q_gzg') || 1.00;
+        const gGz_ = _gGzRaw;
+        const _rawQz = gi('lw_Q_gzg');
+        const gQz_ = (_rawQz == null || String(_rawQz).trim() === '') ? 1.00 : (+_rawQz || 0);
         const Hxk_g  = gGz_*HGx_lf + gQz_*HWx_lf;
         const Hyk_g  = gGz_*HGy_lf + gQz_*HWy_lf;
         const Nk_g   = gGz_*NG_lf + Gk;   // G_k Eigengewicht: γ=1.00 (SIA 267 §4.4.3, GZG)
@@ -11445,6 +11553,7 @@ function _doCalculate(inp){
       etaGB, etaGL, etaKx, etaKy, eta_klaf, klaf_val, ea_a, eb_b, etaSIG, etaGZG, etaGZT,
       tan_a1_GZG, tan_a2_GZG, M1_GZG_val, M2_GZG_val,
       Malpha_GZG_val, Mu_char_GZG, M_ok_char_GZG, alpha_GZG_calc, gzgBettungKollaps,
+      tanZul_GZG: tanZul_GZG_, gzgPerm: gzgPerm_,
       gzgDir:gzgDir_, gzgHxk:gzgHxk_, gzgHyk:gzgHyk_, gzgMxk:gzgMxk_, gzgMyk:gzgMyk_,
       gzgGamG:gzgGamG_, gzgGamQ:gzgGamQ_,
       H_k_GZG, N_k_GZG, C1_GZG: C1_kN,
@@ -12330,11 +12439,11 @@ const NW_FORMULAS = {
   gzgTa2: { sym:'tan α₂ = 2·N_k / (A²·B·C₂)  [Gl.12 — Abheben der hinteren Sohlkante]',
     num:(R,G)=>`2·${(R.N_k_GZG||0).toFixed(1)} / (${G.L}²·${G.B}·C₂) = ${(R.tan_a2_GZG||0).toFixed(5)}` },
   gzgM1: { sym:'M₁(α): α≤α₁ → B·D³·C₁·α/12 [Gl.13] · α≤3α₁ → D·(N_k·tanφ+H_k)/2 [Gl.14] · sonst B·D³·C₁·α/36 [Gl.15]',
-    num:(R,G)=>{ const tz=SETTINGS.alphaZul??0.005; const ta1=R.tan_a1_GZG||0;
+    num:(R,G)=>{ const tz=R.tanZul_GZG??_tanZul(true); const ta1=R.tan_a1_GZG||0;
       const reg = tz<=ta1?'Gl.13':(tz<=3*ta1?'Gl.14':'Gl.15');
       return `α_zul=${tz.toFixed(4)} vs α₁=${ta1.toFixed(4)} → ${reg}: M₁ = ${(R.M1_GZG_val||0).toFixed(1)} kNm`; }},
   gzgM2: { sym:'M₂(α): α≤α₂ → B·A³·C₂·α/12 [Gl.16] · sonst N_k·(A/2 − √(2N_k/(B·C₂·α))/3) [Gl.17]',
-    num:(R,G)=>{ const tz=SETTINGS.alphaZul??0.005; const ta2=R.tan_a2_GZG||0;
+    num:(R,G)=>{ const tz=R.tanZul_GZG??_tanZul(true); const ta2=R.tan_a2_GZG||0;
       return `α_zul=${tz.toFixed(4)} vs α₂=${ta2.toFixed(4)} → ${tz<=ta2?'Gl.16':'Gl.17'}: M₂ = ${(R.M2_GZG_val||0).toFixed(1)} kNm`; }},
   gzgMuc: { sym:'M_u,char: GZT-Grenzmoment (Gl.66) mit charakteristischen Lasten — γ_Ea = γ_Ep = 1, N = N_k  [Gl.21]',
     num:(R,G)=>`M_u,char = ${(R.Mu_char_GZG||0).toFixed(1)} kNm` },
@@ -12345,8 +12454,8 @@ const NW_FORMULAS = {
   gzgTanRes: { sym:'tan(α)_res aus M_α(α) = M_ok  (Bisektion — resultierende Schiefstellung unter H_k)',
     num:(R,G)=>{ const a=R.alpha_GZG_calc||0;
       return a<1e-9?'—':`tan(α)_res = ${a.toFixed(5)}  (= ${(a*1000).toFixed(1)} mm/m)`; }},
-  gzgTanZul: { sym:'tan(α)_zul — zulässige Schiefstellung (Settings; Steckner: 0.005 Fahrleitung, 0.01 Freileitung)',
-    num:(R,G)=>`tan(α)_zul = ${(SETTINGS.alphaZul??0.005).toFixed(4)}` },
+  gzgTanZul: { sym:'tan(α)_zul — zulässige Schiefstellung (SBB 0161.1011.0007: 1/100 ständig+veränderlich, 1/200 veränderlich allein; Grenzwerte in den Optionen)',
+    num:(R,G)=>`tan(α)_zul = ${(R.tanZul_GZG??_tanZul(true)).toFixed(4)}` + ((R.gzgPerm===false) ? ' (veränderlich allein)' : ' (ständig + veränderlich)') },
   gzgEta: { sym:'η = M_α / M_ok  ≥ 1.0  (aufnehmbares Moment bei zul. Schiefstellung ≥ vorhandenes Moment)',
     num:(R,G)=>`${(R.Malpha_GZG_val||0).toFixed(1)} / ${(R.M_ok_char_GZG||0).toFixed(1)} = ${R.etaGZG===Infinity?'—':R.etaGZG.toFixed(3)}` }
 };
@@ -12420,7 +12529,7 @@ function toggleGZTFormula(id, row) {
 
 // Baut HTML der GZG kv-Zeilen — klickbare Zeilen mit Formel-Aufschlüsselung (wie GZT)
 function buildGZGRows(R, G){
-  const tanZul = SETTINGS.alphaZul ?? 0.005;
+  const tanZul = R.tanZul_GZG ?? _tanZul(true);
   // Massgebende Kombination — bewusst als ZAHLENVERGLEICH statt als Erklärtext: der GZG wählt
   // zwischen den beiden Richtungen (grösseres |H_k| ⇒ grösseres M_ok). Eine γ-Variation wie im
   // GZT (8 Kombinationen aus γ_G sup/inf × γ_Q) gibt es hier nicht — der GZG ist nach SIA 267
@@ -12957,7 +13066,7 @@ function buildNachweisDoc(results,G){
     var term5=Nu*u;
 
     // GZG — Steckner Gl.11-21
-    var tanZul=SETTINGS.alphaZul!=null?SETTINGS.alphaZul:0.005;
+    var tanZul=r.tanZul_GZG!=null?r.tanZul_GZG:_tanZul(true);
     var tan_a1=r.tan_a1_GZG||0, tan_a2=r.tan_a2_GZG||0;
     var M1_g=r.M1_GZG_val||0, M2_g=r.M2_GZG_val||0;
     var Malpha_g=r.Malpha_GZG_val||0, Mu_c=r.Mu_char_GZG||0;
@@ -16634,14 +16743,16 @@ function runSelfTest(){
     T.push({name,val,exp,tol,mode,ok});
   };
   // SETTINGS-Parameter pinnen (in-memory, nichts persistieren), danach wiederherstellen
-  const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, pfahlRandMin:SETTINGS.pfahlRandMin,
+  const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, alphaZulFull:SETTINGS.alphaZulFull,
+    pfahlRandMin:SETTINGS.pfahlRandMin,
               stecknerSlope:SETTINGS.stecknerSlope, stecknerMob:SETTINGS.stecknerMob,
               pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat,
               pfahlLatGroup:SETTINGS.pfahlLatGroup, pfahlLcrit:SETTINGS.pfahlLcrit,
               kappaE:SETTINGS.kappaE, bzG:SETTINGS.bauzustandGred,
               bzGv:SETTINGS.bauzustandGredVal, bzGs:SETTINGS.bauzustandGredSpezial,
               nw:SETTINGS.nw };
-  SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
+  SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.alphaZulFull=0.010;
+  SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
   SETTINGS.pfahlAlphaLat=0.30;     // Golden = konservativer Default (laterale Pfahlbettung)
   SETTINGS.pfahlLatGroup=true;     // Golden = p-Multiplier AN (bei gespreizten Pfählen ohnehin 1.0)
   SETTINGS.pfahlLcrit=10;          // Golden = Default-Deckel; T6-Pfahl hat L=10 m ⇒ kein Abzug
@@ -16748,7 +16859,8 @@ function runSelfTest(){
   } catch(err){
     T.push({name:'AUSNAHME: '+(err&&err.message||err), val:NaN, exp:NaN, tol:0, mode:'abs', ok:false});
   } finally {
-    SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.pfahlRandMin=bak.pfahlRandMin;
+    SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.alphaZulFull=bak.alphaZulFull;
+    SETTINGS.pfahlRandMin=bak.pfahlRandMin;
     SETTINGS.stecknerSlope=bak.stecknerSlope; SETTINGS.stecknerMob=bak.stecknerMob;
     SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat;
     SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.pfahlLcrit=bak.pfahlLcrit;
