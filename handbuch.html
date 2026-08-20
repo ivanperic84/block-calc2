@@ -332,7 +332,7 @@ nav a { position:relative; }
   <a href="#s61">6.1 Zustand A</a>
   <a href="#s62">6.2 Modellgrenze</a>
   <a href="#s63">6.3 Zustand B</a>
-  <a href="#s64">6.4 Zweitmodell</a>
+  <a href="#s64">6.4 Ansatz Ingenieurbüro</a>
   <a href="#s65">6.5 Kraftweg Sicherung</a>
   <a href="#s66">6.6 Lastaufteilung</a>
   <a href="#s67">6.7 Wirkungsschatten</a>
@@ -397,9 +397,11 @@ nav a { position:relative; }
         <tr><td>2</td><td>Eingabeparameter</td><td style="color:var(--dim)">Geometrie, Boden, Einwirkungen, Sicherheiten</td></tr>
         <tr><td>3</td><td>Berechnungsgrundlagen</td><td style="color:var(--dim)">Systemmodell, GZT Steckner Gl.66, GZG Winkler</td></tr>
         <tr><td>4</td><td>Ergebnisinterpretation</td><td style="color:var(--dim)">Nachweismatrix, GZT-Diagramm, Statusanzeige</td></tr>
+        <tr><td>5</td><td>Rechenweg Blockfundament</td><td style="color:var(--dim)">Mechanisches Modell, die drei Schleifen, Verifikation</td></tr>
+        <tr><td>6</td><td>Aushub &amp; Sicherung</td><td style="color:var(--dim)">Zustand A/B, Modellgrenze, Bemessung der Sicherung</td></tr>
+        <tr><td>7</td><td>Abgrenzung zu Steckner</td><td style="color:var(--dim)">Deckungsgleich, Erweiterungen, bewusste Abweichungen</td></tr>
         <tr><td>A</td><td>Normen &amp; Literatur</td><td style="color:var(--dim)">Normverweise, Literaturangaben</td></tr>
         <tr><td>B</td><td>Formelzeichen</td><td style="color:var(--dim)">Vollständige Symbolliste mit Einheiten</td></tr>
-        <tr><td>C</td><td>Validierungsbeispiele</td><td style="color:var(--dim)">Typ A / C / D mit Referenzwerten</td></tr>
       </tbody>
     </table>
   </div>
@@ -436,7 +438,8 @@ nav a { position:relative; }
         <rect x="1" y="117" width="198" height="14" fill="var(--s2)" stroke="var(--ol)"/>
         <text x="6" y="127" font-size="7" fill="var(--dim)" font-family="var(--f-mono)">Statusbar</text>
         <rect x="1" y="15" width="198" height="102" fill="var(--s3)" opacity="0.3"/>
-        <text x="100" y="70" font-size="8" fill="var(--dim)" text-anchor="middle" font-family="var(--f-mono)">3D-Viewer (volle Breite)</text>
+        <text x="126" y="70" font-size="8" fill="var(--dim)" text-anchor="middle" font-family="var(--f-mono)">3D-Viewer</text>
+        <text x="126" y="80" font-size="7" fill="var(--xdim)" text-anchor="middle" font-family="var(--f-mono)">volle Breite</text>
         <rect x="1" y="15" width="62" height="102" fill="var(--s2)" stroke="var(--acc)" stroke-width="1"/>
         <text x="32" y="62" font-size="7" fill="var(--on2)" text-anchor="middle" font-family="var(--f-mono)">Eingabe</text>
         <text x="32" y="72" font-size="6.5" fill="var(--xdim)" text-anchor="middle" font-family="var(--f-mono)">offen</text>
@@ -531,7 +534,8 @@ nav a { position:relative; }
 
   <div id="hb-system-svg" style="max-width:560px; margin:0 auto 4px"></div>
   <div class="np-p" style="text-align:center;color:var(--xdim);font-size:8px">Abb. 2.1 — Bezeichnungen am Blockfundament: Schnitt quer (x–z) und Draufsicht (x–y).
-  Der Fundamentkopf ist im Bild bewusst um e_x / e_y versetzt dargestellt.</div>
+  H_Kopf misst den <em>ganzen</em> Kopfkörper von OK Block bis OK Kopf; über Terrain ragen
+  davon H_Kopf − ü = 0.60 m heraus. Der Kopf ist bewusst um e_x / e_y versetzt dargestellt.</div>
   <div class="np-geo">
     <div>
       <table class="np-tbl">
@@ -540,9 +544,9 @@ nav a { position:relative; }
           <tr><td class="sym">B</td><td>Fundamentbreite</td><td>[m]</td><td>Aussenabmessung in x-Richtung</td></tr>
           <tr><td class="sym">L</td><td>Fundamentlänge</td><td>[m]</td><td>Aussenabmessung in y-Richtung</td></tr>
           <tr><td class="sym">H_Block</td><td>Blockhöhe</td><td>[m]</td><td>Höhe des Betonkörpers, OHNE Überdeckung</td></tr>
-          <tr><td class="sym">B_Kopf</td><td>Kopfbreite</td><td>[m]</td><td>Breite des Maststumpfs über GOK</td></tr>
-          <tr><td class="sym">L_Kopf</td><td>Kopflänge</td><td>[m]</td><td>Länge des Maststumpfs über GOK</td></tr>
-          <tr><td class="sym">H_Kopf</td><td>Kopfhöhe</td><td>[m]</td><td>Überstand des Kopfes ÜBER GOK — nicht die Gesamthöhe des Kopfes</td></tr>
+          <tr><td class="sym">B_Kopf</td><td>Kopfbreite</td><td>[m]</td><td>Breite des Fundamentkopfes (quer)</td></tr>
+          <tr><td class="sym">L_Kopf</td><td>Kopflänge</td><td>[m]</td><td>Länge des Fundamentkopfes (längs)</td></tr>
+          <tr><td class="sym">H_Kopf</td><td>Kopfhöhe</td><td>[m]</td><td>Gesamthöhe des Kopfes: OK Block → OK Kopf (nicht nur der Teil über Terrain)</td></tr>
           <tr><td class="sym">ü</td><td>Überdeckung</td><td>[m]</td><td>Erdüberdeckung über Blockoberkante</td></tr>
           <tr><td class="sym">e_x</td><td>Exzentrizität x</td><td>[m]</td><td>Versatz Kopf-/Mastachse quer; auf die Aussenkante begrenzt</td></tr>
           <tr><td class="sym">e_y</td><td>Exzentrizität y</td><td>[m]</td><td>Versatz Kopf-/Mastachse längs; auf die Aussenkante begrenzt</td></tr>
@@ -562,10 +566,19 @@ nav a { position:relative; }
     Flachfundament auf der Plattenoberkante, beim Block auf der Blockoberkante.
   </div>
   <div class="np-note">
-    <strong>H_Kopf ist der Überstand über Terrain, nicht die Kopfhöhe insgesamt.</strong> Das ist die
-    häufigste Verwechslung beim Übernehmen von Daten aus anderen Programmen: dort ist mit „Kopfhöhe"
-    meist das Gesamtmass OK Block → OK Kopf gemeint. Umrechnung: ü = Kopfhöhe − Überstand,
-    H_Kopf = Überstand. Der Hebelarm der Horizontalkräfte ist t + H_Kopf und damit von beiden abhängig.
+    <strong>H_Kopf ist die Gesamthöhe des Kopfes</strong> — gemessen von der Oberkante des
+    Fundamentkörpers (beim Block also OK Block, beim Flachfundament OK Platte) bis OK Kopf. Der Kopf
+    ist ein durchgehender Betonkörper und reicht durch die Überdeckung hindurch (Abb. 2.1).<br><br>
+    Der über Terrain sichtbare Teil ist <strong>H_Kopf − ü</strong> und keine Eingabegrösse. Daraus
+    folgt unmittelbar:
+    <ul style="margin:6px 0 0 16px;padding:0">
+      <li>Eigengewicht des Kopfes: B_K · L_K · <strong>H_Kopf</strong> · γ_Beton</li>
+      <li>Hebelarm Sohle → OK Kopf: <strong>H_Block + H_Kopf</strong></li>
+      <li>Beides ist damit <em>unabhängig von ü</em> — eine tiefere Überdeckung verschiebt den Kopf
+          nach unten, statt ihn zu verlängern.</li>
+    </ul>
+    <br>Diese Konvention ist mit den übrigen Apps identisch: eine dort geführte „Kopfhöhe" kann
+    unverändert übernommen werden. Ist H_Kopf kleiner als ü, liegt der Kopf vollständig unter Terrain.
   </div>
 
   <div class="np-hr"></div>
@@ -708,14 +721,7 @@ nav a { position:relative; }
 
   <div class="np-sh" id="s31">3.1 · Systemmodell Blockfundament</div>
 
-  <div class="np-g2">
-    <div class="np-img-ph" style="height:220px">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-        <path d="M4 20 L4 8 L20 8 L20 20 Z"/><rect x="8" y="3" width="8" height="5"/>
-        <line x1="0" y1="8" x2="24" y2="8" stroke-dasharray="2,2"/>
-      </svg>
-      <span>3D-Modell des Fundaments<br><span style="font-size:7.5px;color:var(--xdim)">aus App-Viewer exportiert</span></span>
-    </div>
+  <div>
     <div>
       <div class="np-p">
         Das Blockfundament ist ein tief eingebetteter Betonkörper (Rechteck-Querschnitt B × L),
@@ -737,6 +743,10 @@ nav a { position:relative; }
           <tr><td>GZG Gebrauchstauglichkeit</td><td>tan(α) ≤ tan(α)_zul &nbsp;(Winkler)</td></tr>
         </tbody>
       </table>
+      <div class="np-p" style="color:var(--xdim);font-size:8px">
+        Die Geometrie ist in Abb. 2.1 bemasst, die Kinematik der Drehung um die Nulllinie in
+        Abb. 5.1 (Kapitel 5) dargestellt.
+      </div>
     </div>
   </div>
 
@@ -751,13 +761,14 @@ nav a { position:relative; }
 
   <div class="np-sh2">Eigengewicht &amp; Normalkraft</div>
   <div class="np-calc">
-    <div class="np-cf">G_k = (B·L·H_Block + B_k·L_k·(H_Kopf+ü)) · γ_Beton &nbsp;&nbsp;[kN]  nur Betonkörper</div>
+    <div class="np-cf">G_k = (B·L·H_Block + B_k·L_k·H_Kopf) · γ_Beton &nbsp;&nbsp;[kN]  nur Betonkörper</div>
     <div class="np-cf">N_d = γ_G · (N_G + G_k) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kN]  Bemessungsnormalkraft</div>
   </div>
 
   <div class="np-sh2">Bemessungsmoment am OK Fundament</div>
   <div class="np-calc">
-    <div class="np-cf">arm = t + H_Kopf &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[m]  Hebelarm für Horizontalkräfte</div>
+    <div class="np-cf">arm = H_Kopf &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[m]  OK Block → OK Kopf (Bezugspunkt der Momente)</div>
+    <div class="np-cf">Sohle → OK Kopf = H_Block + H_Kopf &nbsp;[m]  Hebelarm ab Sohle</div>
     <div class="np-cf">M_ok,x = H_xd·arm + γ_G·M_Gy + γ_Q·M_Wy + N_d·e_x &nbsp;[kNm]  Querfall (Kippen um y)</div>
     <div class="np-cf">M_ok,y = H_yd·arm + γ_G·M_Gx + γ_Q·M_Wx + N_d·e_y &nbsp;[kNm]  Längsfall (Kippen um x)</div>
   </div>
@@ -988,7 +999,7 @@ nav a { position:relative; }
   <div class="np-sh2">Nachweis</div>
   <div class="np-calc">
     <div class="np-cf">η_GZT = M_u / M_d &nbsp;&nbsp;≥ 1.0 &nbsp;&nbsp;&nbsp;(Grenzzustand der Tragfähigkeit erfüllt)</div>
-    <div class="np-cv">M_d = H_d·(H_Kopf+ü) + γ_G·M_G + γ_W·M_W &nbsp;&nbsp;(Bemessungsmoment am OK Block)</div>
+    <div class="np-cv">M_d = H_d·H_Kopf + γ_G·M_G + γ_W·M_W &nbsp;&nbsp;(Bemessungsmoment am OK Block)</div>
   </div>
 
 
@@ -1015,7 +1026,7 @@ nav a { position:relative; }
   <div class="np-calc">
     <div class="np-cf">N_α = N_k = G_k + N_G + N_W &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kN]   charakteristisch (γ = 1.0)</div>
     <div class="np-cf">H_k = H_Gx + H_Wx &nbsp;&nbsp;&nbsp;(Quer) &nbsp;oder &nbsp;H_Gy + H_Wy  [kN]   massgebende Richtung</div>
-    <div class="np-cf">M_ok = H_k·(H_Kopf+ü) + M_G + M_W &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kNm]  Moment an OK Block (Bezugspunkt)</div>
+    <div class="np-cf">M_ok = H_k·H_Kopf + M_G + M_W &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[kNm]  Moment an OK Block (Bezugspunkt)</div>
   </div>
 
   <div class="np-sh2">3.4.3 · Kennzeichnende Drehwinkel (Gl.11–12)</div>
@@ -1388,8 +1399,11 @@ nav a { position:relative; }
     Bemessungswerten (<strong>d</strong>) und charakteristischen Werten (<strong>k</strong>) umgeschaltet werden.
   </div>
 
-  <div class="np-g2">
-    <div id="hb-gzt-svg"></div>
+  <div id="hb-gzt-svg" style="max-width:520px;margin:0 auto 4px"></div>
+  <div class="np-p" style="text-align:center;color:var(--xdim);font-size:8px">
+    Abb. 4.1 — GZT-Diagramm am Beispiel Typ C. Die Elemente sind unten aufgeschlüsselt.
+  </div>
+  <div>
     <div>
       <table class="np-tbl">
         <thead><tr><th>Element</th><th>Darstellung</th></tr></thead>
@@ -1764,14 +1778,34 @@ nav a { position:relative; }
     <strong>Starrkörperbilanz</strong> (Abschnitt 6.4) eine Kapazität, die auch dort gültig bleibt.
   </div>
 
-  <div class="np-sh" id="s64">6.4 · Zweitmodell und Zusatznachweis</div>
+  <div class="np-sh" id="s64">6.4 · Ansatz des Ingenieurbüros — Zweitmodell, Zusatznachweise, Bauzustand</div>
+
+  <div class="np-p">
+    Die folgenden fünf Punkte stammen aus dem Vergleich mit dem Berechnungskonzept
+    <strong>MaFuSi</strong> (Aegerter &amp; Bosshardt AG für die SBB) zur Sicherung freigelegter
+    Mastfundamente mit Streben und Manschetten. Sie sind vollständig in BlockCalc übernommen.
+    Leitregel bei der Übernahme: was nur konservativer werden kann oder reine Information ist, wurde
+    fest eingebaut; was Ergebnisse <em>günstiger</em> macht, ist eine bewusst zu treffende Einstellung.
+  </div>
+
+  <table class="np-tbl" style="margin-bottom:12px">
+    <thead><tr><th>Punkt</th><th>Umsetzung in BlockCalc</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Starrkörperbilanz um die Fusskante</td><td>paralleles Zweitmodell, immer mitgerechnet</td><td>fest</td></tr>
+      <tr><td>Kernweite / Sohlexzentrizität</td><td>eigener Nachweis im Aushubzustand</td><td>fest</td></tr>
+      <tr><td>Bettungsziffer-Vergleich EAB EB 102</td><td>Anzeigewert neben C₁ in der GZG-Karte</td><td>fest, ohne Einfluss auf die Rechnung</td></tr>
+      <tr><td>Sohlreibung Ortbetonsohle</td><td>δ = 1.0 · φ′ als Auswahl bei der Sohlreibung</td><td>Auswahl, Voreinstellung ⅔ · φ′</td></tr>
+      <tr><td>Reduzierter Lastbeiwert im Bauzustand</td><td>γ_G,red statt γ_G,sup</td><td>Option, Standard aus</td></tr>
+    </tbody>
+  </table>
 
   <div class="np-sh2">Starrkörperbilanz um die Fusskante</div>
   <div class="np-p">
     Parallel zu Gl. 66 läuft immer eine klassische Kippbilanz um die Fusskante auf der Aushubseite:
     treibend M_d + H_d · z_H + E_a,d · z_a, haltend E_p,d · z_p + V_d,inf · b/2. Sie ist gröber als
     Gl. 66, bleibt aber bis zur vollständigen Freilegung gültig — und zeigt im Regelfall, wie viel
-    Kapazität aus den Zusatztermen von Gl. 66 stammt.
+    Kapazität aus den Zusatztermen von Gl. 66 stammt. Degeneriert Gl. 66 (Abschnitt 6.2), tritt sie
+    als <strong>Ersatzmodell</strong> an deren Stelle und wird als solches gekennzeichnet.
   </div>
 
   <div class="np-sh2">Kernweite / Sohlexzentrizität</div>
@@ -1780,8 +1814,56 @@ nav a { position:relative; }
     auf 1/3. Beim voll eingebundenen Block ist der Sohldruck bewusst nur informativ — freigelegt
     trägt dieses Argument nicht mehr. Der Nachweis ist unabhängig von Gl. 66: dort ist e → b/2
     zulässig, solange der Boden auf schmalem Streifen trägt (Tragfähigkeit); die Kernweite ist ein
-    <strong>Robustheitskriterium</strong>.
+    <strong>Robustheitskriterium</strong>. Bei Unterdeckung wird zusätzlich ausgewiesen, welche
+    Rückhaltekraft die Kernweite verlangt — die ist häufig grösser als die aus der reinen
+    Momentenbilanz und damit massgebend.
   </div>
+
+  <div class="np-sh2">Bettungsziffer-Vergleich nach EAB EB 102</div>
+  <div class="np-p">
+    In der GZG-Karte steht neben dem verwendeten C₁ ein Vergleichswert
+    <strong>k_h = f_h · M_E / t</strong> mit f_h = 0.50 sowie das Verhältnis C₁ / k_h. Er geht
+    <strong>nicht</strong> in die Rechnung ein und dient nur der Einordnung: beide Herleitungen sind
+    etabliert, EB 102 stammt aber aus dem Baugrubenwandbau und Steckner aus dem Mastfundamentbau.
+    Anlass war ein Vergleichsfall, in dem die beiden Bettungsziffern um Faktor 9 auseinanderlagen.
+  </div>
+
+  <div class="np-sh2">Sohlreibung bei Ortbetonsohle</div>
+  <div class="np-p">
+    Die Voreinstellung δ = ⅔ · φ′ unterstellt eine Fertigteil- oder geglättete Sohle. Eine
+    <strong>gegen den Baugrund betonierte Sohle</strong> ist rauer; SIA 267 Gl. 27 lässt dort bis
+    δ = 1.0 · φ′ zu (in der Praxis auf etwa 35° begrenzt). Die Auswahl steht bei der Sohlreibung
+    bereit — für Ortbeton ist die Voreinstellung konservativ.
+  </div>
+
+  <div class="np-sh2">Reduzierter Lastbeiwert im Bauzustand</div>
+  <div class="np-p">
+    Bauzustände sind kurz und überwacht; die Typenzulassungsstatik rechnet sie deshalb mit einem
+    reduzierten ständigen Lastbeiwert. In BlockCalc ist das eine Option
+    (<strong>Standard aus</strong>, Wert γ_G,red = 1.20, einstellbar 1.00–1.50). Sie wirkt
+    ausschliesslich auf den <em>Bauzustand</em>: Zustand A, die Sicherungsbemessung und die
+    Dimensionierungs-Karte. <strong>Der Endzustand-Nachweis bleibt unberührt</strong> —
+    nachgewiesen mit γ_G,sup.
+  </div>
+
+  <div class="np-note">
+    <strong>Nur für das typengeprüfte Standard-Blockfundament.</strong> Flach- und Pfahlfundament
+    gelten als Spezialfundament und sind vom reduzierten Lastbeiwert ausgenommen. Er greift dort nur
+    über eine ausdrücklich gesetzte Ausnahme — mit dem Hinweis, dass die Anwendungsbedingungen dann
+    projektspezifisch nachzuweisen und im Bericht zu begründen sind. Ist die Option aktiv, aber das
+    Modell gesperrt, sagt die App das ausdrücklich, statt sie still zu ignorieren.
+  </div>
+
+  <details class="np-info"><summary>Was davon gehört in den Nachweisbericht?</summary>
+    <div class="np-info-bd">
+      Starrkörperbilanz, Kernweite und der k_h-Vergleich brauchen keine besondere Erwähnung: die
+      ersten beiden sind zusätzliche, konservative Nachweise, der dritte ist reine Information.<br><br>
+      <strong>Ausdrücklich zu nennen sind die beiden Einstellungen</strong>, die Ergebnisse günstiger
+      machen: eine erhöhte Sohlreibung (δ = 1.0 · φ′, mit Begründung Ortbetonsohle) und ein
+      reduzierter Bauzustands-Lastbeiwert (mit Angabe des Wertes und des Bauzustands). Beim
+      Spezialfundament kommt die Begründung der Anwendungsbedingungen dazu.
+    </div>
+  </details>
 
 </div><!-- /kap6b -->
 
@@ -2048,6 +2130,8 @@ nav a { position:relative; }
       <tr><td>Böschung im GZT</td><td>β_a = β_p = 0</td><td>optional K_p,β richtungsabhängig</td><td>Option, Standard aus</td></tr>
       <tr><td>Kernweite im Aushub</td><td>nicht vorgesehen</td><td>e ≤ κ_e · b als eigener Nachweis</td><td>Erweiterung</td></tr>
       <tr><td>Starrkörperbilanz</td><td>nicht vorgesehen</td><td>paralleles Zweitmodell</td><td>Erweiterung</td></tr>
+      <tr><td>Bettungsziffer-Vergleich</td><td>nicht vorgesehen</td><td>k_h nach EAB EB 102 als Anzeigewert</td><td>Erweiterung, ohne Einfluss</td></tr>
+      <tr><td>Lastbeiwert im Bauzustand</td><td>nicht vorgesehen</td><td>optional γ_G,red statt γ_G,sup</td><td>Option, Standard aus</td></tr>
 
       <tr class="hl"><td colspan="4">Abweichung — bewusst anders als im Papier</td></tr>
       <tr><td>Passivdruck über NL</td><td>Gl. 32: voller λ_p</td><td>mobilisiert E_0 + mob·(E_p − E_0)</td><td>konservativer</td></tr>
@@ -2193,7 +2277,7 @@ nav a { position:relative; }
           <tr><td class="sym">L</td><td>[m]</td><td>Fundamentlänge</td></tr>
           <tr><td class="sym">t</td><td>[m]</td><td>Einbindetiefe = H_Block + ü</td></tr>
           <tr><td class="sym">ü</td><td>[m]</td><td>Überdeckung</td></tr>
-          <tr><td class="sym">H_Kopf</td><td>[m]</td><td>Kopfhöhe über GOK</td></tr>
+          <tr><td class="sym">H_Kopf</td><td>[m]</td><td>Kopfhöhe gesamt: OK Block → OK Kopf</td></tr>
           <tr><td class="sym">e_x, e_y</td><td>[m]</td><td>Exzentrizitäten</td></tr>
           <tr><td class="sym">b_id</td><td>[m]</td><td>Wirksame Querschnittsbreite</td></tr>
           <tr><td class="sym">y_NL</td><td>[m]</td><td>Nulllinientiefe ab OK Block</td></tr>
@@ -2226,7 +2310,7 @@ nav a { position:relative; }
           <tr><td class="sym">H_d</td><td>[kN]</td><td>Bemessungs-Horizontalkraft</td></tr>
           <tr><td class="sym">M_d</td><td>[kNm]</td><td>Bemessungsmoment am OK Block</td></tr>
           <tr><td class="sym">G_k</td><td>[kN]</td><td>Eigengewicht Fundament (Beton, ohne Auffüllung)</td></tr>
-          <tr><td class="sym">arm</td><td>[m]</td><td>Hebelarm = t + H_Kopf</td></tr>
+          <tr><td class="sym">arm</td><td>[m]</td><td>Hebelarm OK Block → OK Kopf = H_Kopf; ab Sohle H_Block + H_Kopf</td></tr>
         </tbody>
       </table>
       <div class="np-sh2" style="margin-top:8px">Erddruckkräfte</div>
@@ -2742,10 +2826,12 @@ let _lastResults=null, _lastG=null;
 function buildSystemSVG() {
   // Beispielgeometrie - bewusst mit L != B und e_x/e_y != 0, damit ALLE Symbole
   // der Geometrietabelle (2.1) auch bildlich belegt sind.
-  const B=1.40, L=1.80, Hb=2.20, ue=0.40, Hkopf=0.60, Bk=0.60, Lk=0.70, ex=0.20, ey=0.15;
+  // H_Kopf ist die GESAMTHOEHE des Kopfes (OK Block -> OK Kopf); der Ueberstand ueber
+  // Terrain ist H_Kopf - ue = 0.60 m.
+  const B=1.40, L=1.80, Hb=2.20, ue=0.40, Hkopf=1.00, Bk=0.60, Lk=0.70, ex=0.20, ey=0.15;
   const t  = Hb + ue;
   const sc = 46;                       // px/m, gilt fuer Schnitt und Draufsicht
-  const W = 476, H = 280;
+  const W = 520, H = 280;
   const c = { f:'var(--s3)', ln:'var(--ol2)', d:'var(--dim)', g:'var(--ol)',
               a:'var(--acc)', x:'var(--xdim)' };
   const F = 'var(--f-mono)';
@@ -2776,11 +2862,12 @@ function buildSystemSVG() {
 
   // == SCHNITT (links) =======================================================
   const cx = 140;
-  const gokY = 104, kopfTopY = gokY - Hkopf*sc, okbY = gokY + ue*sc, ukY = gokY + t*sc;
+  const gokY = 104, okbY = gokY + ue*sc, ukY = gokY + t*sc;
+  const kopfTopY = okbY - Hkopf*sc;    // OK Kopf: H_Kopf ab OK Block nach oben
   const bL = cx - B/2*sc,  bR = cx + B/2*sc;
   const kcx = cx + ex*sc;                          // Kopfachse um e_x versetzt
   const kL = kcx - Bk/2*sc, kR = kcx + Bk/2*sc;
-  const dimL = bL - 16, dimR = bR + 16;
+  const dimL = bL - 16, dimR = bR + 16, dimR2 = bR + 50;
   const mastTop = kopfTopY - 26;
 
   let hatch = '';
@@ -2793,18 +2880,19 @@ function buildSystemSVG() {
   const schnitt = `
   <text x="${cx}" y="13" font-size="9" fill="${c.d}" text-anchor="middle" font-family="${F}" letter-spacing="0.08em">SCHNITT (x–z)</text>
 
-  <rect x="4" y="${gokY}" width="244" height="${H-gokY-34}" fill="var(--s1)" opacity="0.5"/>
+  <rect x="4" y="${gokY}" width="282" height="${H-gokY-34}" fill="var(--s1)" opacity="0.5"/>
   <g clip-path="url(#hbClip)">${hatch}</g>
-  <line x1="4" y1="${gokY}" x2="248" y2="${gokY}" stroke="${c.g}" stroke-width="1.2" stroke-dasharray="6,3"/>
-  <text x="244" y="${gokY-4}" font-size="8" fill="${c.d}" text-anchor="end" font-family="${F}">GOK</text>
+  <line x1="4" y1="${gokY}" x2="286" y2="${gokY}" stroke="${c.g}" stroke-width="1.2" stroke-dasharray="6,3"/>
+  <text x="282" y="${gokY-4}" font-size="8" fill="${c.d}" text-anchor="end" font-family="${F}">GOK</text>
 
-  <rect x="${bL}" y="${gokY}" width="${bR-bL}" height="${okbY-gokY}" fill="var(--s2)" opacity="0.85"/>
+  <rect x="${bL}" y="${gokY}" width="${kL-bL}" height="${okbY-gokY}" fill="var(--s2)" opacity="0.85"/>
+  <rect x="${kR}" y="${gokY}" width="${bR-kR}" height="${okbY-gokY}" fill="var(--s2)" opacity="0.85"/>
   <line x1="${bL}" y1="${okbY}" x2="${bR}" y2="${okbY}" stroke="${c.ln}" stroke-width="0.9" stroke-dasharray="3,2"/>
 
   <rect x="${bL}" y="${okbY}" width="${bR-bL}" height="${ukY-okbY}" fill="${c.f}" opacity="0.35"/>
   <rect x="${bL}" y="${okbY}" width="${bR-bL}" height="${ukY-okbY}" fill="none" stroke="${c.ln}" stroke-width="1.3"/>
-  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${gokY-kopfTopY}" fill="${c.f}" opacity="0.5"/>
-  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${gokY-kopfTopY}" fill="none" stroke="${c.ln}" stroke-width="1.3"/>
+  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${okbY-kopfTopY}" fill="${c.f}" opacity="0.5"/>
+  <rect x="${kL}" y="${kopfTopY}" width="${kR-kL}" height="${okbY-kopfTopY}" fill="none" stroke="${c.ln}" stroke-width="1.3"/>
   <rect x="${kL+7}" y="${mastTop}" width="${kR-kL-14}" height="${kopfTopY-mastTop}" fill="${c.f}" opacity="0.2"/>
   <rect x="${kL+7}" y="${mastTop}" width="${kR-kL-14}" height="${kopfTopY-mastTop}" fill="none" stroke="${c.ln}" stroke-width="0.8" opacity="0.7"/>
   <text x="${kR+5}" y="${mastTop+13}" font-size="7.5" fill="${c.d}" font-family="${F}">Mast</text>
@@ -2816,13 +2904,14 @@ function buildSystemSVG() {
   <line x1="${bL-6}" y1="${ukY}" x2="${bR+6}" y2="${ukY}" stroke="${c.ln}" stroke-width="1"/>
   <text x="${bL-8}" y="${ukY+11}" font-size="7.5" fill="${c.d}" text-anchor="end" font-family="${F}">Sohle</text>
 
-  ${dv(dimL, kopfTopY, gokY,  'H_Kopf = '+Hkopf.toFixed(2)+' m')}
-  ${dv(dimL, gokY,     okbY,  'ü = '+ue.toFixed(2)+' m')}
+  ${dv(dimL, kopfTopY, okbY,  'H_Kopf = '+Hkopf.toFixed(2)+' m')}
   ${dv(dimL, okbY,     ukY,   'H_Block = '+Hb.toFixed(2)+' m')}
-  ${dv(dimR, gokY,     ukY,   't = '+t.toFixed(2)+' m', true)}
+  ${dv(dimR,  gokY, okbY, 'ü = '+ue.toFixed(2)+' m', true)}
+  ${dv(dimR2, gokY, ukY,  't = '+t.toFixed(2)+' m', true)}
   ${hl(kL, kopfTopY, dimL, kopfTopY)}
-  ${hl(bR, gokY, dimR, gokY)}
-  ${hl(bR, ukY,  dimR, ukY)}
+  ${hl(bR, gokY, dimR2, gokY)}
+  ${hl(bR, okbY, dimR, okbY)}
+  ${hl(bR, ukY,  dimR2, ukY)}
 
   ${dh(kL, kR, mastTop-12, 'B_K = '+Bk.toFixed(2)+' m', true)}
   ${hl(kL, kopfTopY, kL, mastTop-12)}
@@ -2832,7 +2921,7 @@ function buildSystemSVG() {
   ${hl(bR, ukY, bR, ukY+26)}`;
 
   // == DRAUFSICHT (rechts) ===================================================
-  const px = 366, pTop = 104;
+  const px = 400, pTop = 104;
   const pL = px - B/2*sc, pR = px + B/2*sc, pB = pTop + L*sc, pcy = (pTop+pB)/2;
   const hcx = px + ex*sc, hcy = pcy + ey*sc;
   const hL = hcx - Bk/2*sc, hR = hcx + Bk/2*sc;
@@ -2840,7 +2929,7 @@ function buildSystemSVG() {
 
   const drauf = `
   <text x="${px}" y="16" font-size="9" fill="${c.d}" text-anchor="middle" font-family="${F}" letter-spacing="0.08em">DRAUFSICHT (x–y)</text>
-  <line x1="256" y1="26" x2="256" y2="${H-26}" stroke="${c.g}" stroke-width="0.8" opacity="0.5"/>
+  <line x1="292" y1="26" x2="292" y2="${H-26}" stroke="${c.g}" stroke-width="0.8" opacity="0.5"/>
 
   <rect x="${pL}" y="${pTop}" width="${pR-pL}" height="${pB-pTop}" fill="${c.f}" opacity="0.3"/>
   <rect x="${pL}" y="${pTop}" width="${pR-pL}" height="${pB-pTop}" fill="none" stroke="${c.ln}" stroke-width="1.3"/>
@@ -2868,16 +2957,16 @@ function buildSystemSVG() {
   <text x="${px}" y="${H-12}" font-size="7.5" fill="${c.x}" text-anchor="middle" font-family="${F}">e_x = ${ex.toFixed(2)} m (quer) · e_y = ${ey.toFixed(2)} m (längs)</text>
 
   <g stroke="${c.x}" stroke-width="0.9" fill="none">
-    <line x1="282" y1="46" x2="306" y2="46" marker-end="url(#hbA)"/>
-    <line x1="282" y1="46" x2="282" y2="70" marker-end="url(#hbA)"/>
+    <line x1="316" y1="46" x2="340" y2="46" marker-end="url(#hbA)"/>
+    <line x1="316" y1="46" x2="316" y2="70" marker-end="url(#hbA)"/>
   </g>
-  <text x="310" y="49" font-size="7" fill="${c.x}" font-family="${F}">x quer</text>
-  <text x="282" y="80" font-size="7" fill="${c.x}" text-anchor="middle" font-family="${F}">y längs</text>`;
+  <text x="344" y="49" font-size="7" fill="${c.x}" font-family="${F}">x quer</text>
+  <text x="316" y="80" font-size="7" fill="${c.x}" text-anchor="middle" font-family="${F}">y längs</text>`;
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:560px;margin:0 auto">
   <defs><marker id="hbA" markerWidth="6" markerHeight="6" refX="5" refY="2" orient="auto">
     <path d="M0,0 L5,2 L0,4 z" fill="${c.x}"/></marker>
-  <clipPath id="hbClip"><rect x="4" y="${gokY}" width="244" height="${H-gokY-34}"/></clipPath></defs>
+  <clipPath id="hbClip"><rect x="4" y="${gokY}" width="282" height="${H-gokY-34}"/></clipPath></defs>
   ${schnitt}
   ${drauf}
 </svg>`;
@@ -2922,7 +3011,10 @@ document.addEventListener('DOMContentLoaded', function() {
     arm_v_GZT:  1.053,
     arm_vp_GZT: 0.980
   };
-  const mockG = { Hb: 3.0, uberd: 0.80, B: 1.20, Hkopf: 0.20, Bk: 0.60 };
+  // H_Kopf = Gesamthöhe OK Block → OK Kopf (Aug 2026). Der Wert 0.20 stammte aus der
+  // Altkonvention (Überstand über Terrain) und hätte den Kopf hier komplett unter GOK
+  // gezeichnet; 1.00 zeigt dieselbe Figur wie zuvor (0.20 m über Terrain bei ü = 0.80).
+  const mockG = { Hb: 3.0, uberd: 0.80, B: 1.20, Hkopf: 1.00, Bk: 0.60 };
   const gztDiv = document.getElementById('hb-gzt-svg');
   if(gztDiv) gztDiv.innerHTML = buildGZTDiagram(mockR, mockG, false, false);
 });
