@@ -691,7 +691,7 @@ nav a { position:relative; }
       <tr><td class="sym">γ_φ</td><td>Reibungswinkel φ'</td><td class="r">1.20</td><td>SIA 267 §2.4</td></tr>
       <tr><td class="sym">γ_c</td><td>Kohäsion c'</td><td class="r">1.50</td><td>SIA 267 §2.4</td></tr>
       <tr><td class="sym">γ_G,inf</td><td>Ständige Einwirkungen, günstig</td><td class="r">1.00</td><td>SIA 261 §4.4</td></tr>
-      <tr><td class="sym">γ_G,eig</td><td>Fundament-Eigengewicht (Grundbruch, Gleiten, Sohlspannung)</td><td class="r">1.00</td><td>SIA 267 §4.4.3</td></tr>
+      <tr><td class="sym">Fundament-Eigengewicht</td><td>eigene Quelle: in den 8 Kombinationen mit γ_G,inf oder γ_G,sup angesetzt (kein eigener Beiwert mehr)</td><td class="r">inf / sup</td><td>SIA 260</td></tr>
       <tr><td class="sym">γ_Ea</td><td>Aktiver Erddruck</td><td class="r">1.35</td><td>SIA 267 §7.3</td></tr>
       <tr><td class="sym">γ_Ep</td><td>Passiver Erddruck / Erdwiderstand</td><td class="r">1.40</td><td>SIA 267, GZ Typ 2</td></tr>
     </tbody>
@@ -1074,7 +1074,7 @@ nav a { position:relative; }
     <thead><tr><th>Nachweis</th><th>Kriterium</th><th>Methode</th></tr></thead>
     <tbody>
       <tr><td>Grundbruch</td><td>η = R_d / σ_max ≥ 1 &nbsp;(beide in kPa)</td><td>Hansen mit Ersatzfläche (Abschnitt 3.6)</td></tr>
-      <tr><td>Gleiten</td><td>η = R_gl / H_d ≥ 1 &nbsp;mit&nbsp; R_gl = N_d,inf·tan δ_Sohle + c'_d·A</td><td>SIA 267 §4.4</td></tr>
+      <tr><td>Gleiten</td><td>η = R_gl / H_d ≥ 1 &nbsp;mit&nbsp; R_gl = N_d·tan δ_Sohle + c'_d·A, N_d und H_d aus derselben Kombination (massgebend: kleinstes η der 8)</td><td>SIA 267 §4.4</td></tr>
       <tr><td>Ausmitte / Kippen</td><td>η = (1/9) / [(e_x/B)² + (e_y/L)²] ≥ 1</td><td>2. Kernweite, zweiachsig</td></tr>
       <tr><td>Sohlspannung</td><td>η = q_u / σ_max ≥ 1</td><td>SIA 267, informativ</td></tr>
       <tr><td>Globale Standsicherheit</td><td>η aus Gleitkreis (Bishop)</td><td>Nur Flach mit Böschung; in den Optionen zuschaltbar</td></tr>
