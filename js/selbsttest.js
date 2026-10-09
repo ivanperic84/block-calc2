@@ -1,0 +1,237 @@
+// BlockCalc — js/selbsttest.js
+// Selbsttest (?selftest=1) mit Golden-Werten
+// SELBSTTEST (?selftest=1) — Golden-/Analytik-Anker
+// Schützt die Norm-Verankerung: analytische Referenzen (Hetényi, Gruppengleichgewicht,
+// Mantelreibung) + eingefrorene Golden-Werte eines vollständig expliziten Zustands.
+// Draft-Save ist im Selbsttest unterdrückt (echter Arbeitsstand bleibt unberührt).
+// ════════════════════════════════════════════
+const _ST_STATE = {"AUFLASTEN":"[]","FLACH_MAT":"beton","LF":"[{\"name\":\"LF 1 — GZT (quer)\",\"preset\":\"quer\",\"gG\":1.35,\"gW\":1.5,\"nw\":\"gzt\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}},{\"name\":\"LF 2 — GZG (quer)\",\"preset\":\"quer\",\"gG\":1,\"gW\":1,\"nw\":\"gzg\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}}]","MODEL":"block","SCHICHTEN":"[{\"phi\":30,\"c\":0,\"gamma\":20,\"gamma2\":10,\"d\":999,\"name\":\"Testboden\",\"preset\":\"custom\",\"me\":30}]","bg_beta":"0","bg_bfuss":"0.00","bg_bhoehe":"0","bg_btyp":"none","bg_c":"0","bg_c1":"155.0","bg_c1_methode":"auto","bg_delta_fac":"0.667","bg_delta_sohle":"0.667","bg_gamma":"20","bg_gamma2":"10","bg_gw":"","bg_gwt":"3.00","bg_koernig":"grob","bg_me":"30","bg_phi":"30","bg_qu":"400","flach-material":"beton","g_bx":"1.3","g_by":"1.3","g_ex":"0","g_ey":"0","g_gauf":"20","g_gbeton":"25","g_hblock":"2.7","g_hkopf":"1.0","g_kx":"0.6","g_ky":"0.6","g_uberd":"0.4","g_uberd_flach":"0.40","hkopf_conv":2,"kopf_in_gk":true,"l_HGx":"8","l_HGy":"8","l_HWx":"6","l_HWy":"6","l_MGx":"45","l_MGy":"45","l_MWx":"35","l_MWy":"35","l_NG":"50","lw_G":"1.35","lw_G1_inf":"0.80","lw_G1_sup":"1.20","lw_G_eig":"1","lw_G_gzg":"1.00","lw_G_inf":"0.8","lw_Q":"1.5","lw_Q1":"1.50","lw_Q_gzg":"1.00","p_bearbeiter":"","p_bemerk":"","p_datum":"2026-01-01","p_fundname":"Selbsttest","p_km":"","p_mastnr":"","p_name":"Selbsttest","p_nr":"","pb_L":"10.00","pb_auto":"1","pb_ax":"12","pb_ay":"12","pb_bank_d":"0.80","pb_bx":"2.00","pb_by":"2.00","pb_dG":"150","pb_ex":"0.00","pb_ey":"0.00","pb_gR":"1.40","pb_gS":"1.15","pb_hk":"1.00","pb_korr":"temp","pb_kx":"0.60","pb_ky":"0.60","pb_mode":"gruppe","pb_n":"4","pb_rot":"0","pb_skinfac":"1.0","pb_sx":"1.40","pb_sy":"1.40","pb_sys":"0","pb_ue":"0.40","pb_var":"0","pb_zugfac":"1.0","pfahl_abstand":"2.50","pfahl_alpha":"2.3","pfahl_anzahl":"2","pfahl_dex":"1.8","pfahl_dex_seite":"gleis","pfahl_dk":"15","pfahl_dm":"5","pfahl_e":"0.5","pfahl_hs":"0","pfahl_l":"4.00","pfahl_laf":"1.0","pfahl_lv_mode":"auto","pfahl_s":"4.00","pfahl_stab_nrd":"0","pfahl_typ":"HEB200","pfahl_zugfest":"ja","tw_Ea":"1.35","tw_Ep":"1.4","tw_c":"1.5","tw_phi":"1.2"};
+
+function runSelfTest(){
+  const _stRes=()=>(curResult()||{}).results;   // Ergebnisliste des aktiven Modells
+  const T=[];   // {name, val, exp, tol, mode:'rel'|'abs', ok}
+  const add=(name,val,exp,tol,mode)=>{
+    let ok=false;
+    if(isFinite(val)&&isFinite(exp)){
+      const d=Math.abs(val-exp);
+      ok = (mode==='abs') ? d<=tol : d<=tol*Math.max(1e-12,Math.abs(exp));
+    }
+    T.push({name,val,exp,tol,mode,ok});
+  };
+  // SETTINGS-Parameter pinnen (in-memory, nichts persistieren), danach wiederherstellen
+  const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, alphaZulFull:SETTINGS.alphaZulFull,
+    pfahlRandMin:SETTINGS.pfahlRandMin,
+              stecknerSlope:SETTINGS.stecknerSlope, stecknerMob:SETTINGS.stecknerMob,
+              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat,
+              pfahlLatGroup:SETTINGS.pfahlLatGroup, pfahlLcrit:SETTINGS.pfahlLcrit,
+              kappaE:SETTINGS.kappaE, bzG:SETTINGS.bauzustandGred,
+              bzGv:SETTINGS.bauzustandGredVal, bzGs:SETTINGS.bauzustandGredSpezial,
+              nw:SETTINGS.nw };
+  SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.alphaZulFull=0.010;
+  SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
+  SETTINGS.pfahlAlphaLat=0.30;     // Golden = konservativer Default (laterale Pfahlbettung)
+  SETTINGS.pfahlLatGroup=true;     // Golden = p-Multiplier AN (bei gespreizten Pfählen ohnehin 1.0)
+  SETTINGS.pfahlLcrit=10;          // Golden = Default-Deckel; T6-Pfahl hat L=10 m ⇒ kein Abzug
+  SETTINGS.kappaE=1/6;             // Golden = Voreinstellung (wirkt nur bei aktivem Aushub)
+  SETTINGS.bauzustandGred=false;   // Golden = voller γ_G,sup (Bauzustands-Reduktion ist opt-in)
+  SETTINGS.bauzustandGredSpezial=false;
+  SETTINGS.stecknerSlope=false;   // Golden = Original-Steckner (β_a=β_p=0)
+  SETTINGS.stecknerMob=true;      // Golden = Passivdruck mobilisiert (Standard AN)
+  // Bishop-Golden (T7) braucht den aktiven Nachweis; Struktur je Tragsystem (Aug 2026).
+  // Alle uebrigen Nachweise werden ebenfalls gepinnt, damit die Golden nicht von einer
+  // Nutzer-Abwahl in den Optionen abhaengen.
+  _nwNorm();
+  SETTINGS.nw = { block:{gzt:true,gzg:true,info:true},
+                  flach:{sohlsp:true,grundb:true,gleiten:true,kippen:true,bishop:true},
+                  pfahl:{geo:true,stahl:true,knick:true,lat:true,gzg:true},
+                  sich:{lat:true,ax:true,stahl:true,sys:true,kern:true,verf:true,gzgsys:true} };
+  // Selbsttest-Flag während des Laufs setzen (auch bei eval-Aufruf ohne ?selftest=1) → unterdrückt
+  // Seiteneffekt-Defaults wie die Frisch-Flach-Stahlplatten-Vorbelegung (Golden-Zustand bleibt exakt).
+  const _stModeBak = window._SELFTEST_MODE; window._SELFTEST_MODE = true;
+  try{
+    // ── T1 Hetényi: p-y-FE (bddBeamPY) gegen geschlossene Halbunendlich-Lösung y=2λ/k_w
+    (()=>{ const ks=20000,B=0.2,EI=50000;
+      const py=bddBeamPY(EI,B,0,10,1,z=>ks);
+      const kw=ks*B, lam=Math.pow(kw/(4*EI),0.25);
+      add('p-y-FE vs. Hetényi y=2λ/k_w', py?py.yHead_mm:NaN, 2*lam/kw*1000, 0.005,'rel'); })();
+    // ── T2 Gruppengleichgewicht solvePfahlbock: N=400 auf 4 Pfähle → je +100 · My=100 → ±25
+    (()=>{ const piles=[{x:-1,y:-1},{x:1,y:-1},{x:-1,y:1},{x:1,y:1}]
+        .map(p=>({x:p.x,y:p.y,axDeg:0,ayDeg:0,kAx:50000,kLat:2500}));
+      const sN=solvePfahlbock(piles,{N:400}), sM=solvePfahlbock(piles,{My:100});
+      add('Gruppe N=400 → F je Pfahl', sN?Math.max(...sN.F.map(f=>Math.abs(f-100))):NaN, 0, 1e-6,'abs');
+      add('Gruppe My=100 → |F|=25, ΣF=0', sM?Math.max(...sM.F.map(f=>Math.abs(Math.abs(f)-25)))+Math.abs(sM.F.reduce((a,b)=>a+b,0)):NaN, 0, 1e-6,'abs'); })();
+    // ── T3 Mantelreibung analytisch: Kies q_s,k=200 · π·d_G·L
+    (()=>{ const SB=SCHICHTEN;
+      SCHICHTEN=[{phi:38,c:0,gamma:20,gamma2:10.5,d:999,name:'Kies',preset:'kies',me:80}];
+      const sk=microSkinFriction(10,0.15,1.0,1.0);
+      SCHICHTEN=SB;
+      add('Mantelreibung Kies R_s,k=q_s·π·d·L', sk?sk.Rk:NaN, 160*Math.PI*0.15*10, 1e-6,'rel'); })();   // Kies 160 kPa (Okt 2026 gesenkt)
+    // ── T4 Block/Steckner (Golden, kanonischer Zustand)
+    applyState(_ST_STATE); calculate();
+    (()=>{ const r=_stRes()&&_stRes()[0]||{};
+      add('Block GZT η (Steckner Gl.66)', r.etaGZT, 2.0326494454949895, 1e-3,'rel');
+      add('Block M_u [kNm]',              r.Mu_GZT, 270.44400872310837, 1e-3,'rel');
+      add('Block GZG η (Schiefstellung)', r.etaGZG, 4.4150063488403495, 1e-3,'rel');
+      // ── T4b Hebelarm Sohle → OK Kopf und die davon abhaengigen Sohlgroessen.
+      // LUECKE, die Aug 2026 einen Fehler durchliess: die Golden pinnten nur etaGZT/M_u/etaGZG/N_d —
+      // die laufen alle ueber M_ok_* und sind vom Hebelarm `arm` UNABHAENGIG. Als bei der H_Kopf-
+      // Umstellung `arm = t + H_Kopf` stehenblieb (um ue zu lang), blieb der Selbsttest gruen,
+      // waehrend Sohldruck, Ausmitte und Grundbruch beim Block zu unguenstig ausfielen.
+      // arm ist einbindungsunabhaengig: H_Block + H_Kopf (nicht t + H_Kopf).
+      add('Block Hebelarm Sohle→OK Kopf = H_Block + H_Kopf',
+          _stRes()[0].Mxd / _stRes()[0].Hxd, 3.70, 1e-9,'abs');
+      // Golden Okt 2026: Typ-2-Nachweise laufen über die 8 Kombinationen; die flachen Felder zeigen
+      // Komb. 8 (alles ungünstig, auch das Eigengewicht mit γ_G,sup). Unabhängig am Vorstand
+      // nachgestellt (8 einzeln gerechnete Kombinationen): σ_max 647.6134, η_GB,min 0.910692.
+      add('Block σ_max [kPa] (arm-abhängig)', _stRes()[0].smax, 647.6133932635412, 1e-4,'rel');
+      add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 0.9106923066249866, 1e-4,'rel');
+      add('Block N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 233.65125, 1e-6,'rel'); })();
+    // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
+    // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
+    // AUSSERHALB der Sohlfläche; dort ist die Meyerhof-Ersatzfläche nicht definiert. Der frühere
+    // Golden (η_GB 0.14457 / R_d 86.04) stammte aus dem auf Be = 0.1 m GEKLEMMTEN Wert und war damit
+    // ein Phantomwert — er hat die Hansen-Formel gar nicht geprüft. Mit 2.60 m (e_x/B = 0.131,
+    // Kippnachweis η = 4.37 erfüllt) liegt der Fall im Gültigkeitsbereich und T5 prüft die Formel.
+    // g_hkopf explizit: der ST-Zustand traegt seit der Konventionsumstellung 1.00 (Gesamthoehe des
+    // BLOCK-Kopfes). Beim Flach war H_Kopf schon immer die Gesamthoehe ab OK Platte — mit 0.60 pinnt
+    // T5 unveraendert denselben physischen Fall wie vor der Umstellung.
+    setModel('flach'); si('g_bx','2.60'); si('g_by','2.60'); si('g_hkopf','0.60'); calculate();
+    (()=>{ const r=_stRes()&&_stRes()[0]||{};
+      // Golden Okt 2026 (8 Kombinationen statt einer von Hand gewählten; unabhängig nachgestellt):
+      // Grundbruch massgebend Komb. 8 (η 1.7975 → 1.6459, das Eigengewicht trägt jetzt γ_G,sup),
+      // Gleiten massgebend Komb. 4 (η 6.3752 → 6.8035, N und H aus DERSELBEN Kombination).
+      add('Flach Grundbruch η', r.etaGB, 1.645932,  1e-4,'rel');
+      add('Flach Gleiten η',    r.etaGL, 6.803465,  1e-4,'rel');
+      add('Flach R_d [kN]',     r.Rd,    268.5416, 1e-4,'rel');
+      add('Flach Grundbruch: massgebende Kombination', r.t2&&r.t2.gb.komb, 8, 0,'abs');
+      add('Flach Gleiten: massgebende Kombination',    r.t2&&r.t2.gl.komb, 4, 0,'abs');
+      add('Flach N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 690.795, 1e-6,'rel'); })();
+    // ── T5c H_Kopf wirkt beim Flach auf die Vertikallast. Bis Aug 2026 zaehlte der
+    // Fundamentkopf beim Flachfundament GAR NICHT mit — H_Kopf war dort ohne jeden
+    // Einfluss auf N_d, obwohl der Kopf im 3D gezeichnet und im Bericht bemasst wird.
+    // Erwartung: ΔN_d = γ_G,sup·B_Kopf·L_Kopf·ΔH_Kopf·γ_Beton = 1.35·0.6·0.6·0.60·25 = 7.29 kN.
+    (()=>{ const n1=_stRes()[0].Nd;
+      si('g_hkopf','0'); calculate(); const n0=_stRes()[0].Nd;
+      si('g_hkopf','0.60'); calculate();
+      add('Flach ΔN_d aus H_Kopf [kN]', n1-n0, 7.29, 1e-6,'abs'); })();
+    // ── T5b Ausmitte-Guard: Resultierende ausserhalb der Sohlfläche ⇒ Grundbruch NICHT führbar
+    // (schützt den Aug-2026-Fix gegen Rückfall auf den geklemmten Phantomwert)
+    si('g_bx','1.30'); si('g_by','1.30'); calculate();
+    (()=>{ const r=_stRes()&&_stRes()[0]||{};
+      add('Flach Ausmitte-Guard: η_GB = 0 bei e/B ≥ 0.5', r.etaGB, 0, 1e-9,'abs'); })();
+    // ── T6 Pfahlfundament (Golden; Result-Felder sind auf 2 Dez. gerundet → abs-Toleranz)
+    setModel('pfahlbock');
+    (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
+      add('Pfahl η_Geo (Mantelreibung)', r.etaGeo,   3.27, 0.015,'abs');
+      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 2.09, 0.015,'abs');
+      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 2.42, 0.015,'abs');
+      add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
+      add('Pfahl R_s,d [kN]',            r.Rskin_d,  336.6, 0.5,'abs'); })();
+    // ── T6b Lastbeiwerte wirken auch beim Pfahlfundament (Okt 2026: es las bis dahin die im
+    // LF-Objekt eingefrorenen 1.35/1.50 statt der Felder). Mit γ = 1.00: N_d = N_G + G_eig
+    // = 50 + (2.0·2.0·0.8 + 0.6·0.6·1.0)·25 = 139.00 kN.
+    (()=>{ si('lw_G','1.00'); si('lw_Q','1.00'); renderPfahlbock();
+      const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
+      add('Pfahl N_d folgt γ_G (γ=1.00 ⇒ N_G+G_eig)', r.govLoad&&r.govLoad.N, 139.00, 1e-6,'abs');
+      si('lw_G','1.35'); si('lw_Q','1.50'); })();
+    // ── T7 Bishop-Gleitkreis (Golden: Flach + Böschung β=−30°, h_β=3 m)
+    // Zustand frisch herstellen — T5/T5b haben g_bx/g_by verändert, und q_block des Gleitkreises
+    // hängt vom Footprint ab (sonst würde der Bishop-Golden mitwandern).
+    applyState(_ST_STATE);
+    setModel('flach');
+    si('bg_beta','-30'); si('bg_bhoehe','3'); si('bg_bfuss','1.0');
+    (()=>{ const bt=document.getElementById('bg_btyp'); if(bt) bt.value='boeschung'; })();
+    calculate();
+    (()=>{ const b=RESULT.flach&&RESULT.flach.bishop;
+      // Golden Aug 2026 korrigiert: y_H (Angriffspunkt H) lag um ü zu tief — die Zeile rechnete
+      // schon immer g_hkopf−ü, das Feld führte aber den Überstand statt der Gesamthöhe.
+      // Verifiziert: y_H 0.20 → 0.60 (= OK Kopf), M_H 13.81 → 12.45, η 0.956756 → 0.993085.
+      add('Bishop Böschung η (β=−30°)', b&&b.ok?b.eta:NaN, 0.9930846, 5e-3,'rel'); })();
+    // ── T8 Modellwechsel: die Flach-Geometrie und die Stahlwichte dürfen weder ins Pfahlfundament
+    // noch (über den Umweg Pfahlfundament) in den Block durchschlagen (Okt 2026).
+    applyState(_ST_STATE);
+    setModel('flach');
+    si('g_bx','1.50'); si('g_by','3.00'); si('g_hblock','0.09'); si('g_hkopf','0');
+    si('g_gbeton','78.5'); FLACH_MAT='stahl';
+    setModel('pfahlbock');
+    (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
+      add('Wechsel Flach(Stahl)→Pfahl: N_d mit Betonwichte', r.govLoad&&r.govLoad.N, 187.65, 1e-6,'abs'); })();
+    setModel('block'); calculate();
+    (()=>{ const r=_stRes()&&_stRes()[0]||{};
+      add('Wechsel Flach→Pfahl→Block: η_GZT unverändert', r.etaGZT, 2.0326494, 1e-3,'rel');
+      add('Wechsel Flach→Pfahl→Block: γ_Beton = 25', +gi('g_gbeton'), 25, 1e-9,'abs'); })();
+    FLACH_MAT='beton'; applyState(_ST_STATE);
+    // ── T9 Rechenkontext: Varianten laufen über das Eingabepaket, ohne die Eingabefelder zu
+    // berühren (Lastbeiwerte, Grundwasser und Schichten erreichten den Kern früher nur über das DOM;
+    // der reduzierte Bauzustands-Beiwert der Dimensionierung blieb dadurch wirkungslos).
+    (()=>{ const b=collectCalcInputs();
+      const v=_doCalculate({...b, raw:{...b.raw, lw_G:'1.00', lw_Q:'1.00', lw_G_inf:'1.00'}, _pure:true}).results[0];
+      add('Variante γ=1.00 über Eingabepaket: N_d = N_G+G_k', v.Nd, 173.075, 1e-6,'rel');
+      add('Variante lässt das Eingabefeld unberührt (lw_G)', +gi('lw_G'), 1.35, 1e-9,'abs');
+      const g=_doCalculate({...b, raw:{...b.raw, bg_gw:'ja', bg_gwt:'1.0'}, _pure:true}).results[0];
+      add('Variante Grundwasser 1.0 m: η_GZT', g.etaGZT, 1.53068, 1e-4,'rel'); })();
+    // ── T9b Auftrieb am Fundamentkopf: GW 0.20 m unter GOK, OK Block bei ü = 0.40 ⇒ der Kopf taucht
+    // 0.20 m ein: ΔAuftrieb = B_K·L_K·0.20·10 = 0.6·0.6·0.20·10 = 0.72 kN gegenüber GW an OK Block.
+    (()=>{ const b=collectCalcInputs(), A=z=>_doCalculate({...b, raw:{...b.raw, bg_gw:'ja', bg_gwt:z}, _pure:true}).G.G_auftrieb;
+      add('Auftrieb am Kopf: Δ bei GW 0.20 m über OK Block [kN]', A('0.20')-A('0.40'), 0.72, 1e-9,'abs'); })();
+    // ── T10 Erfüllt-Regel: entschieden wird auf dem angezeigten 2-Dezimal-Wert
+    add('etaErf(0.997) = erfüllt', etaErf(0.997)?1:0, 1, 0,'abs');
+    add('etaErf(0.994) = nicht erfüllt', etaErf(0.994)?1:0, 0, 0,'abs');
+    add('etaErf(∞) = erfüllt', etaErf(Infinity)?1:0, 1, 0,'abs');
+  } catch(err){
+    T.push({name:'AUSNAHME: '+(err&&err.message||err), val:NaN, exp:NaN, tol:0, mode:'abs', ok:false});
+  } finally {
+    SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.alphaZulFull=bak.alphaZulFull;
+    SETTINGS.pfahlRandMin=bak.pfahlRandMin;
+    SETTINGS.stecknerSlope=bak.stecknerSlope; SETTINGS.stecknerMob=bak.stecknerMob;
+    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat;
+    SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.pfahlLcrit=bak.pfahlLcrit;
+    SETTINGS.kappaE=bak.kappaE; SETTINGS.bauzustandGred=bak.bzG;
+    SETTINGS.bauzustandGredVal=bak.bzGv; SETTINGS.bauzustandGredSpezial=bak.bzGs;
+    SETTINGS.nw=bak.nw;
+    window._SELFTEST_MODE = _stModeBak;
+  }
+  _renderSelfTest(T);
+  return T;
+}
+function _renderSelfTest(T){
+  const nOk=T.filter(t=>t.ok).length, all=T.length, pass=nOk===all;
+  const fmt=v=>!isFinite(v)?'–':(Math.abs(v)>=100?v.toFixed(2):v.toPrecision(6));
+  let el=document.getElementById('selftest-ov');
+  if(!el){ el=document.createElement('div'); el.id='selftest-ov'; document.body.appendChild(el); }
+  el.style.cssText='position:fixed;inset:0;z-index:200;background:var(--bg);color:var(--on);overflow:auto;padding:28px 32px;font-family:var(--f-mono);font-size:11px';
+  el.innerHTML=`
+    <div style="max-width:860px;margin:0 auto">
+      <div style="display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--on);padding-bottom:10px;margin-bottom:4px">
+        <span style="font-size:15px;font-weight:600;letter-spacing:0.03em">BlockCalc Selbsttest</span>
+        <span style="color:var(--dim)">Golden- und Analytik-Anker · SIA-267-Verankerung</span>
+        <span style="flex:1"></span>
+        <span style="font-weight:600;color:${pass?'var(--ok)':'var(--fail)'}">${nOk} / ${all} ${pass?'BESTANDEN':'FEHLGESCHLAGEN'}</span>
+      </div>
+      <div style="color:var(--xdim);font-size:9.5px;margin-bottom:14px">Der Selbsttest überschreibt den Auto-Entwurf nicht. Zum normalen Betrieb: Seite ohne <span style="color:var(--dim)">?selftest=1</span> laden.</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Test</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Wert</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Erwartet</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Toleranz</th>
+          <th style="text-align:right;padding:5px 8px;border-bottom:1px solid var(--ol);font-size:8.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim)">Status</th>
+        </tr></thead>
+        <tbody>${T.map(t=>`<tr style="border-bottom:1px solid var(--ol)">
+          <td style="padding:5px 8px;color:var(--on2)">${esc(t.name)}</td>
+          <td style="padding:5px 8px;text-align:right">${fmt(t.val)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--dim)">${fmt(t.exp)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--xdim)">${t.mode==='rel'?(+(t.tol*100).toPrecision(2))+'%':t.tol}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:600;color:${t.ok?'var(--ok)':'var(--fail)'}">${t.ok?'OK':'ABWEICHUNG'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="margin-top:16px;color:var(--xdim);font-size:9.5px;line-height:1.7">
+        Anker: Hetényi-Halbunendlich-Balken (p-y-FE) · räumliches Gruppengleichgewicht (starres Bankett) ·
+        Mantelreibung EA-Pfähle (analytisch) · Steckner Gl. 66 / GZG Gl. 21 · Hansen-Grundbruch/Gleiten ·
+        Bishop-Gleitkreis (Taylor-validierte Suche). Golden-Werte eingefroren Jul 2026.
+      </div>
+    </div>`;
+  document.title='Selbsttest '+(pass?'OK':'FEHLER')+' · BlockCalc';
+}
+
+// ════════════════════════════════════════════
