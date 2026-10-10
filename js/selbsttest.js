@@ -156,17 +156,28 @@ function runSelfTest(){
     // ── T6 Pfahlfundament (Golden; Result-Felder sind auf 2 Dez. gerundet → abs-Toleranz)
     setModel('pfahlbock');
     (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
-      add('Pfahl η_Geo (Mantelreibung)', r.etaGeo,   3.27, 0.015,'abs');
-      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 2.09, 0.015,'abs');
-      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 2.42, 0.015,'abs');
+      // Golden Okt 2026 (SIA 267 Kap. 9 am Normtext, Nutzerentscheid P1–P3 mit η_a = 0.7): R_a,d = η_a·R_a,k/γ_M,a
+      // statt R_k/1.40, innerer Widerstand η_i·R_mat,d. Herleitung aus den bisherigen Werten:
+      //   R_s,d  336.6·1.40·0.7/1.3 = 253.75 kN   ·   η_Geo  3.27·1.40·0.7/1.3 = 2.465
+      //   η_Stahl 2.09·0.80 = 1.672   ·   η_Knick 2.42·0.80 = 1.936   ·   η_GZG unverändert (charakteristisch)
+      add('Pfahl η_Geo (Mantelreibung)', r.etaGeo,   2.46, 0.015,'abs');
+      add('Pfahl: η_Geo folgt R_k·η_a/γ_M,a (0.7/1.3 gegen 1/1.4)', r.etaGeo, 3.27*1.4*0.7/1.3, 0.015,'abs');
+      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 1.67, 0.015,'abs');
+      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 1.94, 0.015,'abs');
       add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
       // Zyklische Abminderung der Mantelreibung: Faktor 0.80 ⇒ R_s,d = 0.80·336.6 = 269.3 kN; 1.0 ⇒ unverändert
       si('pb_zykfac','0.8'); renderPfahlbock();
-      add('Pfahl zyklisch 0.80: R_skin,d', (RESULT.pfahlbock.r||{}).Rskin_d, 0.8*336.6, 0.15,'abs');
-      add('Pfahl zyklisch 0.80: η_Geo', (RESULT.pfahlbock.r||{}).etaGeo, 0.8*3.27, 0.02,'abs');
+      add('Pfahl zyklisch 0.80: R_skin,d', (RESULT.pfahlbock.r||{}).Rskin_d, 0.8*253.75, 0.15,'abs');
+      add('Pfahl zyklisch 0.80: η_Geo', (RESULT.pfahlbock.r||{}).etaGeo, 0.8*2.465, 0.02,'abs');
       si('pb_zykfac','1.0'); renderPfahlbock();
-      add('Pfahl zyklisch 1.00: R_skin,d unverändert', (RESULT.pfahlbock.r||{}).Rskin_d, 336.6, 0.015,'abs');
-      add('Pfahl R_s,d [kN]',            r.Rskin_d,  336.6, 0.5,'abs'); })();
+      add('Pfahl zyklisch 1.00: R_skin,d unverändert', (RESULT.pfahlbock.r||{}).Rskin_d, 253.75, 0.06,'abs');
+      // Zug strenger als Druck: R_s,d,Zug / R_s,d,Druck = γ_M,a,Druck/γ_M,a,Zug = 1.3/1.6
+      add('Pfahl: R_s,d Zug / Druck = 1.3/1.6', (RESULT.pfahlbock.r||{}).Rskin_dZ/(RESULT.pfahlbock.r||{}).Rskin_d, 1.3/1.6, 2e-3,'abs');
+      // η_a = 1.0 (statische Probebelastung) hebt den Widerstand um 1/0.7
+      si('pb_etaA','1.0'); renderPfahlbock();
+      add('Pfahl η_a = 1.0: R_s,d = R_s,k/1.3', (RESULT.pfahlbock.r||{}).Rskin_d, 253.75/0.7, 0.1,'abs');
+      si('pb_etaA','0.7'); renderPfahlbock();
+      add('Pfahl R_s,d [kN]',            r.Rskin_d,  253.75, 0.5,'abs'); })();
     // ── T6b Lastbeiwerte wirken auch beim Pfahlfundament (Okt 2026: es las bis dahin die im
     // LF-Objekt eingefrorenen 1.35/1.50 statt der Felder). Mit γ = 1.00: N_d = N_G + G_eig
     // = 50 + (2.0·2.0·0.8 + 0.6·0.6·1.0)·25 = 139.00 kN.
@@ -226,7 +237,8 @@ function runSelfTest(){
     si('pb_orient','quer'); si('pb_einbau','ramm'); si('pb_e','0'); onPbMode();
     (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{}, ld=r.govLoad||{};
       add('Einzelpfahl: M_Ed ≥ Kopfmoment M_d', (r.Mmax>=Math.abs(ld.My||0)-0.5)?1:0, 1, 0,'abs');
-      add('Einzelpfahl HEB 200: η_Stahl', r.etaSteel, 1.65, 0.015,'abs');
+      // Stahlprofil nach SIA 263 Ziff. 4.1.3: γ_M1 = 1.05 statt 1.15 ⇒ η 1.65·1.15/1.05 = 1.807
+      add('Einzelpfahl HEB 200: η_Stahl', r.etaSteel, 1.80, 0.015,'abs');
       add('Einzelpfahl HEB 200: η_GZG', r.etaGZG, 0.89, 0.015,'abs'); })();
     // ── T13 Ergänzungen Okt 2026: Spitzenwiderstand, Torsion, Rammrohr, Längenbemessung
     (()=>{ const R=()=>RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
@@ -244,7 +256,7 @@ function runSelfTest(){
       // Torsion HEB 200: W_t = I_T/t_f, I_T = (2·b·t_f³ + h_w·t_w³)/3 ⇒ T_Rd = W_t·f_yk/(√3·γ_s)
       const eS0=R().etaSteel; si('l_TW','2'); renderPfahlbock();
       const It=(2*0.2*Math.pow(0.015,3)+0.17*Math.pow(0.009,3))/3;
-      add('Torsion: T_Rd Stahl HEB 200', R().tors?R().tors.TRst:NaN, It/0.015*355000/Math.sqrt(3)/(+gi('pb_gS')||1.15), 0.01,'abs');
+      add('Torsion: T_Rd Stahl HEB 200', R().tors?R().tors.TRst:NaN, It/0.015*355000/Math.sqrt(3)/(+gi('pb_gM1')||1.05), 0.01,'abs');
       add('Torsion senkt η_Stahl', R().etaSteel<eS0?1:0, 1, 0,'abs');
       add('Torsion: Nachweis über Mantelreibung geführt', (R().etaTors!=null&&isFinite(R().etaTors))?1:0, 1, 0,'abs');
       si('l_TW','0'); renderPfahlbock();

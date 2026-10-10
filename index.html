@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10f">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10g">
 </head>
 <body>
 
@@ -426,11 +426,23 @@
           <div class="hint" style="margin-top:0">verpresst 1.0 · <b>verrohrt ≈ 0.40</b>. Zug-Abminderung für Herausziehen (oft 0.7–0.9). q_s,k je Schicht optional im Tab «Boden» (sonst Erfahrungswert EA-Pfähle/DIN 4128, bodenartabhängig).</div>
 
           <div class="sec">Teilsicherheiten Pfahl</div>
+          <div class="field"><label>Äusserer Widerstand bestimmt durch</label><select id="pb_etaA" onchange="renderPfahlbock()" title="Umrechnungsfaktor η_a nach SIA 267 Ziff. 9.5.2.2.5">
+            <option value="0.7" selected>Berechnung / Tabellenwerte — η_a = 0.7</option>
+            <option value="0.9">vergleichbare Erfahrung oder dynamische Versuche — η_a = 0.9</option>
+            <option value="1.0">statische Probebelastung — η_a = 1.0</option></select></div>
           <div class="lf-grid3">
-            <div class="field"><label>γ_R Mantel</label><input id="pb_gR" type="number" value="1.40" step="0.05" oninput="renderPfahlbock()"/></div>
-            <div class="field"><label>γ_s Stahl</label><input id="pb_gS" type="number" value="1.15" step="0.05" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>γ_M,a Druck</label><input id="pb_gMD" type="number" value="1.30" step="0.05" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>γ_M,a Zug</label><input id="pb_gMZ" type="number" value="1.60" step="0.05" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>γ_M,a quer</label><input id="pb_gMQ" type="number" value="1.40" step="0.05" oninput="renderPfahlbock()"/></div>
           </div>
-          <div class="hint" style="margin-top:4px"><b>Lasten + Lastbeiwerte γ_G/γ_Q</b> im Tab «Lasten» (Mastlasten am Lastangriff). Die <b>Einwirkungen auf UK Bankett</b> werden automatisch berechnet. Boden + GW im Tab «Boden». Kein Abrostzuschlag (SIA 267).</div>
+          <div class="lf-grid3">
+            <div class="field pb-nur-mp"><label>γ_s Tragglied</label><input id="pb_gS" type="number" value="1.15" step="0.05" oninput="renderPfahlbock()"/></div>
+            <div class="field pb-nur-mp"><label>η_i innerer Widerstand</label><select id="pb_etaI" onchange="renderPfahlbock()" title="SIA 267 Ziff. 9.5.2.4.4 / 9.5.2.4.9">
+              <option value="0.8" selected>0.80 — Regel</option><option value="0.9">0.90 — mit Integritätsprüfung</option></select></div>
+            <div class="field pb-nur-ein" style="display:none"><label>γ_M1 Stahlprofil</label><input id="pb_gM1" type="number" value="1.05" step="0.05" oninput="renderPfahlbock()"/></div>
+          </div>
+          <div class="hint" style="margin-top:0">SIA 267 Ziff. 9.5.2: R_a,d = η_a·R_a,k/γ_M,a (Druck 1.3 · Zug 1.6 · quer ≥ 1.4). Innerer Widerstand R_i,d = η_i·R_mat,d; Stahlprofile nach SIA 263 mit γ_M1 = 1.05.</div>
+          <div class="hint" style="margin-top:4px"><b>Lasten + Lastbeiwerte γ_G/γ_Q</b> im Tab «Lasten» (Mastlasten am Lastangriff). Die <b>Einwirkungen auf UK Bankett</b> werden automatisch berechnet. Boden + GW im Tab «Boden». Kein Abrostzuschlag (ASTRA-Bericht 717; Schutz über die Schutzart).</div>
 
           <div class="sec">Pfahlanordnung &amp; Sohlkräfte</div>
           <div id="pfahlbock-draufsicht"></div>
@@ -1745,44 +1757,44 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10f"></script>
-<script src="js/helfer.js?v=2026-10-10f"></script>
-<script src="js/speicher.js?v=2026-10-10f"></script>
-<script src="js/einstellungen.js?v=2026-10-10f"></script>
-<script src="js/templates.js?v=2026-10-10f"></script>
-<script src="js/viewer.js?v=2026-10-10f"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10f"></script>
-<script src="js/lasten.js?v=2026-10-10f"></script>
-<script src="js/boden.js?v=2026-10-10f"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10f"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10f"></script>
-<script src="js/modell.js?v=2026-10-10f"></script>
-<script src="js/lastniveaus.js?v=2026-10-10f"></script>
-<script src="js/bettung.js?v=2026-10-10f"></script>
-<script src="js/erddruck.js?v=2026-10-10f"></script>
-<script src="js/kataloge.js?v=2026-10-10f"></script>
-<script src="js/bishop.js?v=2026-10-10f"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10f"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10f"></script>
-<script src="js/sicherung.js?v=2026-10-10f"></script>
-<script src="js/rechenkern.js?v=2026-10-10f"></script>
-<script src="js/dimensionierung.js?v=2026-10-10f"></script>
-<script src="js/bemessung.js?v=2026-10-10f"></script>
-<script src="js/fundamentliste.js?v=2026-10-10f"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10f"></script>
-<script src="js/bericht.js?v=2026-10-10f"></script>
-<script src="js/bericht-flach.js?v=2026-10-10f"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10f"></script>
-<script src="js/diagramme.js?v=2026-10-10f"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10f"></script>
-<script src="js/ergebnis.js?v=2026-10-10f"></script>
-<script src="js/layout.js?v=2026-10-10f"></script>
-<script src="js/projekt.js?v=2026-10-10f"></script>
-<script src="js/mobil.js?v=2026-10-10f"></script>
-<script src="js/selbsttest.js?v=2026-10-10f"></script>
-<script src="js/tastatur.js?v=2026-10-10f"></script>
-<script src="js/embed.js?v=2026-10-10f"></script>
-<script src="js/start.js?v=2026-10-10f"></script>
+<script src="js/boot.js?v=2026-10-10g"></script>
+<script src="js/helfer.js?v=2026-10-10g"></script>
+<script src="js/speicher.js?v=2026-10-10g"></script>
+<script src="js/einstellungen.js?v=2026-10-10g"></script>
+<script src="js/templates.js?v=2026-10-10g"></script>
+<script src="js/viewer.js?v=2026-10-10g"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10g"></script>
+<script src="js/lasten.js?v=2026-10-10g"></script>
+<script src="js/boden.js?v=2026-10-10g"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10g"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10g"></script>
+<script src="js/modell.js?v=2026-10-10g"></script>
+<script src="js/lastniveaus.js?v=2026-10-10g"></script>
+<script src="js/bettung.js?v=2026-10-10g"></script>
+<script src="js/erddruck.js?v=2026-10-10g"></script>
+<script src="js/kataloge.js?v=2026-10-10g"></script>
+<script src="js/bishop.js?v=2026-10-10g"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10g"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10g"></script>
+<script src="js/sicherung.js?v=2026-10-10g"></script>
+<script src="js/rechenkern.js?v=2026-10-10g"></script>
+<script src="js/dimensionierung.js?v=2026-10-10g"></script>
+<script src="js/bemessung.js?v=2026-10-10g"></script>
+<script src="js/fundamentliste.js?v=2026-10-10g"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10g"></script>
+<script src="js/bericht.js?v=2026-10-10g"></script>
+<script src="js/bericht-flach.js?v=2026-10-10g"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10g"></script>
+<script src="js/diagramme.js?v=2026-10-10g"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10g"></script>
+<script src="js/ergebnis.js?v=2026-10-10g"></script>
+<script src="js/layout.js?v=2026-10-10g"></script>
+<script src="js/projekt.js?v=2026-10-10g"></script>
+<script src="js/mobil.js?v=2026-10-10g"></script>
+<script src="js/selbsttest.js?v=2026-10-10g"></script>
+<script src="js/tastatur.js?v=2026-10-10g"></script>
+<script src="js/embed.js?v=2026-10-10g"></script>
+<script src="js/start.js?v=2026-10-10g"></script>
 
 </body>
 </html>

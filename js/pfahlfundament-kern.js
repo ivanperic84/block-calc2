@@ -266,13 +266,24 @@ function pfahlbockAnalyse(cfg){
   const zykFac  = Math.min(1, Math.max(0.05, cfg.zykFac ?? 1));
   const Rskin_k  = _sk.Rk * grp.eta * zykFac;                   // Druck (charakteristisch), η_g- und zyklisch reduziert
   const Rskin_kZ = Rskin_k * zugFac;                            // Zug (Herausziehen)
-  const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
-  const Rskin_d  = Rskin_k  / gR;                               // Druck-Bemessungswiderstand
-  const Rskin_dZ = Rskin_kZ / gR;                               // Zug-Bemessungswiderstand
+  // ── Bemessungswerte nach SIA 267 Kap. 9 (am Normtext nachgelesen, Okt 2026) ──────────────────
+  //   Ziff. 9.5.2.2  R_a,d = η_a·R_a,k/γ_M,a  mit γ_M,a = 1.3 (Druck, Gl. 43) / 1.6 (Zug, Gl. 44)
+  //   Ziff. 9.5.2.2.5  η_a ≤ 1.0 statische Probebelastung · ≤ 0.9 vergleichbare Erfahrung bzw. dynamische
+  //                    Versuche · ≤ 0.7 bei Berechnung des Tragwiderstands (Gl. 45–48)
+  //   Ziff. 9.5.2.3  quer zur Pfahlachse γ_M,a ≥ 1.4 (Gl. 49), gleiches η_a
+  //   Ziff. 9.5.2.4  R_i,d = η_i·R_mat,d, η_i ≤ 0.80 (0.90 mit Integritätsprüfung, Gl. 50/51);
+  //                  Stahlpfähle nach SIA 263 (Ziff. 9.5.2.4.6): γ_M1 = 1.05, η_i = 1.0
+  // Vorher: ein Beiwert γ_R = 1.40 für Druck, Zug und quer, kein η_a, kein η_i.
+  const gMD = Math.max(1, cfg.gMD ?? 1.30), gMZ = Math.max(1, cfg.gMZ ?? 1.60), gMQ = Math.max(1, cfg.gMQ ?? 1.40);
+  const etaA = Math.min(1, Math.max(0.1, cfg.etaA ?? 0.70));
+  const etaI = Math.min(1, Math.max(0.1, cfg.etaI ?? 0.80));
+  const gS = Math.max(1, cfg.gammaS ?? 1.15);
+  const Rskin_d  = etaA * Rskin_k  / gMD;                       // Druck-Bemessungswiderstand
+  const Rskin_dZ = etaA * Rskin_kZ / gMZ;                       // Zug-Bemessungswiderstand
   // Spitzenwiderstand (nur Einzelpfahl, nur Druck): R_b,k = q_b,k·A_b. q_b,k = 0 ⇒ nicht angesetzt.
   const _einz1 = !!cfg.einzel && n===1;
   const qb = _einz1 ? Math.max(0, +cfg.qb||0) : 0, Ab = _einz1 ? Math.max(0, +cfg.Ab||0) : 0;
-  const Rb_k = qb*Ab, Rb_d = Rb_k/gR;
+  const Rb_k = qb*Ab, Rb_d = etaA*Rb_k/gMD;
   // ── Laterale BODEN-Tragfähigkeit (ULS) — Grenzgleichgewicht der p_u-Hüllkurve (Rotations-/Kick-out-
   //    Versagen des kurzen Pfahls). Fehlte bisher (nur lineare Bettung) → sehr kurze Pfähle „bestanden".
   //    p_u(z) schichtweise (Reibung 3·Kp·σ'v·B, bindig 9·c_u·B), Böschung via bettungFac. Gilt für den
@@ -283,7 +294,7 @@ function pfahlbockAnalyse(cfg){
     const Kp=Math.tan(Math.PI/4+ph*Math.PI/360)**2; return 3*Kp*sigVeffTo(z)*dG*bettungFac*latGrpFac; };
   const Vcap_k = pileLatCapLimitEq(L, dG, 0, puAtL) || 0;       // reine Querkraft-Grenzlast am GOK [kN]
   const Mcap_k = pileLatMomCap(L, dG, puAtL) || 0;              // reines Moment-Grenzwiderstand [kNm]
-  const Vcap_d = Vcap_k/gR, Mcap_d = Mcap_k/gR;
+  const Vcap_d = etaA*Vcap_k/gMQ, Mcap_d = etaA*Mcap_k/gMQ;
   // Knick-Deckel: die Euler-auf-Bettung-Formel N_cr=2√(k·EI) ist längenunabhängig und nur gültig, wenn die
   // Einbindelänge mindestens eine Knick-Halbwelle L_hw=π·(EI/(k·B))^0.25 umfasst — sonst ist sie ungültig
   // (der laterale Nachweis wird dann massgebend). Flag zur Kennzeichnung im Panel/Bericht.
@@ -291,10 +302,10 @@ function pfahlbockAnalyse(cfg){
   const kbedL = Math.max(1e-6, _ksMinL * dG);
   const L_hw = Math.PI * Math.pow(EI/kbedL, 0.25);   // Knick-Halbwellenlänge [m]
   const knickValid = L >= L_hw;                       // Euler-auf-Bettung nur oberhalb gültig
-  const Rt_d = micropileRtd(tdn, gS);                     // Stahl axial (Streckgrenzkraft)
+  const Rt_d = etaI * micropileRtd(tdn, gS);              // Stahl axial: η_i·R_mat,d
   // Biegewiderstand Tragglied: W_pl ≈ (da³−di³)/6 (Voll-/Hohlkreis), M_Rd = W_pl·f_yk/γ_s
   const Wpl  = (tdn.Wpl != null) ? tdn.Wpl : (Math.pow(da,3) - Math.pow(di,3)) / 6;   // m³
-  const M_Rd = Wpl * (tdn.fy||500)*1000 / gS;             // kNm
+  const M_Rd = etaI * Wpl * (tdn.fy||500)*1000 / gS;      // kNm
   // Biegemoment für M+N: bei gestossenen Pfählen (Stoss = Gelenk, nur N+V) baut sich Moment nur
   // innerhalb des längsten Einzelelements auf (M=0 am Stoss) → Biegelänge auf LbendMax begrenzen.
   // Das obere Element wird als eigenständiger Bettungsbalken (freie/gelenkige Enden) gerechnet.
@@ -391,8 +402,8 @@ function pfahlbockAnalyse(cfg){
       return { EI:EIx, h, m, hb: kurz ? bddBeamPY(EIx, dG, e, Lbend, 1, ksAt) : h,
                              mb: kurz ? bddBeamPY(EIx, dG, e, Lbend, 0, ksAt, {M0:1}) : m }; };
     const Pq = mk(Iq), Pl = (Math.abs(Il-Iq) < 1e-18) ? Pq : mk(Il);
-    const MRq = Wq*fyk/gS, MRl = Wl*fyk/gS;
-    const TRst = (tdn.Wt > 0) ? tdn.Wt*fyk/Math.sqrt(3)/gS : 0;        // Torsionswiderstand Stahl [kNm]
+    const MRq = etaI*Wq*fyk/gS, MRl = etaI*Wl*fyk/gS;
+    const TRst = (tdn.Wt > 0) ? etaI*tdn.Wt*fyk/Math.sqrt(3)/gS : 0;        // Torsionswiderstand Stahl [kNm]
     // Überlagerung der beiden Einheitslösungen (linear): Verlauf und Grösstwert des Moments
     const bieg = (P, H, M) => { if(!P.hb || !P.mb) return {M:0, prof:null};
       let mx = 0; const prof = P.hb.profile.map((a,i) => { const b2 = P.mb.profile[i] || {y_mm:0,M:0,p:0,V:0};
@@ -459,7 +470,7 @@ function pfahlbockAnalyse(cfg){
   const alphaImp = 0.49;                                     // Imperfektionsbeiwert Knickkurve c
   const Phi = 0.5 * (1 + alphaImp*(lamBar - 0.2) + lamBar*lamBar);
   const chi = Math.min(1, 1 / (Phi + Math.sqrt(Math.max(0, Phi*Phi - lamBar*lamBar))));
-  const N_bRd = chi * N_pl_k / gS;                           // [kN] Knickwiderstand (Bemessung)
+  const N_bRd = etaI * chi * N_pl_k / gS;                           // [kN] Knickwiderstand (Bemessung)
   const etaKnick = Ncomp > 0.01 ? N_bRd/Ncomp : Infinity;
   // ── GZG: Schiefstellung, Horizontalverschiebung, Setzung (charakteristisch) — je LF,
   //    massgebenden (max) über die Lastfälle nehmen. Akzeptiert Kombo-Arrays oder Einzellast.
@@ -519,11 +530,12 @@ function pfahlbockAnalyse(cfg){
            // Widerstand je Schicht über die Tiefe (char η_g-reduziert · Bemessung Druck/Zug) — Diagramm + Drill-down
            skinLayers: _sk.layers.map(l=>({ name:l.name, preset:l.preset, z0:+l.z0.toFixed(2), z1:+l.z1.toFixed(2),
              dz:+l.dz.toFixed(2), qs:Math.round(l.qs),
-             dRk:+(l.dRk*grp.eta*zykFac).toFixed(1), dRd:+(l.dRk*grp.eta*zykFac/gR).toFixed(1), dRdZ:+(l.dRk*grp.eta*zykFac*zugFac/gR).toFixed(1) })),
+             dRk:+(l.dRk*grp.eta*zykFac).toFixed(1), dRd:+(etaA*l.dRk*grp.eta*zykFac/gMD).toFixed(1), dRdZ:+(etaA*l.dRk*grp.eta*zykFac*zugFac/gMZ).toFixed(1) })),
            grpEta:grp.eta, grpSMean:grp.sMean, grpSd:grp.sd, grpSCap:grp.sCap, grpSToe:grp.sToe,
            latGrpFac:+latGrpFac.toFixed(3), latGrpOn,
            Rt_d:+Rt_d.toFixed(1), M_Rd:+M_Rd.toFixed(1), Mmax:+Mmax.toFixed(1),
            da:+da.toFixed(4), Wpl:Wpl, fyk:(tdn.fy||500), gammaS:+gS.toFixed(2),
+           gMD:+gMD.toFixed(2), gMZ:+gMZ.toFixed(2), gMQ:+gMQ.toFixed(2), etaA:+etaA.toFixed(2), etaI:+etaI.toFixed(2),
            N_cr:+N_cr.toFixed(0), etaKnick:+etaKnick.toFixed(2), Ncomp:+Ncomp.toFixed(1),
            N_pl_k:+N_pl_k.toFixed(0), lamBar:+lamBar.toFixed(2), chi:+chi.toFixed(3), N_bRd:+N_bRd.toFixed(0),
            knickValid, L_hw:+L_hw.toFixed(2),

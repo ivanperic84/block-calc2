@@ -296,7 +296,8 @@ function _pbResultHTML(r, piles, n){
   const gL=r.govLoad||{}, Hd=Math.hypot(gL.Hx||0, gL.Hy||0);   // Sohlkräfte massg. Kombo (UK Bankett)
   const govF=r.govPile>=0?Math.abs(r.pileRes[r.govPile]?.F||0):0;
   const govZug=r.govPile>=0 && !!r.pileRes[r.govPile]?.zug;
-  const gRv=+gi('pb_gR')||1.4;
+  const gRv=r.gMD||1.3;   // γ_M,a Druck (SIA 267 Gl. 43)
+  const _aTxt='η_a = '+(r.etaA||0.7).toFixed(2)+' · γ_M,a = '+(r.gMD||1.3).toFixed(2)+' Druck / '+(r.gMZ||1.6).toFixed(2)+' Zug';
   const RdGeo = govZug ? r.Rskin_dZ : +(r.Rskin_d + (r.Rb_d||0)).toFixed(1);   // Zug: nur Mantel · Druck: Mantel + Spitze
   const etaGeoK = Math.min(r.etaGeo, r.etaTors!=null ? r.etaTors : Infinity);
   const g=r.gzgFull, gv=r.gzgVar;
@@ -317,7 +318,7 @@ function _pbResultHTML(r, piles, n){
   const skinDetail = skL.length
     ? skL.map((l,i)=>skRow(`${l.name||l.preset||'Schicht '+(i+1)} · z ${l.z0}–${l.z1} m`, `+${l.dRk.toFixed(1)} kN`, `q_s,k=${l.qs} kPa · Δz=${l.dz} m`)).join('')
       + `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--ol);margin-top:2px;padding-top:2px;color:var(--on2)"><span>Σ R_s,k (Druck · η_g=${(r.grpEta||1).toFixed(2)})</span><span>${(r.Rskin_k||0).toFixed(1)} kN</span></div>`
-      + skRow('R_s,d = R_s,k / γ_R (Druck)', `${(r.Rskin_d||0).toFixed(1)} kN`)
+      + skRow('R_s,d = η_a·R_s,k / γ_M,a (Druck)', `${(r.Rskin_d||0).toFixed(1)} kN`)
       + (r.zugFac<0.999?skRow(`R_s,d Zug (×${r.zugFac.toFixed(2)}, Herausziehen)`, `${(r.Rskin_dZ||0).toFixed(1)} kN`):skRow('R_s,d Zug (= Druck, zugFac=1)', `${(r.Rskin_dZ||0).toFixed(1)} kN`))
       + `<div style="color:var(--xdim);margin-top:2px">U = π·d_G = ${(Math.PI*(r.dG||0.15)).toFixed(3)} m · q_s,k schichtkonstant (Verpresspfahl)</div>`
     : '(keine Schichtdaten)';
@@ -328,17 +329,17 @@ function _pbResultHTML(r, piles, n){
   const stI = r.pileRes.indexOf(stP);
   const steelDetail =
       skRow('R_t,k Streckgrenzkraft Tragglied', `${(r.N_pl_k||0).toFixed(0)} kN`, 'Katalog (F_yk bzw. A_s·f_y)')
-    + skRow('R_t,d = R_t,k / γ_s (Druck/Zug)', `${(r.Rt_d||0).toFixed(1)} kN`, `γ_s=${(r.gammaS||1.15).toFixed(2)}`)
+    + skRow(r.einzel ? 'R_t,d = R_t,k / γ_M1 (Druck/Zug)' : 'R_t,d = η_i·R_t,k / γ_s (Druck/Zug)', `${(r.Rt_d||0).toFixed(1)} kN`, r.einzel ? `γ_M1=${(r.gammaS||1.05).toFixed(2)} (SIA 263)` : `η_i=${(r.etaI||0.8).toFixed(2)} · γ_s=${(r.gammaS||1.15).toFixed(2)}`)
     + (r.einzel
-      ? skRow('M_Rd quer / längs = W_pl·f_yk/γ_s', `${r.einzel.MRq.toFixed(1)} / ${r.einzel.MRl.toFixed(1)} kNm`, r.einzel.starkQuer ? 'starke Achse trägt quer' : 'starke Achse trägt längs')
+      ? skRow('M_Rd quer / längs = W_pl·f_yk/γ_M1', `${r.einzel.MRq.toFixed(1)} / ${r.einzel.MRl.toFixed(1)} kNm`, r.einzel.starkQuer ? 'starke Achse trägt quer' : 'starke Achse trägt längs')
       + skRow('M_Ed quer / längs (Bettungsbalken, H und M am Kopf)', `${r.einzel.Mq.toFixed(1)} / ${r.einzel.Ml.toFixed(1)} kNm`, 'Kopfmoment geht voll in die Biegung ein')
       : skRow('W_pl = (d_a³−d_i³)/6', `${((r.Wpl||0)*1e6).toFixed(1)} cm³`, `d_a=${((r.da||0)*1000).toFixed(0)} · d_i=${((r.di||0)*1000).toFixed(0)} mm`)
-      + skRow('M_Rd = W_pl·f_yk/γ_s', `${(r.M_Rd||0).toFixed(1)} kNm`, `f_yk=${r.fyk||500} N/mm²`)
+      + skRow('M_Rd = η_i·W_pl·f_yk/γ_s', `${(r.M_Rd||0).toFixed(1)} kNm`, `f_yk=${r.fyk||500} N/mm²`)
       + skRow('M_max Pfahl (p-y)', `${(r.Mmax||0).toFixed(1)} kNm`))
     + `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--ol);margin-top:2px;padding-top:2px;color:var(--on2)"><span>massg. Pfahl P${stI+1} · N_Ed / M_Ed</span><span>${NEd.toFixed(1)} kN / ${MEd.toFixed(1)} kNm</span></div>`
     + (r.einzel && r.einzel.T>0.005
       ? skRow('Ausnutzung Normalspannung |N|/R_t,d + ΣM/M_Rd', `${r.einzel.us.toFixed(2)}`)
-      + skRow('Torsion T_Ed / T_Rd = W_t·f_yk/(√3·γ_s)', `${r.einzel.T.toFixed(1)} / ${r.einzel.TRst.toFixed(1)} kNm`, `= ${r.einzel.uT.toFixed(2)}`)
+      + skRow('Torsion T_Ed / T_Rd = W_t·f_yk/(√3·γ_M1)', `${r.einzel.T.toFixed(1)} / ${r.einzel.TRst.toFixed(1)} kNm`, `= ${r.einzel.uT.toFixed(2)}`)
       + skRow('Ausnutzung √(σ-Anteil² + τ-Anteil²)', `${Math.hypot(r.einzel.us, r.einzel.uT).toFixed(2)}`, 'von Mises')
       : skRow('Ausnutzung |N|/R_t,d + |M|/M_Rd', `${(un+um).toFixed(2)}`, `${un.toFixed(2)} + ${um.toFixed(2)}`))
     + skRow('η = 1 / Ausnutzung', `${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`);
@@ -377,8 +378,8 @@ function _pbResultHTML(r, piles, n){
       ${r.qsMax>r.qsMin+0.1?row('q_s,k Bereich (je Schicht)', r.qsMin+' … '+r.qsMax+' kPa'):''}
       ${r.grpEta<0.999?row('Gruppenwirkungsgrad η_g (s̄/D='+r.grpSd+')', '×'+r.grpEta.toFixed(2)+' &nbsp;<span style="color:var(--xdim)">s̄='+r.grpSMean+' m (Kopf '+r.grpSCap+' → Fuss '+r.grpSToe+')</span>'):row('Gruppenwirkung (s̄/D='+(isFinite(r.grpSd)?r.grpSd:'∞')+')', 'η_g = 1.00 (gespreizt)')}
       ${rowD('R_s,k Druck (Mantelreibung, η_g)', r.Rskin_k+' kN', skinDetail)}
-      ${row('R_s,d = R_s,k / γ_R (Druck)', r.Rskin_d+' kN')}
-      ${r.Rb_k>0 ? row('R_b,k = q_b,k·A_b (Spitze, nur Druck)', r.Rb_k+' kN &nbsp;<span style="color:var(--xdim)">'+r.qb+' kPa · '+(r.Ab*1e4).toFixed(0)+' cm²</span>') + row('R_d Druck = (R_s,k + R_b,k) / γ_R', RdGeo+' kN') : ''}
+      ${row('R_s,d = η_a·R_s,k / γ_M,a (Druck)', r.Rskin_d+' kN')}
+      ${r.Rb_k>0 ? row('R_b,k = q_b,k·A_b (Spitze, nur Druck)', r.Rb_k+' kN &nbsp;<span style="color:var(--xdim)">'+r.qb+' kPa · '+(r.Ab*1e4).toFixed(0)+' cm²</span>') + row('R_d Druck = η_a·(R_s,k + R_b,k) / γ_M,a', RdGeo+' kN') : ''}
       ${r.zugFac<0.999?row('R_s,d Zug (×'+r.zugFac.toFixed(2)+', Herausziehen)', r.Rskin_dZ+' kN'):''}
       ${r.skinFac<0.999?row('Abminderung Verrohrung', '×'+r.skinFac.toFixed(2)):''}
       ${r.zykFac<0.999?row('Abminderung zyklische Beanspruchung (in R_s,k enthalten)', '×'+r.zykFac.toFixed(2)):''}
@@ -386,7 +387,7 @@ function _pbResultHTML(r, piles, n){
       ${etaRow('η Geotechnik', r.etaGeo, 'η = '+(r.Rb_k>0&&!govZug?'R_d':'R_s,d')+' '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(+RdGeo).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
       ${r.tors ? row('Torsion T_Ed / T_Rd = r_T·R_s,d', r.tors.T+' / '+r.tors.TRgeo+' kNm &nbsp;<span style="color:var(--xdim)">r_T = '+(r.tors.rT*1000).toFixed(0)+' mm</span>')
         + etaRow('η Torsion (Mantelreibung, mit N überlagert)', r.etaTors, 'η = 1 / √((|N|/R_d)² + (T/T_Rd)²)<br>= 1 / √('+r.tors.uN.toFixed(2)+'² + '+r.tors.uT.toFixed(2)+'²) = '+(isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞')+'<br>'+(r.tors.label||'')) : ''}
-      <div style="font-size:9px;color:var(--xdim);margin-top:2px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig, Kohäsion nicht angesetzt'+(r.Rb_k>0?', Spitzenwiderstand aus eingegebenem q_b,k)':', <b>Spitzenwiderstand nicht angesetzt</b>)') : 'q_s,k Erfahrungswert je Schicht (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant — Vordimensionierung)'} · γ_R = ${gRv.toFixed(2)} Modellwert (ohne Probebelastung; mit Ausziehversuch SIA-267-Korrelationsbeiwert) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k (nur Druck)' : '<b>Spitzendruck NICHT angesetzt</b>'+(r.einzel?'':' (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand)')} · wirksame Verpresslänge L_eff = ${(r.skinLeff||0).toFixed(2)} m${r.skinCapped?' (auf L_crit = '+(r.skinLcrit||0).toFixed(2)+' m gedeckelt)':(r.skinLcrit?' (unter L_crit = '+(r.skinLcrit||0).toFixed(2)+' m)':' (kein Deckel)')}</div>
+      <div style="font-size:9px;color:var(--xdim);margin-top:2px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig, Kohäsion nicht angesetzt'+(r.Rb_k>0?', Spitzenwiderstand aus eingegebenem q_b,k)':', <b>Spitzenwiderstand nicht angesetzt</b>)') : 'q_s,k Erfahrungswert je Schicht (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant — Vordimensionierung)'} · ${_aTxt} (SIA 267 Ziff. 9.5.2.2) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k (nur Druck)' : '<b>Spitzendruck NICHT angesetzt</b>'+(r.einzel?'':' (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand)')} · wirksame Verpresslänge L_eff = ${(r.skinLeff||0).toFixed(2)} m${r.skinCapped?' (auf L_crit = '+(r.skinLcrit||0).toFixed(2)+' m gedeckelt)':(r.skinLcrit?' (unter L_crit = '+(r.skinLcrit||0).toFixed(2)+' m)':' (kein Deckel)')}</div>
       ${(() => {
         // q_s,k-Plausibilität: Preset-Tabellenwert vs. eingegebenes φ' (unkonservative Richtung)
         const mm = (typeof _qsPlausibility==='function') ? _qsPlausibility(r.L||0) : [];
@@ -420,11 +421,11 @@ function _pbResultHTML(r, piles, n){
               '×'+r.latGrpFac.toFixed(2)+' &nbsp;<span style="color:var(--xdim)">auf k_s und p_u</span>')
         : row('Lateraler Gruppeneffekt (s̄/D='+(isFinite(r.grpSd)?r.grpSd:'∞')+')',
               r.latGrpOn===false ? 'aus (Optionen)' : 'p_m = 1.00 (gespreizt)')}
-      ${row('V_u,d (Querkraft-Grenzlast, /γ_R)', r.Vcap_d+' kN')}
-      ${row('M_u,d (Moment-Grenzwiderstand, /γ_R)', r.Mcap_d+' kNm')}
+      ${row('V_u,d = η_a·V_u,k / γ_M,a quer', r.Vcap_d+' kN')}
+      ${row('M_u,d = η_a·M_u,k / γ_M,a quer', r.Mcap_d+' kNm')}
       ${row('Einwirkung V_d / M_gl,d', r.latVd+' kN / '+r.latMd+' kNm')}
       ${etaRow('η lateral', r.etaLat, 'η = 1 / (V_d/V_u,d + M_gl,d/M_u,d)<br>= 1 / ('+r.latVd+'/'+r.Vcap_d+' + '+r.latMd+'/'+r.Mcap_d+') = '+(isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'))}
-      <div style="font-size:9px;color:var(--xdim);margin-top:2px">Rotations-/Kick-out-Versagen des Pfahls im Boden (plastische p_u-Hüllkurve, Böschung via Bettungsfaktor). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast <b>und</b> das Mast-Moment (M_gl = M_Kopf + V·freie Länge).':'Gruppe: massgebender Pfahl über die laterale Kopfkraft (Kopfmoment ≈ 0, im axialen Kräftepaar erfasst).'} · <b>Behebt</b>: sehr kurze Einbindelängen fallen jetzt durch. γ_R = ${gRv.toFixed(2)}.</div>
+      <div style="font-size:9px;color:var(--xdim);margin-top:2px">Rotations-/Kick-out-Versagen des Pfahls im Boden (plastische p_u-Hüllkurve, Böschung via Bettungsfaktor). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast <b>und</b> das Mast-Moment (M_gl = M_Kopf + V·freie Länge).':'Gruppe: massgebender Pfahl über die laterale Kopfkraft (Kopfmoment ≈ 0, im axialen Kräftepaar erfasst).'} · η_a = ${(r.etaA||0.7).toFixed(2)} · γ_M,a quer = ${(r.gMQ||1.4).toFixed(2)} (SIA 267 Ziff. 9.5.2.3).</div>
     ${CARD_END}
 
     ${cardHd('Innerer Tragwiderstand (Tragglied)', Math.min(r.etaSteel, r.etaKnick), null, govName==='Stahl'||govName==='Knick')}
@@ -432,21 +433,21 @@ function _pbResultHTML(r, piles, n){
       <div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:0 0 4px">Querschnitt — N+M-Interaktion</div>
       <div class="nw-formula">|N|/R_t,d + |M|/M_Rd ≤ 1  ·  η = 1 / Ausnutzung</div>
       ${row('R_t,d Stahl axial', r.Rt_d+' kN')}
-      ${row('M_Rd = W_pl·f_yk/γ_s', r.M_Rd+' kNm')}
+      ${row(r.einzel ? 'M_Rd = W_pl·f_yk/γ_M1' : 'M_Rd = η_i·W_pl·f_yk/γ_s', r.M_Rd+' kNm')}
       ${row('M_max Pfahl (p-y)', r.Mmax+' kNm')}
       ${etaRow('η Querschnitt (N+M)', r.etaSteel, steelDetail)}
       ${diagWrap('_pbdiag_schnitt', buildPbSchnittSVG(r,n,_gztExpanded))}
       ${diagWrap('_pbdiag_steel', buildPbSteelDiagram(r,n,_gztExpanded))}
       <!-- Knicken SIA 263 -->
       <div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 4px;padding-top:7px;border-top:1px solid var(--ol)">Knicken (SIA 263, elast. Bettung)</div>
-      <div class="nw-formula">N_cr = 2·√(k_bed·EI) · λ̄ = √(N_pl,k/N_cr) · N_b,Rd = χ·N_pl,k/γ_s · η = N_b,Rd/N_Ed</div>
+      <div class="nw-formula">N_cr = 2·√(k_bed·EI) · λ̄ = √(N_pl,k/N_cr) · N_b,Rd = η_i·χ·N_pl,k/γ_s · η = N_b,Rd/N_Ed</div>
       ${row('N_Ed Druck max', r.Ncomp+' kN')}
       ${row('N_cr elast. Knicklast (Winkler)', r.N_cr+' kN')}
       ${row('N_pl,k = R_t,k Tragglied', r.N_pl_k+' kN')}
       ${row('λ̄ bez. Schlankheit', r.lamBar.toFixed(2))}
       ${row('χ Abminderung (Kurve c)', r.chi.toFixed(3))}
-      ${row('N_b,Rd = χ·N_pl,k/γ_s', r.N_bRd+' kN')}
-      ${etaRow('η Knicken', r.etaKnick, 'η = N_b,Rd / N_Ed = '+r.N_bRd.toFixed(0)+' / '+r.Ncomp.toFixed(0)+' = '+(isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞')+'<br>N_b,Rd = χ·N_pl,k/γ_s = '+r.chi.toFixed(2)+'·'+r.N_pl_k.toFixed(0)+'/'+(+gi('pb_gS')||1.15).toFixed(2))}
+      ${row(r.einzel ? 'N_b,Rd = χ·N_pl,k/γ_M1' : 'N_b,Rd = η_i·χ·N_pl,k/γ_s', r.N_bRd+' kN')}
+      ${etaRow('η Knicken', r.etaKnick, 'η = N_b,Rd / N_Ed = '+r.N_bRd.toFixed(0)+' / '+r.Ncomp.toFixed(0)+' = '+(isFinite(r.etaKnick)?r.etaKnick.toFixed(2):'∞')+'<br>N_b,Rd = '+(r.einzel?'':'η_i·')+'χ·N_pl,k/'+(r.einzel?'γ_M1':'γ_s')+' = '+(r.einzel?'':(r.etaI||0.8).toFixed(2)+'·')+r.chi.toFixed(2)+'·'+r.N_pl_k.toFixed(0)+'/'+(r.gammaS||1.15).toFixed(2))}
       ${diagWrap('_pbdiag_knick', buildPbKnickDiagram(r,n,_gztExpanded))}
       ${r.knickValid===false ? wBox('warn', 'Knickformel ungültig (L < Knick-Halbwelle)',
         `L = ${r.L.toFixed(2)} m &lt; L_hw = ${r.L_hw.toFixed(2)} m — die längenunabhängige

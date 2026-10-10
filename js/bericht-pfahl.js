@@ -20,7 +20,7 @@ function buildNachweisDocPfahl(r, piles, n){
   const Bb=+gi('pb_bx')||2, Lb=+gi('pb_by')||2, dB=+gi('pb_bank_d')||0.8, ue=+gi('pb_ue')||0;
   const kx=+gi('pb_kx')||0, ky=+gi('pb_ky')||0, hk=+gi('pb_hk')||0, ex=+gi('pb_ex')||0, ey=+gi('pb_ey')||0;
   const ax=+gi('pb_ax')||0, ay=+gi('pb_ay')||0, Lp=+gi('pb_L')||10, dG=(+gi('pb_dG')||150)/1000;
-  const gR=+gi('pb_gR')||1.4, gS=+gi('pb_gS')||1.15;
+  const gR=r.gMD||1.3, gS=r.gammaS||1.15;   // γ_M,a Druck bzw. γ_s / γ_M1 aus dem Ergebnis
   const cat=(typeof getMicropileSystems==='function')?getMicropileSystems():[];
   let sys=cat[+gi('pb_sys')]||cat[0]||{grade:'',vars:[]};
   let tdn=(sys.vars&&sys.vars[+gi('pb_var')])||(sys.vars&&sys.vars[0])||{};
@@ -204,7 +204,8 @@ function buildNachweisDocPfahl(r, piles, n){
     ${ch('5','Grenzzustand der Tragfähigkeit (GZT)')}
     <div class="np-nw">
       ${nwh('5.1','Äusserer Tragwiderstand — Mantelreibung','SIA 267 · EA-Pfähle')}
-      ${fml("R_s,d = R_s,k / γ_R  ·  R_s,k = Σ q_s,k · U · Δz · η_g", `${N(r.Rskin_k)} / ${N(gR,2)}`, `${N(r.Rskin_d)}`,'kN')}
+      ${fml("R_s,d = η_a · R_s,k / γ_M,a  ·  R_s,k = Σ q_s,k · U · Δz · η_g   (SIA 267 Gl. 42)", `${N(r.etaA,2)} · ${N(r.Rskin_k)} / ${N(gR,2)}`, `${N(r.Rskin_d)}`,'kN')}
+      <div style="font-size:8px;color:var(--xdim);margin:2px 0 4px">η_a = ${N(r.etaA,2)}: ${r.etaA>=0.999?'statische Probebelastung':r.etaA>=0.899?'vergleichbare Erfahrung bzw. dynamische Versuche':'Berechnung des Tragwiderstands'} (Ziff. 9.5.2.2.5) · γ_M,a = ${N(r.gMD,2)} Druck / ${N(r.gMZ,2)} Zug (Gl. 43/44).</div>
       <table class="np-tbl" style="margin:4px 0">
         <tr><td>q_s,k Mittel ${r.qsTab?'(Tab./Erfahrung)':'(Erfahrungswert)'}</td><td class="r">${r.qsAvg} kPa</td></tr>
         ${r.qsMax>r.qsMin+0.1?`<tr><td>q_s,k Bereich je Schicht</td><td class="r">${r.qsMin} … ${r.qsMax} kPa</td></tr>`:''}
@@ -212,7 +213,7 @@ function buildNachweisDocPfahl(r, piles, n){
         ${r.zykFac<0.999?`<tr><td>Abminderung zyklische Beanspruchung (Eingabe; in R_s,k enthalten)</td><td class="r">× ${N(r.zykFac,2)}</td></tr>`:''}
         <tr><td>R_s,d Druck</td><td class="r">${N(r.Rskin_d)} kN</td></tr>
         ${r.Rb_k>0?`<tr><td>Spitzenwiderstand R_b,k = q_b,k · A_b = ${r.qb} kPa · ${(r.Ab*1e4).toFixed(0)} cm² (nur Druck, q_b,k eingegeben)</td><td class="r">${N(r.Rb_k)} kN</td></tr>
-        <tr><td>R_d Druck = (R_s,k + R_b,k) / γ_R</td><td class="r">${N(r.Rskin_d+r.Rb_d)} kN</td></tr>`:''}
+        <tr><td>R_d Druck = η_a · (R_s,k + R_b,k) / γ_M,a</td><td class="r">${N(r.Rskin_d+r.Rb_d)} kN</td></tr>`:''}
         ${r.zugFac<0.999?`<tr><td>R_s,d Zug (× ${N(r.zugFac,2)}, Herausziehen)</td><td class="r">${N(r.Rskin_dZ)} kN</td></tr>`:''}
         <tr><td>|N|_max (P${r.govPile+1}, ${govZug?'Zug':'Druck'})</td><td class="r">${N(govF)} kN</td></tr>
       </table>
@@ -226,7 +227,7 @@ function buildNachweisDocPfahl(r, piles, n){
       ${nwh('5.2','Innerer Tragwiderstand — Querschnitt (N+M)','SIA 267')}
       ${r.einzel
         ? fml("|N|/R_t,d + M_quer/M_Rd,quer + M_längs/M_Rd,längs ≤ 1  ·  M aus dem Bettungsbalken mit H und M am Pfahlkopf", `R_t,d = ${N(r.Rt_d)} kN · M_Rd quer/längs = ${N(r.einzel.MRq)} / ${N(r.einzel.MRl)} kNm · M_Ed quer/längs = ${N(r.einzel.Mq)} / ${N(r.einzel.Ml)} kNm (${r.einzel.starkQuer?'starke Achse trägt quer':'starke Achse trägt längs'})`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)
-        : fml("|N|/R_t,d + |M|/M_Rd ≤ 1  ·  M_Rd = W_pl·f_yk/γ_s", `R_t,d = ${N(r.Rt_d)} kN · M_Rd = ${N(r.M_Rd)} kNm · M_max = ${N(r.Mmax)} kNm`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)}
+        : fml("|N|/R_t,d + |M|/M_Rd ≤ 1  ·  M_Rd = η_i·W_pl·f_yk/γ_s", `R_t,d = ${N(r.Rt_d)} kN · M_Rd = ${N(r.M_Rd)} kNm · M_max = ${N(r.Mmax)} kNm`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)}
       ${r.einzel && r.einzel.T>0.005 ? fml("Torsion: τ = T_Ed/W_t ≤ f_yk/(√3·γ_s)  ·  Überlagerung √(σ-Anteil² + τ-Anteil²) ≤ 1 (von Mises)", `T_Ed = ${N(r.einzel.T)} kNm · T_Rd = ${N(r.einzel.TRst)} kNm · σ-Anteil ${N(r.einzel.us,2)} · τ-Anteil ${N(r.einzel.uT,2)}`, `Ausnutzung ${N(Math.hypot(r.einzel.us,r.einzel.uT),2)}`) : ''}
       ${eta(r.etaSteel)}
       ${figFn(()=>buildPbSchnittSVG(r,n,true),'Abb. — Schnittgrössen massg. Pfahl: Verschiebung y, Querkraft V, Moment M über die Tiefe')}
@@ -244,14 +245,14 @@ function buildNachweisDocPfahl(r, piles, n){
       ${nwh('5.4','Äusserer Tragwiderstand — Laterale Bodentragfähigkeit','Grenzgleichgewicht p_u')}
       <div class="np-cf" style="margin-bottom:4px">Rotations-/Kick-out-Versagen des Pfahls im Boden — plastische p_u-Hüllkurve (Reibung 3·Kp·σ'v·d, bindig 9·c_u·d). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast und das Mast-Moment.':'Gruppe: massgebender Pfahl über die laterale Kopfkraft.'}</div>
       <table class="np-tbl" style="margin:4px 0">
-        <tr><td>V_u,d (Querkraft-Grenzlast, /γ_R)</td><td class="r">${N(r.Vcap_d)} kN</td></tr>
-        <tr><td>M_u,d (Moment-Grenzwiderstand, /γ_R)</td><td class="r">${N(r.Mcap_d)} kNm</td></tr>
+        <tr><td>V_u,d = η_a·V_u,k/γ_M,a quer (Querkraft-Grenzlast, /γ_R)</td><td class="r">${N(r.Vcap_d)} kN</td></tr>
+        <tr><td>M_u,d = η_a·M_u,k/γ_M,a quer (Moment-Grenzwiderstand, /γ_R)</td><td class="r">${N(r.Mcap_d)} kNm</td></tr>
         <tr><td>Einwirkung V_d / M_gl,d</td><td class="r">${N(r.latVd)} kN / ${N(r.latMd)} kNm</td></tr>
       </table>
       ${fml("η_lateral = 1 / (V_d/V_u,d + M_gl,d/M_u,d)", `1 / (${N(r.latVd)}/${N(r.Vcap_d)} + ${N(r.latMd)}/${N(r.Mcap_d)})`, `${isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'}`)}
       ${eta(r.etaLat)}
     </div>`:''}
-    <div style="font-size:8px;color:var(--xdim);margin-top:4px">γ_R = ${N(gR,2)} (Modellwert ohne Probebelastung) · γ_s = ${N(gS,2)} · voller A_s (kein Abrostzuschlag, SIA 267) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant) · laterale Bodentragfähigkeit = plastisches Grenzgleichgewicht (Kick-out/Rotation).</div>
+    <div style="font-size:8px;color:var(--xdim);margin-top:4px">SIA 267 Kap. 9: η_a = ${N(r.etaA,2)} · γ_M,a = ${N(r.gMD,2)} Druck / ${N(r.gMZ,2)} Zug / ${N(r.gMQ,2)} quer · innerer Widerstand ${r.einzel ? 'Stahlprofil nach SIA 263, γ_M1 = '+N(gS,2) : 'η_i = '+N(r.etaI,2)+' · γ_s = '+N(gS,2)} · voller A_s (kein Abrostzuschlag, ASTRA-Bericht 717) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant) · laterale Bodentragfähigkeit = plastisches Grenzgleichgewicht (Kick-out/Rotation).</div>
   </div>`;
 
   // ── Kap 6: GZG

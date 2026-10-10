@@ -106,6 +106,9 @@ function _pbApplyModeUI(){
   const _vp=(document.getElementById('pb_einbau')||{}).value==='verpresst';
   const rdG=document.getElementById('pb-row-dG'); if(rdG) rdG.style.display = (ein && !_vp) ? 'none' : '';   // Bohr-/Verpress-Ø nur wenn verpresst
   const rub=document.getElementById('pb-row-ueber'); if(rub) rub.style.display = ein ? '' : 'none';   // Überstand nur Einzelpfahl
+  // Innerer Widerstand: Mikropfahl γ_s + η_i · Einzelpfahl (Stahlprofil) γ_M1 nach SIA 263
+  document.querySelectorAll('.pb-nur-mp').forEach(el => { el.style.display = ein ? 'none' : ''; });
+  document.querySelectorAll('.pb-nur-ein').forEach(el => { el.style.display = ein ? '' : 'none'; });
   const h=document.getElementById('pb_mode_hint');
   if(h) h.textContent = ein
     ? 'Ein einzelner Pfahl (Stahlprofil), Mastlasten wirken direkt am Pfahlkopf (kein Bankett/Kopf, kein Hebel, kein Eigengewicht). Momente trägt der Pfahl über Biegung + Bettung → biegesteifer Kopfanschluss erforderlich.'
@@ -304,7 +307,10 @@ function renderPfahlbock(opt){
     dGrout:_dGrout, tendon:tdn, E_steel:sys.E, einzel:_ein, einbau:_einbau, Uramm:_Uramm, starkQuer:_starkQuer,
     qb:_qb, Ab:_Ab, rT:_rT,
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
-    gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
+    // SIA 267 Kap. 9: γ_M,a Druck/Zug/quer, η_a nach Art der Bestimmung, innerer Widerstand η_i·R_mat,d.
+    // Mikropfahl: Tragglied mit γ_s und η_i · Einzelpfahl (Stahlprofil): SIA 263 γ_M1, η_i = 1.0
+    gMD:+gi('pb_gMD')||1.30, gMZ:+gi('pb_gMZ')||1.60, gMQ:+gi('pb_gMQ')||1.40, etaA:+gi('pb_etaA')||0.70,
+    etaI:_ein ? 1.0 : (+gi('pb_etaI')||0.80), gammaS:_ein ? (+gi('pb_gM1')||1.05) : (+gi('pb_gS')||1.15),
     alphaZul:_tanZul(true), alphaZulVar:_tanZul(false),   // SBB 1:100 / 1:200 aus den Optionen
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1, zykFac:+gi('pb_zykfac')||1 });
   if(_nur) return r;

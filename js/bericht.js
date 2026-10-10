@@ -269,8 +269,11 @@ function _npAnnahmen(sys, ph){
     var ramm=ein && (gi('pb_einbau')!=='verpresst');
     var qsMan=SCHICHTEN.filter(function(s){ return s.qs!=null && +s.qs>0; }).length;
     g('Modell Pfahlfundament');
-    z('γ_R — Pfahlwiderstand im Baugrund', num('pb_gR'), 1.40, 'Vorgabe des Programms ohne Probebelastung');
-    z('γ_s — Stahl', num('pb_gS'), 1.15, 'Vorgabe des Programms');
+    z('η_a — Umrechnungsfaktor äusserer Widerstand', num('pb_etaA'), 0.70, 'SIA 267 Ziff. 9.5.2.2.5: 1.0 statische Probebelastung · 0.9 vergleichbare Erfahrung / dynamische Versuche · 0.7 Berechnung');
+    z('γ_M,a — Druck / Zug / quer', (num('pb_gMD')||0).toFixed(2)+' / '+(num('pb_gMZ')||0).toFixed(2)+' / '+(num('pb_gMQ')||0).toFixed(2), '1.30 / 1.60 / 1.40', 'SIA 267 Gl. (43), (44), (49)');
+    if(ein) z('γ_M1 — Stahlprofil', num('pb_gM1'), 1.05, 'SIA 263 Ziff. 4.1.3 (SIA 267 Ziff. 9.5.2.4.6: Stahlpfähle nach SIA 263)');
+    else { z('γ_s — Tragglied', num('pb_gS'), 1.15, 'Betonstahl nach SIA 262');
+           z('η_i — innerer Widerstand', num('pb_etaI'), 0.80, 'SIA 267 Ziff. 9.5.2.4.4 (0.90 mit Integritätsprüfung, Ziff. 9.5.2.4.9)'); }
     z('Mantelreibung q_s,k', ramm ? 'K₀·σ′v·tan(⅔·φ′)' : (qsMan ? qsMan+' Schicht(en) eingegeben' : 'Vorgabe je Bodenart'),
       ramm ? 'K₀·σ′v·tan(⅔·φ′)' : 'Vorgabe je Bodenart',
       ramm ? 'gerammtes Profil ohne Verpresskörper; Kohäsion nicht angesetzt' : 'EA-Pfähle Tab. 5.29/5.30, untere Grenze der niedrigsten tragfähigen Klasse — massgebend ist die Probebelastung');
@@ -291,7 +294,7 @@ function _npAnnahmen(sys, ph){
     }
     z('Knicken', 'Kurve c, N_cr = 2·√(k·EI)', 'Kurve c, N_cr = 2·√(k·EI)', 'fest; SIA 263, elastische Bettung der weichsten Schicht');
     z('Korrosion', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag',
-      ein && KRINNER_PILES[gi('pb_prof')] ? 'DIBt Z-34.15-253' : 'SIA 267 / ASTRA 717: Schutz über die Schutzart');
+      ein && KRINNER_PILES[gi('pb_prof')] ? 'DIBt Z-34.15-253' : 'ASTRA-Bericht 717: Schutz über die Schutzart (SIA 267 Ziff. 9.6.6.4: ≥ 40 mm Zementstein bei Nutzungsdauer > 5 Jahre)');
     z('Zulässige Schiefstellung / Verschiebung', '1:'+Math.round(1/(S.alphaZulFull||0.01))+' / 1:'+Math.round(1/(S.alphaZul||0.005))+' · ±20 / ±10 mm', '1:100 / 1:200 · ±20 / ±10 mm', 'SBB 0161.1011.0007; Verschiebung nur bis 2 Pfähle');
   }
   var fz=function(v,d){ return typeof v==='number' ? v.toFixed(d) : (v==null ? '–' : esc(String(v))); };
