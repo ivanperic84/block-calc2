@@ -296,6 +296,25 @@ function runSelfTest(){
       si('pb_prof','RR324'); renderPfahlbock();
       add('Rammrohr Ø 323.9: Breite im Rechenkern', R().dG, 0.3239, 1e-4,'abs');
       si('pb_prof','HEB200'); })();
+    // ── T14 Felsfundament (Sockel 2.0×2.0 m, 4 Anker s = 1.40 m, l_v = 3.0 m, τ_k = 600 kPa, σ_R,d = 2000 kPa).
+    // Handrechnung Komb. 4 (N = 138.7 kN, M_y = 148.89 kNm): x = (N+Z)/(σ·l), Z = (M − N·(b/2 − x/2))/(a + b/2 − x/2)
+    // → Z = 7.567 kN auf 2 Anker; R_a,d = 0.7·600·π·0.15·3/1.6 = 371.1 kN; G_E = 25·π/3·1.732²·3·(1.4/3.464) = 95.2 kN (Kürzung nur entlang der Zugreihe).
+    (()=>{ applyState(_ST_STATE); setModel('pfahlbock'); si('pb_mode','fels'); onPbMode();
+      si('pb_L','3'); si('pb_ftau','600'); si('pb_fsig','2000'); si('pb_fmu','0.60'); si('pb_fkeg','30'); si('pb_fgam','25'); calculate();
+      const r=(RESULT.pfahlbock||{}).r||{}, k4=(r.kombs||[]).find(k=>k.nr===4)||{qx:{}};
+      add('Fels: Ankerzug Z Komb. 4 [kN]',           k4.qx.Z, 7.567213, 1e-5,'rel');
+      add('Fels: Verbund R_a,d [kN]',                 r.Ra_d, 371.1, 0.06,'abs');
+      add('Fels: η Felsausbruch',                     r.etaAusb, 22.65, 0.015,'abs');
+      add('Fels: η Felspressung (Komb. 8, ohne Zug)', r.etaPress, 8.81, 0.015,'abs');
+      add('Fels: η Gleiten',                          r.etaGleit, 3.69, 0.015,'abs');
+      // Schiefstellung: unter den charakteristischen Lasten des Referenzfalls kein Ankerzug ⇒ η = ∞. Mit M_Wy = 120 kNm:
+      // N_k 139, M_k 190.2 → Z = 32.2745 kN (2 Anker), δ = 16.137·2.3/164820 = 0.2252 mm, Hebel 1.6786 m,
+      // tan α = 1.3415e-4; nur ständig: kein Zug ⇒ Zuwachs = 1.3415e-4 gegen 1:200 → η = 37.27.
+      add('Fels: GZG ohne Ankerzug η = ∞', isFinite(r.etaGZG) ? 0 : 1, 1, 1e-9,'abs');
+      si('l_MWy','120'); calculate();
+      add('Fels: η Schiefstellung (Zuwachs aus veränderlich, 1:200)', ((RESULT.pfahlbock||{}).r||{}).etaGZG, 37.27, 0.02,'abs');
+      si('l_MWy','35'); si('pb_ftau','0'); calculate();
+      add('Fels: ohne τ_k ist der Verbundnachweis nicht erfüllt (η = 0)', ((RESULT.pfahlbock||{}).r||{}).etaVerb, 0, 1e-9,'abs'); })();
     si('pb_mode','gruppe'); onPbMode(); applyState(_ST_STATE); setModel('pfahlbock');
     (()=>{ pbDimLaenge(); const L=+gi('pb_L'), r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
       const kurz=renderPfahlbock({nurRechnen:true, L:L-0.5});

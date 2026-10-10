@@ -2480,6 +2480,17 @@ nav a { position:relative; }
       <tr><td>Querschnittsklasse Rohre</td><td>ab d/t > 70·ε² elastisch</td><td>SIA 263</td></tr>
       <tr><td>Krinner V-Serie</td><td>S235, 1.5 mm Abrostung, planmässig nur axial</td><td>DIBt Z-34.15-253; Biegung liegt ausserhalb der Genehmigung</td></tr>
       <tr><td>Korrosion Mikropfähle</td><td>kein Abrostzuschlag, Schutz über die Schutzart</td><td>SIA 267 Ziff. 9.6.1.5</td></tr>
+      <tr><th colspan="3">Felsfundament — Sockel mit Felsankern (Ausführung des Pfahlfundaments)</th></tr>
+      <tr><td>Bauweise</td><td>Betonsockel auf dem Fels; Kippmoment über ungespannte Zuganker im Fels und Druck auf den Fels</td><td>Nutzerentscheid Okt 2026. SBB 0161.1011.0002 nennt für felsigen Baugrund nur «Abmessung gemäss Bemessung»; die Zeichnung 0161.1011.0601 lag nicht vor</td></tr>
+      <tr><td>Kräftegleichgewicht</td><td>starrer Sockel, plastische Druckzone mit σ_R,d an der Druckkante, Zug nur in der äussersten Ankerreihe: M = Z·a + (N + Z)·(b/2 − x/2), x = (N + Z)/(σ_R,d·l)</td><td>Annahme des Programms</td></tr>
+      <tr><td>Felspressung</td><td>ohne Ankerzug Ersatzlänge b − 2e (Meyerhof); mit Ankerzug Druckzone höchstens b/2</td><td>Annahme des Programms</td></tr>
+      <tr><td>Lasten in beiden Richtungen</td><td>jede Richtung mit vollem N, Ankerkräfte addiert</td><td>Annahme des Programms</td></tr>
+      <tr><td>Ankerwiderstand</td><td>wie Zugpfahl: innen η_i·A_s·f_y/γ_s, aussen η_a·τ_k·π·d_B·l_v/γ_M,a mit γ_M,a = 1.6</td><td>SIA 267 Kap. 9 sinngemäss (Annahme: ungespannte Felsanker wie Zugpfähle). Kap. 10 der Norm regelt vorgespannte Anker</td></tr>
+      <tr><td>Verbundspannung τ_k, Felspressung σ_R,d</td><td>Eingaben ohne Vorschlagswert; ohne Eingabe gilt der Nachweis als nicht erfüllt</td><td>Nutzerentscheid; Baugrundgutachten bzw. Ankerversuch</td></tr>
+      <tr><td>Felsausbruch</td><td>0.90·G_E ≥ Z_1 mit dem Gewicht des Ausbruchkegels (α = 30° halber Öffnungswinkel, γ = 25 kN/m³), entlang der ziehenden Ankerreihe bei engem Abstand gekürzt; ohne Zugfestigkeit des Felses</td><td>Annahme des Programms; α und γ sind Startwerte</td></tr>
+      <tr><td>Gleiten</td><td>(N + Z)·tan δ_k/γ_φ ≥ H_d mit tan δ_k = 0.60 (Startwert), ohne Dübelwirkung der Anker</td><td>Annahme des Programms</td></tr>
+      <tr><td>Gebrauchstauglichkeit (Schiefstellung)</td><td>nur aus der Dehnung der Zuganker: δ = Z_1·l_frei/(E_s·A_s) mit l_frei = Sockeldicke + l_v/2, tan α = δ/(a + b/2 − x/2). Gesamtwert gegen 1:100, Zuwachs aus den veränderlichen Lasten gegen 1:200</td><td>Annahme des Programms; die Zusammendrückung des Felses ist vernachlässigt, ohne Ankerzug ist die Schiefstellung null. Grenzwerte SBB 0161.1011.0007</td></tr>
+      <tr><td>Nicht nachgewiesen</td><td>Verbund Stahl–Mörtel, Ankerkopf und Ankerplatte, Sockelbewehrung</td><td>Abgrenzung</td></tr>
       <tr><th colspan="3">Sicherung / Aushub</th></tr>
       <tr><td>Lastverteilung Block ↔ Pfahl</td><td>über Drehfedern</td><td>Annahme des Programms</td></tr>
       <tr><td>Laterale Tragwirkung</td><td>p-y-Bettungsbalken, elasto-plastisch</td><td>gegen Hetényi geprüft</td></tr>
@@ -2510,7 +2521,7 @@ nav a { position:relative; }
 </div><!-- /hb-layout -->
 
 <!-- GZT-Diagramm: dieselbe Datei wie in der App (keine zweite Kopie mehr) -->
-<script src="js/diagramm-gzt.js?v=2026-10-10k"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10l"></script>
 <script>
 
 let _lastResults=null, _lastG=null;

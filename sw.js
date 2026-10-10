@@ -9,7 +9,7 @@
 //      offline startet.
 // VERSION wird von werkzeug/version-setzen.sh gesetzt und muss mit dem ?v= in index.html
 // übereinstimmen (die Dateien werden mit genau dieser Adresse angefragt und abgelegt).
-const VERSION = '2026-10-10k';
+const VERSION = '2026-10-10l';
 const CACHE = 'blockcalc-' + VERSION;
 
 const APP_DATEIEN = [
@@ -33,6 +33,7 @@ const APP_DATEIEN = [
   'js/bishop.js',
   'js/pfahl-bettung.js',
   'js/pfahlfundament-kern.js',
+  'js/fels.js',
   'js/sicherung.js',
   'js/rechenkern.js',
   'js/dimensionierung.js',

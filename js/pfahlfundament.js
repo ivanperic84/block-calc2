@@ -94,7 +94,10 @@ function _pbIncl(p, ax, ay){ return { axDeg: Math.sign(p.x)*ax, ayDeg: Math.sign
 //    _pbIncl macht ihn über Math.sign(0)=0 automatisch vertikal.
 function _pbEinzel(){ return (document.getElementById('pb_mode')||{}).value === 'einzel'; }
 function _pbApplyModeUI(){
-  const ein=_pbEinzel();
+  const ein=_pbEinzel(), fels=_pbFels();
+  { const gf=document.getElementById('pb-grp-fels'); if(gf) gf.style.display = fels ? '' : 'none'; }
+  document.querySelectorAll('.pb-nicht-fels').forEach(el => { el.style.display = fels ? 'none' : ''; });
+  if(typeof _pbFelsUI==='function') _pbFelsUI(fels);
   const blk=document.getElementById('pb-grp-block'), lay=document.getElementById('pb-grp-layout');
   if(blk) blk.style.display = ein ? 'none' : '';
   if(lay) lay.style.display = ein ? 'none' : '';
@@ -110,7 +113,9 @@ function _pbApplyModeUI(){
   document.querySelectorAll('.pb-nur-mp').forEach(el => { el.style.display = ein ? 'none' : ''; });
   document.querySelectorAll('.pb-nur-ein').forEach(el => { el.style.display = ein ? '' : 'none'; });
   const h=document.getElementById('pb_mode_hint');
-  if(h) h.textContent = ein
+  if(h) h.textContent = fels
+    ? 'Betonsockel auf dem Fels: das Kippmoment tragen ungespannte Zuganker im Fels und der Druck auf den Fels. Die Anker stehen senkrecht.'
+    : ein
     ? 'Ein einzelner Pfahl (Stahlprofil), Mastlasten wirken direkt am Pfahlkopf (kein Bankett/Kopf, kein Hebel, kein Eigengewicht). Momente trägt der Pfahl über Biegung + Bettung → biegesteifer Kopfanschluss erforderlich.'
     : 'Starres Bankett auf mehreren Pfählen; Lasten werden über das Bankett verteilt.';
 }
@@ -243,7 +248,8 @@ function renderPfahlbock(opt){
     +(_LbendMax?`<br><span style="color:var(--xdim)">gestossen: L=${_Lfull.toFixed(2)} m gesamt (N+V) · M+N über längstes Element ${Math.min(_Lfull,_LbendMax).toFixed(2)} m (Stoss = Gelenk)</span>`:'');
   const _ein = _pbEinzel();                    // Einzelpfahl: 1 Pfahl, Last direkt am Kopf
   const n=_ein ? 1 : (+gi('pb_n')||4);
-  const ax=_ein ? 0 : (+gi('pb_ax')||0), ay=_ein ? 0 : (+gi('pb_ay')||0);
+  const _fels = _pbFels();                     // Sockel mit Felsankern: Anker senkrecht, eigene Rechnung (fels.js)
+  const ax=(_ein||_fels) ? 0 : (+gi('pb_ax')||0), ay=(_ein||_fels) ? 0 : (+gi('pb_ay')||0);
   // Bankett-Maße zuerst (Block ist Primär-Eingabe) — daraus folgen die max. Pfahlabstände
   const Bbank=Math.max(0.3,+gi('pb_bx')||2.0), Lbank=Math.max(0.3,+gi('pb_by')||2.0);
   const randMin=_pbRandMin();
@@ -303,6 +309,26 @@ function renderPfahlbock(opt){
   });
   const gzgFullC=(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,1,1,1)}));
   const gzgVarC =(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,0,0,1)}));
+  if(_fels){
+    const rF = felsankerAnalyse({ piles, B:Bbank, L:Lbank, dSockel:dBank, sx, sy, ulsCombos, tendon:tdn,
+      dB:(+gi('pb_dG')||150)/1000, lv:Math.max(0.1,+gi('pb_L')||1), tau:Math.max(0,+gi('pb_ftau')||0), sigRd:Math.max(0,+gi('pb_fsig')||0),
+      mu:Math.max(0,+gi('pb_fmu')||0), alpha:Math.min(45,Math.max(10,+gi('pb_fkeg')||30)), gamF:Math.max(15,+gi('pb_fgam')||25),
+      gzgFull:gzgFullC, gzgVar:gzgVarC, alphaZul:_tanZul(true), alphaZulVar:_tanZul(false), Es:(sys.E||205000),
+      gPhi:+gi('tw_phi')||1.20, gMZ:+gi('pb_gMZ')||1.60, etaA:+gi('pb_etaA')||0.70, etaI:+gi('pb_etaI')||0.80, gammaS:+gi('pb_gS')||1.15 });
+    if(_nur) return rF;
+    const dvF=document.getElementById('pfahlbock-draufsicht'); if(dvF) dvF.innerHTML = buildPfahlbockDraufsicht(piles, 0, 0, Bbank, Lbank, (+gi('pb_dG')||150)/1000);
+    const slF=document.getElementById('pfahlbock-sole'), glF=rF.govLoad||{};
+    if(slF) slF.innerHTML = `Hebel = ${hl.toFixed(2)} m · Sockel ${Bbank.toFixed(1)}×${Lbank.toFixed(1)}×${dBank.toFixed(2)} m · G_eig=${G_eig.toFixed(0)} kN · ${rF.ulsCombosN} Kombinationen<br><b>UK Sockel, massgebend ${rF.govCombo}:</b> N=${(glF.N||0).toFixed(0)} · H_x=${(glF.Hx||0).toFixed(0)} · H_y=${(glF.Hy||0).toFixed(0)} · M_x=${(glF.Mx||0).toFixed(0)} · M_y=${(glF.My||0).toFixed(0)}`;
+    { const mb=document.getElementById('pb_rand_msg'); if(mb){ mb.style.display='none'; mb.innerHTML=''; } }
+    const scF=document.getElementById('res-scroll'); if(scF){ scF.style.display=''; scF.innerHTML=_felsResultHTML(rF); }
+    const pillF=document.getElementById('overall-pill');
+    if(pillF){ const ok=etaErf(rF.eta_massg); pillF.className='pill '+(ok?'pill-ok':'pill-f'); pillF.textContent=ok?'Erfüllt':'Nicht erfüllt'; }
+    RESULT.pfahlbock = { r:rF, piles, n, viz:{ pileRes:rF.pileRes, govLoad:rF.govLoad, govLoadChar:rF.govLoadChar, govCombo:rF.govCombo,
+      mastN:{ k:Math.max(0,(rF.govLoadChar&&rF.govLoadChar.NMast)||0), d:Math.max(0,(rF.govLoad&&rF.govLoad.NMast)||0) } } };
+    if(typeof _updateDrawerStatus==='function') try{ _updateDrawerStatus(); }catch(_){}
+    try{ rebuildScene(); }catch(err){ console.error('Felsfundament-3D rebuild:', err); }
+    return rF;
+  }
   const r=pfahlbockAnalyse({ piles, L:_Lfull, e:_ein ? Math.max(0,+gi('pb_e')||0) : 0, LbendMax:_LbendMax, bettungFac:_bettungFac,
     zKopf:_ein ? 0 : Math.max(0,+gi('pb_ue')||0)+dBank,   // Tiefe des Pfahlkopfs (UK Bankett) unter Gelände
    

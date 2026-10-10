@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10k">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10l">
 </head>
 <body>
 
@@ -305,6 +305,7 @@
           <div class="field"><label>Fundamentart</label><select id="pb_mode" onchange="onPbMode()">
             <option value="gruppe" selected>Pfahlgruppe mit Bankett</option>
             <option value="einzel">Einzelpfahl — Last am Pfahlkopf</option>
+            <option value="fels">Sockel mit Felsankern</option>
           </select></div>
           <div class="hint" id="pb_mode_hint" style="margin-top:0"></div>
 
@@ -341,8 +342,8 @@
           <div class="field"><label>Abstand quer s_x <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sx_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sx',this.value);renderPfahlbock()"><input id="pb_sx" type="number" value="1.20" step="0.1" oninput="slSync('pb_sx',this.value);renderPfahlbock()"/></div></div>
           <div class="field"><label>Abstand längs s_y <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_sy_r" min="0.5" max="4.0" step="0.1" value="1.2" oninput="slSync('pb_sy',this.value);renderPfahlbock()"><input id="pb_sy" type="number" value="1.20" step="0.1" oninput="slSync('pb_sy',this.value);renderPfahlbock()"/></div></div>
           <div class="hint" id="pb_sp_hint" style="margin-top:0"></div>
-          <div class="field"><label>Neigung quer α_x <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ax_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ax',this.value);renderPfahlbock()"><input id="pb_ax" type="number" value="12" step="1" oninput="slSync('pb_ax',this.value);renderPfahlbock()"/></div></div>
-          <div class="field"><label>Neigung längs α_y <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ay_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ay',this.value);renderPfahlbock()"><input id="pb_ay" type="number" value="12" step="1" oninput="slSync('pb_ay',this.value);renderPfahlbock()"/></div></div>
+          <div class="field pb-nicht-fels"><label>Neigung quer α_x <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ax_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ax',this.value);renderPfahlbock()"><input id="pb_ax" type="number" value="12" step="1" oninput="slSync('pb_ax',this.value);renderPfahlbock()"/></div></div>
+          <div class="field pb-nicht-fels"><label>Neigung längs α_y <em>°</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_ay_r" min="0" max="25" step="1" value="12" oninput="slSync('pb_ay',this.value);renderPfahlbock()"><input id="pb_ay" type="number" value="12" step="1" oninput="slSync('pb_ay',this.value);renderPfahlbock()"/></div></div>
           <div class="hint" style="margin-top:0">übliche Neigung 10–15°. α &gt; 0 = Pfahlfuss nach aussen.</div>
           </div><!-- /pb-grp-layout -->
 
@@ -396,6 +397,20 @@
             <div class="hint" style="margin-top:0">Wirkt nur auf Druck und erst <b>ab 300 mm Pfahlbreite</b> (EA-Pfähle). <b>0 = nicht angesetzt</b> (Vorgabe). Den Wert liefert das Baugrundgutachten oder die Sondierung; das Programm schlägt keinen vor. «Umschriebene Fläche» setzt Pfropfenbildung bzw. eine geschlossene Spitze voraus.</div>
           </div>
 
+          <div id="pb-grp-fels" style="display:none">
+          <div class="sec">Fels und Verankerung</div>
+          <div class="hint" style="margin-top:0">«Pfahllänge L» ist hier die <b>Verankerungslänge im Fels</b>, «Verpresskörper-Ø» der <b>Bohrloch-Durchmesser</b>. Verbundspannung und Felspressung kommen aus dem Baugrundgutachten bzw. aus Ankerversuchen — das Programm schlägt keine Werte vor.</div>
+          <div class="g2">
+            <div class="field"><label>Verbundspannung τ_k Mörtel–Fels <em>kPa</em></label><input id="pb_ftau" type="number" value="0" step="50" min="0" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>Felspressung σ_R,d <em>kPa</em></label><input id="pb_fsig" type="number" value="0" step="100" min="0" oninput="renderPfahlbock()"/></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label>Reibungsbeiwert tan δ_k Sockel–Fels</label><input id="pb_fmu" type="number" value="0.60" step="0.05" min="0" oninput="renderPfahlbock()"/></div>
+            <div class="field"><label>Ausbruchkegel α <em>°</em></label><input id="pb_fkeg" type="number" value="30" step="5" min="10" max="45" oninput="renderPfahlbock()"/></div>
+          </div>
+          <div class="field"><label>Wichte Fels γ <em>kN/m³</em></label><input id="pb_fgam" type="number" value="25" step="1" min="15" oninput="renderPfahlbock()"/></div>
+          <div class="hint">tan δ_k = 0.60, α = 30° (halber Öffnungswinkel) und γ = 25 kN/m³ sind Startwerte des Programms, keine Normwerte.</div>
+          </div>
           <div id="pb-grp-tendon">
           <div class="sec">Tragglied (Mikropfahl-System)</div>
           <div class="field"><label>System</label><select id="pb_sys" onchange="onPbSys()"></select></div>
@@ -1757,44 +1772,45 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10k"></script>
-<script src="js/helfer.js?v=2026-10-10k"></script>
-<script src="js/speicher.js?v=2026-10-10k"></script>
-<script src="js/einstellungen.js?v=2026-10-10k"></script>
-<script src="js/templates.js?v=2026-10-10k"></script>
-<script src="js/viewer.js?v=2026-10-10k"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10k"></script>
-<script src="js/lasten.js?v=2026-10-10k"></script>
-<script src="js/boden.js?v=2026-10-10k"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10k"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10k"></script>
-<script src="js/modell.js?v=2026-10-10k"></script>
-<script src="js/lastniveaus.js?v=2026-10-10k"></script>
-<script src="js/bettung.js?v=2026-10-10k"></script>
-<script src="js/erddruck.js?v=2026-10-10k"></script>
-<script src="js/kataloge.js?v=2026-10-10k"></script>
-<script src="js/bishop.js?v=2026-10-10k"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10k"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10k"></script>
-<script src="js/sicherung.js?v=2026-10-10k"></script>
-<script src="js/rechenkern.js?v=2026-10-10k"></script>
-<script src="js/dimensionierung.js?v=2026-10-10k"></script>
-<script src="js/bemessung.js?v=2026-10-10k"></script>
-<script src="js/fundamentliste.js?v=2026-10-10k"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10k"></script>
-<script src="js/bericht.js?v=2026-10-10k"></script>
-<script src="js/bericht-flach.js?v=2026-10-10k"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10k"></script>
-<script src="js/diagramme.js?v=2026-10-10k"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10k"></script>
-<script src="js/ergebnis.js?v=2026-10-10k"></script>
-<script src="js/layout.js?v=2026-10-10k"></script>
-<script src="js/projekt.js?v=2026-10-10k"></script>
-<script src="js/mobil.js?v=2026-10-10k"></script>
-<script src="js/selbsttest.js?v=2026-10-10k"></script>
-<script src="js/tastatur.js?v=2026-10-10k"></script>
-<script src="js/embed.js?v=2026-10-10k"></script>
-<script src="js/start.js?v=2026-10-10k"></script>
+<script src="js/boot.js?v=2026-10-10l"></script>
+<script src="js/helfer.js?v=2026-10-10l"></script>
+<script src="js/speicher.js?v=2026-10-10l"></script>
+<script src="js/einstellungen.js?v=2026-10-10l"></script>
+<script src="js/templates.js?v=2026-10-10l"></script>
+<script src="js/viewer.js?v=2026-10-10l"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10l"></script>
+<script src="js/lasten.js?v=2026-10-10l"></script>
+<script src="js/boden.js?v=2026-10-10l"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10l"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10l"></script>
+<script src="js/modell.js?v=2026-10-10l"></script>
+<script src="js/lastniveaus.js?v=2026-10-10l"></script>
+<script src="js/bettung.js?v=2026-10-10l"></script>
+<script src="js/erddruck.js?v=2026-10-10l"></script>
+<script src="js/kataloge.js?v=2026-10-10l"></script>
+<script src="js/bishop.js?v=2026-10-10l"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10l"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10l"></script>
+<script src="js/fels.js?v=2026-10-10l"></script>
+<script src="js/sicherung.js?v=2026-10-10l"></script>
+<script src="js/rechenkern.js?v=2026-10-10l"></script>
+<script src="js/dimensionierung.js?v=2026-10-10l"></script>
+<script src="js/bemessung.js?v=2026-10-10l"></script>
+<script src="js/fundamentliste.js?v=2026-10-10l"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10l"></script>
+<script src="js/bericht.js?v=2026-10-10l"></script>
+<script src="js/bericht-flach.js?v=2026-10-10l"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10l"></script>
+<script src="js/diagramme.js?v=2026-10-10l"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10l"></script>
+<script src="js/ergebnis.js?v=2026-10-10l"></script>
+<script src="js/layout.js?v=2026-10-10l"></script>
+<script src="js/projekt.js?v=2026-10-10l"></script>
+<script src="js/mobil.js?v=2026-10-10l"></script>
+<script src="js/selbsttest.js?v=2026-10-10l"></script>
+<script src="js/tastatur.js?v=2026-10-10l"></script>
+<script src="js/embed.js?v=2026-10-10l"></script>
+<script src="js/start.js?v=2026-10-10l"></script>
 
 </body>
 </html>

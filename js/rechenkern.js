@@ -33,7 +33,8 @@ function _evalPfahl(){
   const num=id=>+gi(id)||0;
   if(typeof renderPfahlbock==='function') renderPfahlbock();
   const r=(RESULT.pfahlbock&&RESULT.pfahlbock.r)||{};
-  const uls=[[r.etaGeo,'Mantelreibung'],[r.etaTors,'Torsion'],[r.etaAuf,'Aufbruchsicherheit'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
+  const uls=r.fels ? [[r.etaSteel,'Ankerstahl'],[r.etaVerb,'Verbund Mörtel–Fels'],[r.etaAusb,'Felsausbruch'],[r.etaPress,'Felspressung'],[r.etaGleit,'Gleiten']].filter(([v])=>isFinite(v))
+    : [[r.etaGeo,'Mantelreibung'],[r.etaTors,'Torsion'],[r.etaAuf,'Aufbruchsicherheit'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
              [r.etaLat,'Laterale Bodentragfähigkeit']].filter(([v])=>isFinite(v));
   const o={ dims:'—', geom:null, gov:'–', lf:r.govCombo||null,
             etaT: uls.length?Math.min(...uls.map(([v])=>v)):null,
@@ -145,7 +146,7 @@ const MODELS = {
     standard:false, sicherung:false, gl66:false, dimensionierbar:false,
     berechnen(){ renderPfahlbock(); },
     hatErgebnis(){ return !!(RESULT.pfahlbock && RESULT.pfahlbock.r); },
-    bericht(){ const p=RESULT.pfahlbock; return buildNachweisDocPfahl(p.r, p.piles, p.n); },
+    bericht(){ const p=RESULT.pfahlbock; return p.r.fels ? buildNachweisDocFels(p.r, p.piles, p.n) : buildNachweisDocPfahl(p.r, p.piles, p.n); },
     auswerten(){ return _evalPfahl(); } }
 };
 function curModel(){ return MODELS[(typeof CALC_MODEL!=='undefined') ? CALC_MODEL : 'block'] || MODELS.block; }

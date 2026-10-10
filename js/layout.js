@@ -179,7 +179,7 @@ function toggleGZTExpand(evt, key){
     else if(data.fn === 'buildPbSystemSVG')    newSvg = buildPbSystemSVG(data.R, data.piles, data.n, _gztExpanded);
     else if(data.fn === 'buildPbSteelDiagram') newSvg = buildPbSteelDiagram(data.R, data.n, _gztExpanded);
     else if(data.fn === 'buildPbKnickDiagram') newSvg = buildPbKnickDiagram(data.R, data.n, _gztExpanded);
-    else if(/^buildPb(Aufbruch|Lateral|Einzel)Diagram$/.test(data.fn)) newSvg = window[data.fn](data.R, data.n, _gztExpanded);
+    else if(/^build(Pb(Aufbruch|Lateral|Einzel)|Fels)Diagram$/.test(data.fn)) newSvg = window[data.fn](data.R, data.n, _gztExpanded);
     else if(data.fn && typeof window[data.fn] === 'function' && data.G) newSvg = window[data.fn](data.R, data.G, _gztExpanded);   // Block/Flach: (r, g, breit)
     else                                       newSvg = buildGZTDiagram(data.R, data.G, _gztExpanded, false);
     div.innerHTML = '';

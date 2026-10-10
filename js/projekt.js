@@ -13,7 +13,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
   'pfahl_typ','pfahl_anzahl','pfahl_l','pfahl_s','pfahl_alpha','pfahl_e',
   'pfahl_dm','pfahl_dk',
   'pfahl_dex','pfahl_dex_seite','pfahl_abstand','pfahl_hs','pfahl_laf','pfahl_lv_mode','pfahl_zugfest','pfahl_stab_nrd',
-  'pb_mode','pb_prof','pb_stahl','pb_orient','pb_einbau','pb_qb','pb_spitze','l_TG','l_TW','pb_n','pb_rot','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
+  'pb_mode','pb_ftau','pb_fsig','pb_fmu','pb_fkeg','pb_fgam','pb_prof','pb_stahl','pb_orient','pb_einbau','pb_qb','pb_spitze','l_TG','l_TW','pb_n','pb_rot','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
   'pb_bx','pb_by','pb_bank_d','pb_kx','pb_ky','pb_hk','pb_ex','pb_ey','pb_ue','pb_gMD','pb_gMZ','pb_gMQ','pb_etaA','pb_etaI','pb_gM1','pb_gS','pb_skinfac','pb_zugfac','pb_zykfac'];
 
 function collectState(){
@@ -64,7 +64,7 @@ function applyState(st){
   if(st.pb_rot === undefined) si('pb_rot','0');
   // Felder vom Okt 2026 (Torsion, Stahlgüte, Spitzenwiderstand): ältere Stände bekommen die Vorgabe,
   // sonst bliebe der Wert des zuvor geladenen Projekts stehen.
-  [['pb_gMD','1.30'],['pb_gMZ','1.60'],['pb_gMQ','1.40'],['pb_etaA','0.7'],['pb_etaI','0.8'],['pb_gM1','1.05'],['pb_zykfac','1.0'],['bg_c_gleit','0'],['bg_me_ratio','5'],['l_TG','0'],['l_TW','0'],['pb_stahl','355'],['pb_qb','0'],['pb_spitze','stahl'],['pb_orient','quer'],['pb_einbau','ramm']]
+  [['pb_gMD','1.30'],['pb_gMZ','1.60'],['pb_gMQ','1.40'],['pb_etaA','0.7'],['pb_etaI','0.8'],['pb_gM1','1.05'],['pb_zykfac','1.0'],['bg_c_gleit','0'],['pb_ftau','0'],['pb_fsig','0'],['pb_fmu','0.60'],['pb_fkeg','30'],['pb_fgam','25'],['bg_me_ratio','5'],['l_TG','0'],['l_TW','0'],['pb_stahl','355'],['pb_qb','0'],['pb_spitze','stahl'],['pb_orient','quer'],['pb_einbau','ramm']]
     .forEach(([id,v]) => { if(st[id] === undefined) si(id, v); });
   // Migration Altprojekte: Überdeckungs-Toggle (g_uberd_on) entfernt Jul 2026 → war er aus, ü auf 0 setzen
   if(st.g_uberd_on===false){ const uf=document.getElementById('g_uberd'), ur=document.getElementById('g_uberd_r'); if(uf) uf.value='0'; if(ur) ur.value='0'; }

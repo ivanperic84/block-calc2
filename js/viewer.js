@@ -610,7 +610,8 @@ function mkMomArc(grp,pos,axis,M,col,angleOffset=0){
 function buildPfahlbockViz(){
   const _ein=_pbEinzel();                                        // Einzelpfahl: ohne Bankett/Kopf
   const n=_ein ? 1 : (+gi('pb_n')||4), sx=+gi('pb_sx')||1.2, sy=+gi('pb_sy')||1.2;
-  const ax=_ein ? 0 : (+gi('pb_ax')||0), ay=_ein ? 0 : (+gi('pb_ay')||0);
+  const _felsV=(typeof _pbFels==='function') && _pbFels();   // Felsanker stehen senkrecht
+  const ax=(_ein||_felsV) ? 0 : (+gi('pb_ax')||0), ay=(_ein||_felsV) ? 0 : (+gi('pb_ay')||0);
   const L=Math.max(0.5,+gi('pb_L')||10);
   const ueber=_ein ? Math.max(0,+gi('pb_e')||0) : 0;             // Überstand über GOK (freie Länge, nur Einzelpfahl)
   // Einzelpfahl: Querschnitt aus dem Profil-Katalog (HEB/Krinner) → laterale Breite/Form; sonst Verpresskörper-Ø
