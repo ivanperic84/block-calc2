@@ -359,7 +359,7 @@ function initViewer(){
     if(!drag)return;
     if(_downXY && Math.hypot(e.clientX-_downXY.x,e.clientY-_downXY.y)>4) _moved=true;
     sph.t-=(e.clientX-pm.x)*0.01;
-    sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p+(e.clientY-pm.y)*0.01));
+    sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p-(e.clientY-pm.y)*0.01));   // nach unten ziehen = Modell kippt nach vorn (Kamera steigt), wie bei gängigen 3D-Programmen
     pm={x:e.clientX,y:e.clientY};moveCam();
   });
   el.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });   // Mittelklick-Autoscroll unterdrücken
@@ -382,7 +382,7 @@ function initViewer(){
     if(e.touches.length===1&&t0){
       if(_downXY && Math.hypot(e.touches[0].clientX-_downXY.x,e.touches[0].clientY-_downXY.y)>6) _moved=true;
       sph.t-=(e.touches[0].clientX-t0.x)*0.012;
-      sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p+(e.touches[0].clientY-t0.y)*0.012));
+      sph.p=Math.max(0.1,Math.min(Math.PI/2-0.05,sph.p-(e.touches[0].clientY-t0.y)*0.012));
       t0={x:e.touches[0].clientX,y:e.touches[0].clientY};moveCam();
     }
     if(e.touches.length===2&&pinch0!==null){
