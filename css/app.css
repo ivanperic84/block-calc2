@@ -243,14 +243,11 @@ input.field-invalid, select.field-invalid { outline:2px solid var(--fail); outli
 .vc-lf-grp { display:flex; gap:4px; }
 .vc-lf-sep { width:1px; height:12px; background:var(--ol); display:inline-block; margin:0 1px; }
 .vc-lf-btn.akt { border-color:var(--ol2); color:var(--on2); }
-#vc-komb { background:var(--s1); border:1px solid var(--ol); border-radius:3px; color:var(--dim); font-family:var(--f-mono);
-  font-size:9.5px; height:20px; padding:0 4px; cursor:pointer; max-width:150px; }
-#vc-komb.on { border-color:var(--acc); color:var(--acc); font-weight:600; }
+.vc-sel, #vc-komb { background:var(--s1); border:1px solid var(--ol); border-radius:3px; color:var(--dim); font-family:var(--f-mono);
+  font-size:9.5px; height:20px; padding:0 4px; cursor:pointer; max-width:170px; }
+.vc-sel.on, #vc-komb.on { border-color:var(--acc); color:var(--acc); font-weight:600; }
 #vc-komb:disabled { opacity:.5; cursor:default; }
-#vc-komb-info { font-family:var(--f-mono); font-size:9px; color:var(--dim); background:color-mix(in srgb, var(--s1) 82%, transparent);
-  border-radius:3px; padding:1px 6px; text-align:center; max-width:100%; pointer-events:none; }
-#vc-komb-info:empty { display:none; }
-@media (max-width:767px){ #viewer-lf { max-width:calc(100% - 116px); } #vc-komb-info { display:none; } }
+@media (max-width:767px){ #viewer-lf { max-width:calc(100% - 116px); } }
 .vc-lf-btn, #vc-char-toggle {
   background:none; border:1px solid var(--ol); border-radius:3px;
   color:var(--dim); font-family:var(--f-mono); font-size:9.5px;

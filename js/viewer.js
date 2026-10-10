@@ -1643,31 +1643,39 @@ function _vcPbViz(viz){
   }catch(_){ return viz; } }
 function syncLFSel(){
   _vcResolveLf();
-  const wrap=document.getElementById('vc-lf-btns'); if(!wrap) return;
-  const mw=document.getElementById('vc-lf-mode');
-  if(mw) mw.innerHTML=[['global','Massg.','Massgebender Lastfall über alle Richtungen (kleinstes η) — folgt dem Ergebnis'],
-                       ['quer','Quer','Massgebender Lastfall quer zum Gleis'],['laengs','Längs','Massgebender Lastfall längs zum Gleis']]
-    .map(([m,t,ti])=>`<button class="vc-lf-btn${_vcLfMode===m?' on':''}" title="${ti}" onclick="selectVcMode('${m}')">${t}</button>`).join('');
-  wrap.innerHTML=LF.map((lf,i)=>
-    `<button class="vc-lf-btn${i===_vcLfIdx?(_vcLfMode==='lf'?' on':' akt'):''}" title="${esc(lf.name)}" onclick="selectVcLF(${i})">LF ${i+1}</button>`
-  ).join('');
+  const lfSel=document.getElementById('vc-lf-sel'); if(!lfSel) return;
+  // Lastfall: «Massgebend» (folgt dem Ergebnis) oder ein bestimmter. «quer»/«längs» nur, wenn es
+  // Lastfälle beider Richtungen gibt — sonst wären die Einträge gleichbedeutend mit «Massgebend».
+  const dirs=LF.map(_lfRichtung), beide = dirs.includes('quer') && dirs.includes('laengs');
+  if(!beide && (_vcLfMode==='quer' || _vcLfMode==='laengs')){ _vcLfMode='global'; _vcResolveLf(); }
+  const kurz=i=>'LF '+(i+1);
+  const hL = `<option value="m:global">Massgebend${_vcLfMode==='global'&&LF.length>1?' · '+kurz(_vcLfIdx):''}</option>`
+    + (beide ? `<option value="m:quer">Massgebend quer${_vcLfMode==='quer'?' · '+kurz(_vcLfIdx):''}</option>`
+             + `<option value="m:laengs">Massgebend längs${_vcLfMode==='laengs'?' · '+kurz(_vcLfIdx):''}</option>` : '')
+    + LF.map((lf,i)=>`<option value="lf:${i}">${kurz(i)} · ${esc((lf.name||'').replace(/^LF\s*\d+\s*[—–-]\s*/,'').slice(0,28))}</option>`).join('');
+  if(lfSel._h!==hL){ lfSel.innerHTML=hL; lfSel._h=hL; }
+  lfSel.value = _vcLfMode==='lf' ? 'lf:'+_vcLfIdx : 'm:'+_vcLfMode;
+  lfSel.classList.toggle('on', _vcLfMode==='lf');
   // Kombinationswahl
-  const sel=document.getElementById('vc-komb'), info=document.getElementById('vc-komb-info');
+  const sel=document.getElementById('vc-komb');
   const K=_vcKombListe(); if(_vcKomb && !K.list.some(k=>k.nr===_vcKomb)) _vcKomb=0;
   const fz=v=>(+v).toFixed(2).replace(/\.?0+$/,'')||'0', et=k=>(k.eta!=null&&isFinite(k.eta))?' · η '+k.eta.toFixed(2):'';
   if(sel){
     const h = K.list.length
-      ? `<option value="0">Komb. massg.${K.gov?' ('+K.gov+')':''}</option>`+K.list.map(k=>`<option value="${k.nr}">Komb. ${k.nr}${et(k)}</option>`).join('')
-      : `<option value="0">ohne Kombination</option>`;
+      ? `<option value="0">Komb. massgebend${K.gov?' ('+K.gov+')':''}</option>`+K.list.map(k=>`<option value="${k.nr}">Komb. ${k.nr}${et(k)}</option>`).join('')
+      : `<option value="0">charakteristisch</option>`;
     if(sel._h!==h){ sel.innerHTML=h; sel._h=h; }
     sel.value=String(_vcKomb); sel.disabled=!K.list.length;
     sel.classList.toggle('on', _vcKomb>0);
   }
-  if(info){ const lf=LF[_vcLfIdx], k=K.list.find(x=>x.nr===(_vcKomb||K.gov));
-    info.textContent = !lf ? '' : ((_vcOhneTreffer ? 'Kein Lastfall '+(_vcLfMode==='quer'?'quer':'längs')+' zum Gleis definiert — gezeigt: ' : '') + lf.name + (k
-      ? ` · Komb. ${k.nr}${_vcKomb?'':' (massgebend)'}: Eigengewicht ${fz(k.fE)} · ständig ${fz(k.fG)} · veränderlich ${fz(k.fQ)}${et(k)}`
+  // Erläuterung nur als Tooltip der Leiste (nicht dauernd eingeblendet)
+  const wrap=document.getElementById('viewer-lf');
+  if(wrap){ const lf=LF[_vcLfIdx], k=K.list.find(x=>x.nr===(_vcKomb||K.gov));
+    wrap.title = !lf ? '' : (lf.name + (k
+      ? ` · Kombination ${k.nr}${_vcKomb?'':' (massgebend)'}: Eigengewicht ${fz(k.fE)} · ständig ${fz(k.fG)} · veränderlich ${fz(k.fQ)}${et(k)}`
       : ' · charakteristisch (Gebrauchstauglichkeit)')); }
 }
+function selectVcLfSel(v){ const [a,b]=String(v).split(':'); if(a==='lf') selectVcLF(+b||0); else selectVcMode(b||'global'); }
 function selectVcMode(m){ _vcLfMode=m; _vcKomb=0; syncLFSel(); updateViewer(); }
 function selectVcLF(i){
   _vcLfIdx=i; _vcLfMode='lf'; _vcKomb=0;
