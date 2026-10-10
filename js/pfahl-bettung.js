@@ -46,6 +46,15 @@ function solveLinearDense(A, b){
 //   ist gedeckelt. Querkraft V(z)=EI·w''' (je Element konstant) zusätzlich im Profil.
 // Rückgabe: {yHead_mm, yGround_mm, Mmax_kNm, sMmax, Vhead_kN, profile:[{z,y_mm,M,p,V}],
 //            converged, yielded} oder null.
+// ── Seitliche Bettung der Pfähle nach SIA 267 Ziff. 9.5.4.5 Gl. (53): k_s,k = E_s,k / D ─────────────
+// (Okt 2026, Nutzerentscheid; vorher pauschal 0.30·M_E/((1−ν²)·d) — eine Faustregel ohne belegte Quelle.)
+// Die Norm verlangt zusätzlich: «Im oberflächennahen Bereich ist der Bettungsmodul entsprechend dem
+// reduzierten Tragwiderstand bzw. der reduzierten Steifigkeit des Baugrunds abzumindern», nennt aber
+// kein Mass. ANNAHME DES PROGRAMMS: linearer Anstieg von 0 an der Oberfläche auf den vollen Wert in
+// der Tiefe KS_RAMPE_D · d (Bereich des oberflächennahen Bruchkeils).
+const KS_RAMPE_D = 3;
+function ksRampe(z, d){ return Math.min(1, Math.max(0, z) / Math.max(1e-6, KS_RAMPE_D * d)); }
+
 function bddBeamPY(EI, B, e, L, H, ksAt, opts){
   opts = opts || {};
   const puAt = (typeof opts === 'function') ? null : opts.puAt;        // (Alt-Aufrufe ohne opts)

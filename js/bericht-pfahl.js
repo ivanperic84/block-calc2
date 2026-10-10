@@ -219,6 +219,8 @@ function buildNachweisDocPfahl(r, piles, n){
       </table>
       ${fml(r.Rb_k>0&&!govZug ? "η_Geo = R_d / |N|_max" : "η_Geo = R_s,d / |N|_max", `${N(govZug?r.Rskin_dZ:r.Rskin_d+(r.Rb_d||0))} / ${N(govF)}`, `${isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞'}`)}
       ${eta(r.etaGeo)}
+      ${r.auf ? fml("Aufbruchsicherheit (SIA 267 Ziff. 9.5.3.3): G_E,k = n_Z·[l_a·l_b·(L − ⅓·√(l_a²+l_b²)·cot φ′)]·η_Z·γ′   ·   η = γ_G,inf·G_E,k / Z_d", `n_Z = ${r.auf.nZ} · l_a × l_b = ${N(r.auf.la,2)} × ${N(r.auf.lb,2)} m · wirksame Höhe ${N(r.auf.hE,2)} m · η_Z = 0.80 · γ′ = ${N(r.auf.gam,1)} kN/m³ · φ′ = ${N(r.auf.phi,1)}° ⇒ G_E,k = ${N(r.auf.GEk)} kN · Z_d = ${N(r.auf.Z)} kN (${r.auf.label||''})`, `η = 0.90·${N(r.auf.GEk)}/${N(r.auf.Z)} = ${r.etaAuf.toFixed(2)}`) + eta(r.etaAuf)
+        + `<div style="font-size:8px;color:var(--xdim);margin-top:3px">Angehängter Bodenkörper je Zugpfahl nach EA-Pfähle / DIN 1054 (die SIA 267 verlangt den Nachweis, nennt kein Verfahren). Grenzzustand Typ 1 mit γ_G,inf = 0.90 (SIA 260 Tab. 1); Rastermass am Pfahlkopf, Reibung am Umfang des Bodenkörpers nicht angesetzt.</div>` : ''}
       ${r.tors ? fml("Torsion: T_Rd = r_T · R_s,d  ·  η = 1 / √((|N|/R_d)² + (T_Ed/T_Rd)²)", `T_Ed = ${N(r.tors.T)} kNm · r_T = ${(r.tors.rT*1000).toFixed(0)} mm · T_Rd = ${N(r.tors.TRgeo)} kNm · Anteile ${N(r.tors.uN,2)} / ${N(r.tors.uT,2)} (${r.tors.label||''})`, `η = ${isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞'}`) + eta(r.etaTors)
         + `<div style="font-size:8px;color:var(--xdim);margin-top:3px">Das Torsionsmoment um die Pfahlachse wird über die Mantelreibung mit dem Hebel r_T abgetragen (Rohr d/2, I-Profil ≈ 0.375·b); dieselbe Mantelreibung trägt die Axialkraft, darum die vektorielle Überlagerung. Der Erdwiderstand an den Flanschen ist nicht angesetzt.</div>` : ''}
       ${figFn(()=>buildPbAxialDiagram(r,n,true),'Abb. — Mantelreibungswiderstand R(z) über die Tiefe (Druck/Zug) vs. angesetzte Pfahlkräfte')}
@@ -288,6 +290,7 @@ function buildNachweisDocPfahl(r, piles, n){
       <thead><tr><th>Nachweis / Grenzzustand</th><th class="r">η</th></tr></thead><tbody>
         ${sumRow(r.Rb_k>0 ? 'GZT — Äusserer Tragwiderstand (Mantel + Spitze)' : 'GZT — Äusserer Tragwiderstand (Mantelreibung)', r.etaGeo)}
         ${r.etaTors!=null?sumRow('GZT — Torsion über Mantelreibung', r.etaTors):''}
+        ${r.etaAuf!=null?sumRow('GZT — Aufbruchsicherheit der Zugpfähle', r.etaAuf):''}
         ${r.etaLat!=null?sumRow('GZT — Laterale Bodentragfähigkeit (Kick-out)', r.etaLat):''}
         ${sumRow('GZT — Innerer Tragwiderstand (Querschnitt N+M)', r.etaSteel)}
         ${sumRow('GZT — Innerer Tragwiderstand (Knicken)', r.etaKnick)}

@@ -9,7 +9,7 @@
 //      offline startet.
 // VERSION wird von werkzeug/version-setzen.sh gesetzt und muss mit dem ?v= in index.html
 // übereinstimmen (die Dateien werden mit genau dieser Adresse angefragt und abgelegt).
-const VERSION = '2026-10-10h';
+const VERSION = '2026-10-10i';
 const CACHE = 'blockcalc-' + VERSION;
 
 const APP_DATEIEN = [

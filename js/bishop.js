@@ -274,7 +274,7 @@ function buildBishopSVG(b, wide){
   }
   // ── Momentenbilanz (Moment/R) + Scherfestigkeit — Fusszeile
   s+=`<text x="6" y="${(HB-PADB+11).toFixed(1)}" font-family="var(--f-mono)" font-size="${F}" fill="var(--dim)">Σ haltend ${halt.toFixed(0)} kN  /  Σ treibend ${driv.toFixed(0)} kN${(b.M_H||0)>0.01?' (davon H: '+b.M_H.toFixed(0)+')':''}  →  η = <tspan fill="${eC}" font-weight="600">${b.eta.toFixed(2)}</tspan></text>
-   <text x="6" y="${(HB-PADB+11+F+2.5).toFixed(1)}" font-family="var(--f-mono)" font-size="${F-0.5}" fill="var(--xdim)">Momente um M (÷R) · φ′_d = φ′/γ_φ (γ_φ=${(b.gph||1.2).toFixed(2)}) · c′_d = c′/γ_c (γ_c=${(b.gc||1.5).toFixed(2)}) · ${S.length} Lamellen</text>`;
+   <text x="6" y="${(HB-PADB+11+F+2.5).toFixed(1)}" font-family="var(--f-mono)" font-size="${F-0.5}" fill="var(--xdim)">${S.length} Lamellen · Momente um M · γ_φ = ${(b.gph||1.2).toFixed(2)} · γ_c = ${(b.gc||1.5).toFixed(2)}</text>`;
   return s+`</svg>`;
 }
 

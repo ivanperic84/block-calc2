@@ -304,8 +304,10 @@ function renderPfahlbock(opt){
   const gzgFullC=(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,1,1,1)}));
   const gzgVarC =(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,0,0,1)}));
   const r=pfahlbockAnalyse({ piles, L:_Lfull, e:_ein ? Math.max(0,+gi('pb_e')||0) : 0, LbendMax:_LbendMax, bettungFac:_bettungFac,
+    zKopf:_ein ? 0 : Math.max(0,+gi('pb_ue')||0)+dBank,   // Tiefe des Pfahlkopfs (UK Bankett) unter Gelände
+   
     dGrout:_dGrout, tendon:tdn, E_steel:sys.E, einzel:_ein, einbau:_einbau, Uramm:_Uramm, starkQuer:_starkQuer,
-    qb:_qb, Ab:_Ab, rT:_rT,
+    qb:_qb, Ab:_Ab, rT:_rT, sx:sx, sy:sy,
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     // SIA 267 Kap. 9: γ_M,a Druck/Zug/quer, η_a nach Art der Bestimmung, innerer Widerstand η_i·R_mat,d.
     // Mikropfahl: Tragglied mit γ_s und η_i · Einzelpfahl (Stahlprofil): SIA 263 γ_M1, η_i = 1.0
@@ -377,7 +379,7 @@ function renderPfahlbock(opt){
 // Nachweise hängen nicht von der Länge ab (Querschnitt, Knicken, bei langen Pfählen auch die
 // Kopfverformung) — bleibt einer davon unter 1, wird das gemeldet statt endlos zu verlängern.
 function _pbGov(r){
-  const c=[[nwOn('pfahl','geo')?r.etaGeo:Infinity,'Mantelreibung'],[nwOn('pfahl','geo')&&r.etaTors!=null?r.etaTors:Infinity,'Torsion'],
+  const c=[[nwOn('pfahl','geo')?r.etaGeo:Infinity,'Mantelreibung'],[nwOn('pfahl','geo')&&r.etaTors!=null?r.etaTors:Infinity,'Torsion'],[nwOn('pfahl','geo')&&r.etaAuf!=null?r.etaAuf:Infinity,'Aufbruchsicherheit'],
            [nwOn('pfahl','stahl')?r.etaSteel:Infinity,'Querschnitt'],[nwOn('pfahl','knick')?r.etaKnick:Infinity,'Knicken'],
            [nwOn('pfahl','lat')?r.etaLat:Infinity,'laterale Bodentragfähigkeit'],[nwOn('pfahl','gzg')?r.etaGZG:Infinity,'Gebrauchstauglichkeit']]
           .filter(x=>x[0]!=null && !isNaN(x[0])).sort((a,b)=>a[0]-b[0]);

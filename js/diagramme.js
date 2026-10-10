@@ -304,19 +304,19 @@ function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullou
   <text x="${bx-6}" y="${by + (lowBlock?20:-10)}" font-family="'DM Mono',monospace" font-size="6" fill="${c_dim}" text-anchor="middle">Anschluss</text>
   <!-- Pfahl (vertikal) -->
   <rect x="${px-3}" y="${py-10}" width="6" height="52" rx="1" fill="${c_acc}" fill-opacity="0.5" stroke="${c_acc}" stroke-width="0.8"/>
-  <text x="${px+6}" y="${py+44}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Pfahl (vert.)</text>
+  <text x="${px-6}" y="${py+40}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="end">Pfahl (vert.)</text>
   <!-- Horizontale Referenz (gestrichelt) am Kopf -->
   <line x1="${px-34}" y1="${py}" x2="${px}" y2="${py}" stroke="${c_dim}" stroke-width="0.5" stroke-dasharray="2,2"/>
   <!-- Stütze F_s entlang Achse -->
   <line x1="${bx}" y1="${by}" x2="${px}" y2="${py}" stroke="${dirC}" stroke-width="2.4" stroke-linecap="round"/>
-  <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="'DM Mono',monospace" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)}</text>
+  <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="'DM Mono',monospace" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)} kN</text>
   <text x="${px-36}" y="${py + (lowBlock?9:-3)}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
   <!-- H_eff horizontal (Broms-Lateral) -->
   ${arr(px, py, hx2, py, c_pu)}
-  <text x="${hx2 + sgnH*2}" y="${py - 5}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'end':'start'}">H=${H_pf.toFixed(1)} (Broms)</text>
+  <text x="${hx2}" y="${py - 5}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'start':'end'}">H=${H_pf.toFixed(1)} kN</text>
   <!-- V vertikal (axial) -->
   ${arr(px, py, px, vy2, c_pu)}
-  <text x="${px+5}" y="${vy2 + (sgnV>0?9:-3)}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">V=${V_pf.toFixed(1)} (${pullout?'Herausziehen':'Druck'})</text>
+  <text x="${px+5}" y="${vy2 + (sgnV>0?9:-3)}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">V=${V_pf.toFixed(1)} kN (${pullout?'Herausziehen':'Druck'})</text>
   <text x="${VB-7}" y="${HB-6}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_xdim}" text-anchor="end">F_s=H/cos α · V=H·|tan α|</text>
 </svg>`;
 }

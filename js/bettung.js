@@ -29,6 +29,45 @@ function c1Steckner(phi_k_deg, t, beta_deg, hbeta) {
   return Math.max(1, C_base * _c1SlopeFactor(beta_deg, hbeta, t) / 1000); // → MN/m³
 }
 
+// ── Bettungsmodul aus der Setzungsberechnung mit Wiederbelastung ────────────────────────────────
+// Lang/Huder/Amann, Bodenmechanik und Grundbau: Abschn. 11.6 (k_sm = p′_m / s_m, mittlere Setzung des
+// starren Fundaments im kennzeichnenden Punkt K, Eigengewicht inbegriffen) und Abschn. 8.5 (kombinierte
+// Ent- und Belastung): bis zum Gewicht des ausgehobenen Bodens σ′_v(t) wird WIEDERbelastet (M′_E), nur
+// der Rest ist Erstbelastung (M_E):  Δs = Δσ_I·Δz/M′_E + (Δσ_II − Δσ_I)·Δz/M_E.
+// Last: Eigengewicht des Fundamentkörpers (Block + Kopf), abzüglich Auftrieb — ohne Mastlast (Nutzervorgabe).
+// Summation mit dem Einflussfaktor J nach Boussinesq (Rechtecklast, Punkt K bei 0.37·B / 0.37·L),
+// abgebrochen, wo J < 10 % (Abschn. 8.4). M_E je Schicht in der Tiefe t + z.
+// ANNAHMEN DES PROGRAMMS (Nutzerentscheid Okt 2026): M′_E = Verhältnis · M_E mit dem Startwert 5
+// (Feld bg_me_ratio; die Literatur nennt keinen Wert — er gehört aus dem Ödometerversuch bestimmt), und
+// der so bestimmte vertikale Bettungsmodul gilt auch für die Stirnflächen (C₁ = C₂ = k_sm).
+function _boussJEcke(a, b, z){
+  if(z <= 0) return 0.25;
+  const R = Math.sqrt(a*a + b*b + z*z);
+  return (Math.atan(a*b/(z*R)) + a*b*z/R*(1/(a*a+z*z) + 1/(b*b+z*z))) / (2*Math.PI);
+}
+function _boussJ(B, L, x, y, z){
+  let s = 0;
+  for(const a of [B/2 - x, B/2 + x]) for(const b of [L/2 - y, L/2 + y]) s += _boussJEcke(a, b, z);
+  return s;
+}
+function c1Setzung(o){
+  const {B, L, t, G} = o, ratio = Math.max(1, +o.ratio || 1);
+  const zgw = gwDepth(), u = isFinite(zgw) && t > zgw ? 10 * (t - zgw) : 0;
+  const p   = Math.max(0, G / (B*L) - u);            // wirksame Sohlpressung aus Eigengewicht [kPa]
+  const sv0 = Math.max(0, sigVeffTo(t));             // Gewicht des ausgehobenen Bodens [kPa]
+  const pWB = Math.min(p, sv0), pErst = Math.max(0, p - sv0);
+  const meAt = z => Math.max(0.5, (SCHICHTEN.length > 1 ? schichtAtDepth(t + z).me : null) ?? (+gi('bg_me') || 20)) * 1000;
+  const dz = 0.02; let z = dz/2, s = 0, I = 0;
+  for(; z < 30; z += dz){
+    const J = _boussJ(B, L, 0.37*B, 0.37*L, z);
+    if(J < 0.10) break;
+    const me = meAt(z);
+    s += J * dz * (pWB/(ratio*me) + pErst/me); I += J * dz;
+  }
+  const k = s > 1e-12 ? p / s / 1000 : 0;            // [MN/m³]
+  return { k, p, sv0, pWB, pErst, s, I, zEnd: z, ratio, G, u };
+}
+
 // Tiefengewichteter Mittelwert φ_k [°] über alle Schichten bis Tiefe t
 function avgPhiToDepth(t) {
   let phi_sum = 0, z = 0;
@@ -84,32 +123,29 @@ function _updateDeltaFacUI(){
       + '— sind abgeschaltet.';
 }
 
-function _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w){
+function _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w, c1_setz){
   const hint = document.getElementById('bg_c1_hint');
   const chip = document.getElementById('c1-zone-chip');
 
   // Chip
-  const chipLabels = {soft:'Unter Grenze', mid:'Übergangsbereich', ok:'Steckner gültig'};
-  const chipCls    = {soft:'chip-fail',    mid:'chip-warn',        ok:'chip-ok'};
-  if(chip){ chip.textContent=chipLabels[zoneKey]; chip.className='c1-zone-chip '+chipCls[zoneKey]; }
+  const chipLabels = {soft:'M_E massgebend', mid:'Mischung', ok:'Steckner massgebend'};
+  const chipCls    = {soft:'chip-warn',      mid:'chip-warn', ok:'chip-ok'};
+  if(chip){ chip.textContent=_c1Methode==='setzung' ? 'Setzungsmethode' : chipLabels[zoneKey]; chip.className='c1-zone-chip '+chipCls[zoneKey]; }
 
   // Zeile 1: Zone + Kontext
   const koernigLbl = _bgKoernig==='fein' ? 'Feinkörnig' : 'Grobkörnig';
-  const methForcedLbl = _c1Methode==='winkler'  ? ' · Winkler erzwungen' :
+  const methForcedLbl = _c1Methode==='setzung'  ? ' · Setzung mit Wiederbelastung gewählt' :
+                        _c1Methode==='winkler'  ? ' · Winkler erzwungen' :
                         _c1Methode==='steckner' ? ' · Steckner erzwungen' :
                         _c1Methode==='blend'    ? ' · Blend erzwungen' : '';
   const zoneLbl = zoneKey==='soft'
-    ? `M_E=${me_avg.toFixed(0)} MN/m² — unter Minimum (< 12) · ${koernigLbl}${methForcedLbl}`
-    : zoneKey==='mid'
-    ? `M_E=${me_avg.toFixed(0)} MN/m² — Übergangsbereich · ${koernigLbl}${methForcedLbl}`
-    : `M_E=${me_avg.toFixed(0)} MN/m² — Steckner gültig (≥ ${grenzwert}) · ${koernigLbl}${methForcedLbl}`;
+    ? `M_E=${me_avg.toFixed(0)} MN/m² — M_E·Kp/B begrenzt Steckner · ${koernigLbl}${methForcedLbl}`
+    : `M_E=${me_avg.toFixed(0)} MN/m² — Steckner Gl.3 ist der kleinere Wert · ${koernigLbl}${methForcedLbl}`;
 
   // Zeile 2: Zwischenwerte
-  const blendLbl = zoneKey==='mid'
-    ? `Blend ${(w*100).toFixed(0)}% St + ${((1-w)*100).toFixed(0)}% Wk`
-    : zoneKey==='ok' ? 'Steckner' : 'Winkler';
+  const blendLbl = _c1Methode==='auto' ? 'kleinerer Wert' : _c1Methode==='setzung' ? 'Setzung' : zoneKey==='ok' ? 'Steckner' : 'Winkler';
   const autoVal = _c1Manual ? ` · Auto wäre: ${c1_eff.toFixed(1)}` : '';
-  const valLbl = `St: ${c1_steck.toFixed(1)}  Wk: ${c1_me.toFixed(1)}  [${blendLbl}]  →  C₁ = ${_c1Manual?(+gi('bg_c1')||0).toFixed(1):c1_eff.toFixed(1)} MN/m³${autoVal}`;
+  const valLbl = `St: ${c1_steck.toFixed(1)}  Wk: ${c1_me.toFixed(1)}  Setz: ${(c1_setz||0).toFixed(1)}  [${blendLbl}]  →  C₁ = ${_c1Manual?(+gi('bg_c1')||0).toFixed(1):c1_eff.toFixed(1)} MN/m³${autoVal}`;
 
   // Zeile 3: Manuell-Hinweis
   const manualLbl = _c1Manual ? `Manuell überschrieben — Reset-Button zum Zurücksetzen` : '';
@@ -130,11 +166,11 @@ function _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, steckn
   _updateC1MethodOptions(me_avg, grenzwert);
   const mhint = document.getElementById('c1-methode-hint');
   if(mhint){
-    if(_c1Methode === 'winkler')  mhint.textContent = 'Winkler erzwungen — M_E · Kp / B';
+    if(_c1Methode === 'setzung')  mhint.textContent = 'Setzung aus Eigengewicht mit Wiederbelastung — gilt für Sohle und Stirnflächen (Annahme)';
+    else if(_c1Methode === 'winkler')  mhint.textContent = 'Winkler erzwungen — M_E · Kp / B';
     else if(_c1Methode === 'steckner') mhint.textContent = 'Steckner erzwungen — φ-abhängig';
-    else if(zoneKey==='soft') mhint.textContent = `auto — Winkler (M_E < 12, Steckner ungültig)`;
-    else if(zoneKey==='mid')  mhint.textContent = `auto — Blend ${(w*100).toFixed(0)}% Steckner / ${((1-w)*100).toFixed(0)}% Winkler`;
-    else                      mhint.textContent = `auto — Steckner Gl.3 (M_E ≥ ${grenzwert})`;
+    else if(zoneKey==='soft') mhint.textContent = `auto — kleinerer Wert: M_E · Kp / B (Steckner Gl.3 läge höher)`;
+    else                      mhint.textContent = `auto — kleinerer Wert: Steckner Gl.3`;
   }
 }
 
@@ -144,9 +180,10 @@ function _updateC1MethodOptions(me_avg, grenzwert){
   if(!sel) return;
   const steckOk = me_avg >= grenzwert;
   const opts = [
-    { v:'auto',     lbl:'Automatisch',                   show: true },
-    { v:'winkler',  lbl:'Winkler — M_E · Kp / B',        show: !steckOk },
-    { v:'steckner', lbl:'Steckner Gl.3 — φ-abhängig',    show: steckOk },
+    { v:'auto',     lbl:'Automatisch — kleinerer Wert',  show: true },
+    { v:'winkler',  lbl:'Winkler — M_E · Kp / B',        show: true },
+    { v:'steckner', lbl:'Steckner Gl.3 — φ-abhängig',    show: true },
+    { v:'setzung',  lbl:'Setzung mit Wiederbelastung',   show: true },
   ];
   const prev = sel.value || _c1Methode;
   sel.innerHTML = opts.filter(o=>o.show).map(o=>`<option value="${o.v}">${o.lbl}</option>`).join('');
@@ -185,11 +222,12 @@ function openC1Info(){
   const d = window._c1Calc;
   if(!d){ return; }
   const Kp = Math.tan(Math.PI/4 + d.phi_avg*Math.PI/360)**2;
-  const blendText = d.zoneKey==='mid'
-    ? `\nBlend (M_E im Übergangsbereich 12–25 MN/m²):\n  w = (${d.me_avg.toFixed(1)}−12) / 13 = ${(d.w*100).toFixed(0)}%  →  ${((1-d.w)*100).toFixed(0)}% Winkler + ${(d.w*100).toFixed(0)}% Steckner\n  C₁ = ${(1-d.w).toFixed(3)}·${d.c1_me.toFixed(1)} + ${d.w.toFixed(3)}·${d.c1_steck.toFixed(1)} = ${d.c1_eff.toFixed(1)} MN/m³`
-    : d.zoneKey==='soft'
-    ? `\nSteckner Gl.3 nicht gültig (M_E < 12 MN/m²):\n  C₁ = C₁_ME = ${d.c1_eff.toFixed(1)} MN/m³`
-    : `\nSteckner Gl.3 maßgebend (M_E ≥ ${d.grenzwert} MN/m²):\n  C₁ = C₁_Steckner = ${d.c1_eff.toFixed(1)} MN/m³`;
+  const sz = d.setz || {};
+  const blendText = _c1Methode==='setzung'
+    ? `\nMethode 3 — Setzung mit Wiederbelastung (Lang/Huder/Amann 11.6 und 8.5):\n  Eigengewicht Fundamentkörper G = ${(sz.G||0).toFixed(1)} kN  →  p = ${(sz.p||0).toFixed(1)} kPa\n  Aushubgewicht σ'v(t) = ${(sz.sv0||0).toFixed(1)} kPa  →  Wiederbelastung ${(sz.pWB||0).toFixed(1)} · Erstbelastung ${(sz.pErst||0).toFixed(1)} kPa\n  M'_E = ${(sz.ratio||5).toFixed(1)} · M_E (Startwert 5 = Annahme)\n  Setzung s = ${((sz.s||0)*1000).toFixed(2)} mm (Boussinesq, Punkt K, bis ${(sz.zEnd||0).toFixed(2)} m unter der Sohle)\n  k_sm = p / s = ${(sz.k||0).toFixed(1)} MN/m³  →  C₁ = C₂ = ${d.c1_eff.toFixed(1)} MN/m³\n  Annahme: der vertikale Wert gilt auch für die Stirnflächen.`
+    : _c1Methode!=='auto'
+    ? `\nMethode fest gewählt (${_c1Methode==='winkler'?'Winkler':'Steckner'}):\n  C₁ = ${d.c1_eff.toFixed(1)} MN/m³`
+    : `\nAutomatisch — der kleinere Wert gilt:\n  C₁ = min(${d.c1_steck.toFixed(1)} ; ${d.c1_me.toFixed(1)}) = ${d.c1_eff.toFixed(1)} MN/m³  (${d.zoneKey==='soft'?'M_E · Kp / B':'Steckner Gl.3'})\n  Steckner Gl.3 kennt M_E nicht und setzt tragfähigen Baugrund voraus; der\n  gemessene M_E begrenzt darum nach oben. M_E·Kp/B entspricht in der\n  Drehsteifigkeit etwa SIA 267 Gl. (53) k_s = E_s/D.`;
   const phiOk = d.phi_avg >= 27;
   const meOkFein = d.me_avg >= 12;
   const meOkGrob = d.me_avg >= 25;
@@ -217,12 +255,12 @@ function openC1Info(){
     `Gültigkeitsprüfung (Projektunterlage):`,
     `  φ'_k = ${d.phi_avg.toFixed(1)}° ${phiOk?'≥':'<'} 27°  ${phiOk?'✓':'✗'}`,
     `  M_E = ${d.me_avg.toFixed(1)} MN/m²:  ≥ 12 (feinkörnig) ${meOkFein?'✓':'✗'}  |  ≥ 25 (grobkörnig) ${meOkGrob?'✓':'✗'}`,
-    `  → ${d.stecknerGueltig?'Steckner für gewählte Bodenart gültig':'Steckner für gewählte Bodenart NICHT voll gültig — '+( d.zoneKey==='soft'?'Winkler-Ansatz':'Blend')+' angewendet'}`,
+    `  → ${d.stecknerGueltig?'Minimalanforderung der gewählten Bodenart erfüllt':'Minimalanforderung der gewählten Bodenart NICHT erfüllt (Hinweis, ohne Einfluss auf C₁)'}`,
     ...(slpOn ? [`  Böschung β = ${d.beta.toFixed(0)}° (Gl.4-Faktor ${d.slopeFac.toFixed(3)}) mindert C₁ in BEIDEN Methoden`,
                 `  → wirkt auch, wenn Steckner-Einsatzbedingung nicht erfüllt ist (Winkler/Blend)`] : []),
     ``,
     `${'─'.repeat(52)}`,
-    `Quellen: Steckner (1989) Bautechnik 2/89 Gl.3`,
+    `Quellen: Steckner (1989) Bautechnik 2/89 Gl.3 · SIA 267 Ziff. 9.5.4.5 Gl. (53)`,
     `         SN 670 004-2b-NA (USCS), Minimalanforderungen`,
     `         Winkler-Bettung horizontal: M_E · Kp / B`,
   ].join('\n');
@@ -245,7 +283,7 @@ function openC1Info(){
   ov.style.display='flex';
 }
 
-// Reiner Auto-C₁-Wert (3-Zonen-Blend Winkler/Steckner, β/B/t/φ-abhängig) — ohne UI-Effekte.
+// Reiner Auto-C₁-Wert (kleinerer Wert aus Steckner Gl.3 und M_E·Kp/B; β/B/t/φ-abhängig) — ohne UI-Effekte.
 // Wird von autoC1() (mit UI) UND von _doCalculate() (Auto-Modus, live) genutzt, damit C₁ der
 // Geländeneigung, Geometrie und φ immer folgt. Quelle: Steckner 1989 Gl.3/4.
 function c1AutoValue(){
@@ -261,26 +299,37 @@ function c1AutoValue(){
   // Winkler-Ast (M_E·Kp/B) trägt die Böschungsabminderung ebenfalls → C₁ folgt der Neigung auch,
   // wenn die Steckner-Einsatzbedingungen (M_E, φ) nicht erfüllt sind (Winkler/Blend-Zone).
   const c1_me     = Math.max(1, c1Effective_layers(t, B) * slopeFac);
+  // Setzungsmethode (wählbar): Eigengewicht des Fundamentkörpers, Böschungsabminderung wie die anderen Äste
+  const _Ls = Math.max(0.1, +gi('g_by') || B), _gb = (typeof _gBetonMassiv==='function' && CALC_MODEL!=='block') ? _gBetonMassiv() : (+gi('g_gbeton') || 25);
+  const _Gs = (B*_Ls*Math.max(0, +gi('g_hblock')||0) + Math.max(0,+gi('g_kx')||0)*Math.max(0,+gi('g_ky')||0)*Math.max(0,+gi('g_hkopf')||0)) * _gb;
+  const _rs = +gi('bg_me_ratio'), setz = c1Setzung({B, L:_Ls, t, G:_Gs, ratio: _rs >= 1 ? _rs : 5});
+  const c1_setz = Math.max(1, setz.k * slopeFac);
   let c1_eff, zoneKey, w=0;
-  if(_c1Methode === 'winkler'){
+  if(_c1Methode === 'setzung'){
+    c1_eff=c1_setz; zoneKey='soft'; w=0;
+  } else if(_c1Methode === 'winkler'){
     c1_eff=c1_me; zoneKey='soft'; w=0;
   } else if(_c1Methode === 'steckner'){
     c1_eff=c1_steck; zoneKey='ok'; w=1;
   } else {
-    if(me_avg < 12){ c1_eff=c1_me; zoneKey='soft'; w=0; }
-    else if(me_avg < grenzwert){
-      w=(me_avg-12)/Math.max(1, grenzwert-12);
-      c1_eff=(1-w)*c1_me+w*c1_steck; zoneKey='mid';
-    } else { c1_eff=c1_steck; zoneKey='ok'; w=1; }
+    // Okt 2026 (Nutzerentscheid): C₁ = min(Steckner Gl.3, M_E·Kp/B). Steckner Gl.3 kennt M_E nicht
+    // (abgeleitet aus Sulzbergers Tabelle Bodenart → C → φ, vorausgesetzt ist «tragfähiger» Baugrund);
+    // bei günstigem φ und kleinem M_E überschätzte sie die Bettung um Faktor 3–6. Der gemessene M_E
+    // begrenzt darum nach oben. M_E·Kp/B entspricht in der Drehsteifigkeit etwa SIA 267 Gl. (53)
+    // k_s = E_s/D (Dreieck mit C₁ an der Sohle ≙ konstant C₁/3; Kp ≈ 3). Der frühere Sprung bei
+    // M_E = 12 (feinkörnig) und die Überblendung 12…25 (grobkörnig) entfallen.
+    if(c1_me < c1_steck){ c1_eff=c1_me; zoneKey='soft'; w=0; }
+    else { c1_eff=c1_steck; zoneKey='ok'; w=1; }
   }
   return {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert, slopeFac,
-          c1_steck, c1_me, stecknerGueltig: me_avg >= grenzwert};
+          c1_steck, c1_me, c1_setz, setz, stecknerGueltig: me_avg >= grenzwert};
 }
 
 function autoC1(){
   const a = c1AutoValue();
   let {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert, slopeFac,
-       c1_steck, c1_me, stecknerGueltig} = a;
+       c1_steck, c1_me, c1_setz, setz, stecknerGueltig} = a;
+  const _rf = document.getElementById('bg_me_ratio_field'); if(_rf) _rf.style.display = _c1Methode==='setzung' ? '' : 'none';
   // bg_me als Display-Feld aktualisieren
   const bgMeEl = document.getElementById('bg_me');
   if(bgMeEl) bgMeEl.value = me_avg.toFixed(1);
@@ -292,10 +341,10 @@ function autoC1(){
     // Manueller Wert — c1_eff für _c1Calc aktualisieren aber Feld nicht anfassen
     c1_eff = +gi('bg_c1') || c1_eff;
   }
-  _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w);
+  _updateC1UI(me_avg, grenzwert, c1_steck, c1_me, c1_eff, zoneKey, stecknerGueltig, w, c1_setz);
 
   // Details für Info-Panel und Nachweisbericht
-  window._c1Calc = {phi_avg,me_avg,B,t,beta,grenzwert,slopeFac,c1_steck,c1_me,c1_eff,zoneKey,
+  window._c1Calc = {phi_avg,me_avg,B,t,beta,grenzwert,slopeFac,c1_steck,c1_me,c1_setz,setz,methode:_c1Methode,c1_eff,zoneKey,
                     stecknerGueltig,w,koernig:_bgKoernig,manual:_c1Manual};
   calculate();
 }

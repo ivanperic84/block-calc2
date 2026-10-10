@@ -286,9 +286,11 @@ function calcPfahlsicherung(){
   const Kp_bl    = Math.tan(Math.PI/4 + phi_r_b/2)**2;  // Kp am Block (ohne δ, konservativ)
 
   // ── A) k_s Lateral-Korrekturfaktor
-  // Laterale Bettungssteifigkeit ≈ 20–40% der vertikalen (Oedometer → M_E).
-  // α_lat Standard 0.30; einstellbar via SETTINGS.pfahlAlphaLat
-  const alpha_lat  = Math.min(1.0, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 0.30)));
+  // Okt 2026: k_s = E_s/D nach SIA 267 Gl. (53) (α = 1.0). Die frühere Faustregel «20–40 % der
+  // vertikalen Steifigkeit» (α = 0.30, pauschal über die ganze Länge) ist ersetzt durch eine gezielte
+  // Abminderung dort, wo sie begründet ist: oberflächennah (ksRampe) und im Überlagerungsbereich mit dem
+  // Erdkeil des Blocks (z < z_ov, s. ksAt). α bleibt als eigene Einstellung SETTINGS.sichAlphaLat.
+  const alpha_lat  = Math.min(1.0, Math.max(0.1, +(SETTINGS.sichAlphaLat ?? 1.0)));
   const nu         = 0.3;
   // Mehrschicht: M_E schichtdickengewichtet über die Einbindelänge (1 Schicht → me)
   const multiLayer = SCHICHTEN.length > 1;
@@ -304,7 +306,7 @@ function calcPfahlsicherung(){
     }
     if(tt > 0.01) me_eff = sumM / tt;
   }
-  const k_s_vert   = me_eff * 1000 / ((1 - nu**2) * B);   // vertikal [kN/m³]
+  const k_s_vert   = me_eff * 1000 / B;                    // E_s/D, SIA 267 Gl. (53) [kN/m³]
   const k_s        = k_s_vert * alpha_lat;                 // lateral  [kN/m³]
 
   // Charakteristische Länge
@@ -350,11 +352,15 @@ function calcPfahlsicherung(){
   // Kompatibilität Diagramme: f_overlap = f_shadow
   const f_overlap = f_shadow;
   const r_overlap = z_ov > 0.01 ? z_ov / Math.max(0.1, t_bl) : 0;
+  const _latFacM  = pileShadow.reduce((a,p)=>a+p.latFac,0) / Math.max(1, pileShadow.length);   // Anteil im Keil
 
   // ── p-y-Pfahl: laterale Bettungsziffer je Tiefe (schichtweise, M_E·α_lat)
   const ksAt = z => {
     const meZ = multiLayer ? Math.max(0.5, schichtAtDepth(Math.max(0, z)).me ?? me) : me_eff;
-    return meZ * 1000 / ((1 - nu**2) * B) * alpha_lat;               // [kN/m³]
+    // Überlagerung mit dem Block: im Keilbereich (z < z_ov) trägt der Boden wie beim Grenzwiderstand
+    // (bromsShadowFactor) nur zu 50 % — gewichtet mit dem Anteil der Pfähle, die im Grundriss im Keil stehen.
+    const fUe = z < z_ov ? 1 - 0.5 * _latFacM : 1;
+    return meZ * 1000 / B * alpha_lat * ksRampe(z, B) * fUe;          // [kN/m³]
   };
   // Einheitslast-FE-Solve (linear → mit tatsächlicher Last skalierbar): Kopf-/GOK-
   // Verschiebung [mm/kN] und max. Biegemoment [kNm/kN]. Fallback Winkler-Closed-Form.
@@ -980,7 +986,8 @@ function calcPfahlsicherung(){
       ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
       <div style="font-size:9px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
       ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
-      ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
+      ${row('Bettung: Faktor α auf E_s/D (SIA 267 Gl. 53)', alpha_lat.toFixed(2), '')}
+      ${row('Bettung: Abminderung oberflächennah / im Blockkeil', 'linear bis '+(KS_RAMPE_D*B).toFixed(2)+' m'+(z_ov>0.01 ? ' · ×'+(1-0.5*_latFacM).toFixed(2)+' bis '+z_ov.toFixed(2)+' m' : ' · keine Überlagerung'), '')}
       ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
       ${row('δ Pfahlkopf bei H_d (p-y)', nfx(delta_gruppe_mm), 'mm')}
       ${row('h_Bezug Verkippung (Sohle → Anschluss)', h_ref_tilt.toFixed(2), 'm')}

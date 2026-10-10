@@ -347,6 +347,7 @@ nav a { position:relative; }
   <div class="hb-nav-sec">Anhang</div>
   <a href="#anhA">A · Normen & Literatur</a>
   <a href="#anhB">B · Formelzeichen</a>
+  <a href="#anhC">C · Annahmen</a>
 </nav>
 
 <!-- ── Hauptinhalt ──────────────────────────── -->
@@ -1020,6 +1021,56 @@ nav a { position:relative; }
     <div class="np-cf">C₁ = {4 + 0.6·(φ'_k − 20)} · 10⁴ · t/2 · (1 + β_p/40) &nbsp;(Gl.4, β_p ≤ 0)</div>
     <div class="np-cv">Beispiel φ=30°, t=3.0m: C₁ = 10·10⁴·1.5 = 150'000 kN/m³ = 150 MN/m³</div>
     <div class="np-cv">Mehrschicht: tiefengewichteter Mittelwert φ_avg; β_p = Geländeneigung</div>
+  </div>
+
+  <div class="np-sh2">3.4.1a · Begrenzung durch den Steifemodul (Annahme des Programms)</div>
+  <div class="np-p">
+    Gl.3 enthält den Steifemodul <strong>nicht</strong>. Steckner leitet sie aus der Tabelle von Sulzberger ab
+    (Bodenart → Bettungsziffer in 2 m Tiefe → Reibungswinkel) und setzt «tragfähigen» Baugrund mit entsprechender
+    Lagerungsdichte voraus. Bei günstigem Reibungswinkel und kleinem M_E überschätzt Gl.3 die Bettung deshalb
+    deutlich: für B = 1.30 m, t = 3.10 m und φ = 33° entspricht sie einem M_E von rund 70 MN/m²; bei
+    M_E = 12 MN/m² liegt sie um den Faktor 6 zu hoch.
+  </div>
+  <div class="np-calc">
+    <div class="np-cf">C₁ = min( C₁,Steckner ; M_E · K_p / B ) &nbsp;&nbsp;&nbsp;mit K_p = tan²(45° + φ'_k/2)</div>
+    <div class="np-cv">Beispiel φ=30°, t=3.1 m, B=1.30 m, M_E=30: min(155 ; 30·3.0/1.30 = 69.2) = 69.2 MN/m³</div>
+    <div class="np-cv">Die Böschungsabminderung (Gl.4) wirkt auf beide Werte.</div>
+  </div>
+  <div class="np-p">
+    Im Modus «Automatisch» gilt der kleinere Wert; Steckner bleibt die Obergrenze für guten Baugrund. Der Ansatz
+    M_E·K_p/B entspricht in der Drehsteifigkeit etwa SIA 267 Ziff. 9.5.4.5 Gl. (53) k_s = E_s/D: eine über die Tiefe
+    konstante Bettung k hat dieselbe Drehsteifigkeit wie die dreieckförmige Verteilung mit C₁ = 3·k an der Sohle,
+    und K_p ≈ 3. Diese Gleichsetzung ist eine <strong>Annahme des Programms</strong> (Nutzerentscheid Oktober 2026),
+    keine Formel von Steckner. Über das Feld «Methode» lässt sich jeder der beiden Werte fest wählen, über das Feld
+    C₁ ein eigener Wert eingeben. Bis Oktober 2026 schaltete das Programm ab M_E = 12 (feinkörnig) bzw. 25 MN/m²
+    (grobkörnig) ganz auf Gl.3 um; gespeicherte Fundamente mit automatischem C₁ rechnen seither mit grösserer
+    Schiefstellung.
+  </div>
+
+  <div class="np-sh2">3.4.1b · Wahlmethode: Setzung mit Wiederbelastung</div>
+  <div class="np-p">
+    Über das Feld «C₁-Berechnungsmethode» lässt sich die Bettung statt dessen aus einer Setzungsberechnung bestimmen
+    (Lang/Huder/Amann, Bodenmechanik und Grundbau, Abschn. 11.6 und 8.5). Das Eigengewicht des Fundamentkörpers ersetzt
+    zunächst das Gewicht des ausgehobenen Bodens; bis dahin wird der Baugrund nur <strong>wieder</strong>belastet und
+    reagiert mit dem steiferen Modul M′_E. Erst der darüber hinausgehende Teil ist Erstbelastung mit M_E.
+  </div>
+  <div class="np-calc">
+    <div class="np-cf">p = G / (B·L) − u &nbsp;&nbsp;&nbsp;&nbsp;G = Eigengewicht Block + Kopf, u = Auftrieb an der Sohle</div>
+    <div class="np-cf">p_WB = min(p ; σ′_v(t)) &nbsp;&nbsp;&nbsp; p_Erst = p − p_WB</div>
+    <div class="np-cf">s = Σ J·Δz · ( p_WB / M′_E + p_Erst / M_E ) &nbsp;&nbsp;&nbsp;J nach Boussinesq im kennzeichnenden Punkt, bis J &lt; 10 %</div>
+    <div class="np-cf">C₁ = C₂ = k_sm = p / s</div>
+    <div class="np-cv">Beispiel B = L = 1.30 m, t = 3.10 m, γ = 20, G = 123.1 kN, M_E = 30: p = 72.8 kPa, davon 62.0 Wiederbelastung;</div>
+    <div class="np-cv">M′_E = 5·M_E → s = 0.64 mm → k_sm = 115 MN/m³ &nbsp;(ohne Wiederbelastung: 37 MN/m³)</div>
+  </div>
+  <div class="np-p">
+    <strong>Annahmen des Programms</strong> (Nutzerentscheid Oktober 2026): (1) Das Verhältnis M′_E / M_E ist mit dem
+    pauschalen <strong>Startwert 5</strong> vorbelegt; die Literatur nennt keinen Wert, massgebend ist der
+    Ödometerversuch bzw. das Baugrundgutachten. (2) Der so bestimmte <strong>vertikale</strong> Bettungsmodul wird
+    unverändert auch an den <strong>Stirnflächen</strong> angesetzt (C₁ = C₂); die Literatur leitet ihn nur für die
+    Sohle her. (3) Als Last zählt nur das Eigengewicht des Fundamentkörpers, ohne Mastlast. Der Wert hängt von
+    Geometrie und Gewicht ab und wird bei jeder Rechnung neu bestimmt. Bei tiefen, leichten Fundamenten überwiegt die
+    Wiederbelastung, und die Bettung kann über dem Wert nach Steckner liegen — die Methode wird darum nur auf
+    ausdrückliche Wahl verwendet und nicht in die automatische Begrenzung einbezogen.
   </div>
 
   <div class="np-sh2">3.4.2 · Charakteristische Einwirkungen und Schnittgrössen</div>
@@ -2240,8 +2291,8 @@ nav a { position:relative; }
         <td>Lastfallkombinationen, Teilsicherheitsbeiwerte γ_G / γ_Q</td>
       </tr>
       <tr>
-        <td>Steckner, H. (1989)</td>
-        <td>Berechnung von Blockfundamenten für Bahnoberleitungsmasten — Bautechnik 2/1989</td>
+        <td>Steckner, S. (1989)</td>
+        <td>Gebrauchstauglichkeits- und Standsicherheitsnachweis für eingespannte Blockfundamente — Bautechnik 66 (1989), H. 2, S. 55–62</td>
         <td>Grenzmoment Gl.66, Nulllinien-Verfahren, GZG Winkler</td>
       </tr>
       <tr>
@@ -2254,6 +2305,11 @@ nav a { position:relative; }
         <td>Eurocode 7: Entwurf, Berechnung und Bemessung in der Geotechnik</td>
         <td>Referenz für Grundbruch Hansen (informativ)</td>
       </tr>
+      <tr><td>SIA 260:2013</td><td>Grundlagen der Projektierung von Tragwerken</td><td>Lastbeiwerte und Kombinationen (Tab. 1)</td></tr>
+      <tr><td>SIA 263:2013</td><td>Stahlbau</td><td>Stahlprofile, Knicken, Querschnittsklassen</td></tr>
+      <tr><td>SIA D 0197</td><td>Geotechnik — Bemessungsbeispiele zur Norm SIA 267</td><td>Grundbruch-Format und Formel (Kap. 5.3.4.3)</td></tr>
+      <tr><td>Lang / Huder / Amann / Puzrin</td><td>Bodenmechanik und Grundbau</td><td>Erweiterte Tragfähigkeitsformel (Abschn. 9.2)</td></tr>
+      <tr><td>DIBt Z-34.15-253</td><td>Bauartgenehmigung Krinner Schraubfundamente V-Serie</td><td>Kenndaten Krinner V 89 / 114 / 140</td></tr>
       <tr>
         <td>Winkler, E. (1867)</td>
         <td>Die Lehre von der Elasticitaet und Festigkeit</td>
@@ -2349,6 +2405,102 @@ nav a { position:relative; }
 
 </div><!-- /anhB -->
 
+<!-- ════════════════════════════════════════════
+     ANHANG C — ANNAHMEN
+     ════════════════════════════════════════════ -->
+<div class="np-page" id="kap-anhC">
+  <div class="np-ph"><strong>BlockCalc — Benutzerhandbuch</strong><span>Anhang C · Annahmen</span></div>
+
+  <div class="np-ch" id="anhC">Anhang C · Annahmen und Vorgabewerte</div>
+
+  <div class="np-p">
+    Diese Liste hält fest, was das Programm annimmt oder vorbelegt und worauf sich der Ansatz stützt. «Annahme des
+    Programms» heisst: keine Norm und keine der Projektunterlagen schreibt den Ansatz vor. Die für ein Fundament
+    tatsächlich verwendeten Werte stehen im Nachweisbericht, Anhang A, mit Abweichungen von der Vorgabe in Fettschrift.
+    Stand Oktober 2026.
+  </div>
+
+  <table class="np-tbl">
+    <thead><tr><th>Grösse</th><th>Ansatz / Vorgabe</th><th>Quelle / Bemerkung</th></tr></thead>
+    <tbody>
+      <tr><th colspan="3">Lasten und Kombinationen (alle Tragsysteme)</th></tr>
+      <tr><td>Lastbeiwerte Typ 2</td><td>γ_G,sup 1.35 · γ_G,inf 0.80 · γ_Q 1.50</td><td>SIA 260 Tab. 1</td></tr>
+      <tr><td>γ_G,inf beim Flachfundament</td><td>fest 1.00</td><td>SIA 267 Ziff. 8.5.2.4 Gl. (35)</td></tr>
+      <tr><td>Lastbeiwerte Typ 1 (Kippen Flach)</td><td>1.20 / 0.80 · γ_Q 1.50</td><td>Vorgabe des Programms, strenger als SIA 260 Tab. 1 (1.10 / 0.90)</td></tr>
+      <tr><td>Kombinationen je Lastfall</td><td>8: Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td><td>SIA 260 Tab. 1 Fussnote 1; N, H, M der ständigen Mastlast tragen gemeinsam denselben Beiwert</td></tr>
+      <tr><td>Richtungen quer und längs</td><td>getrennte Lastfälle, keine Überlagerung</td><td>Annahme des Programms; Überlagerung nur, wenn ein Lastfall beide Richtungen aktiviert</td></tr>
+      <tr><td>Gebrauchstauglichkeit</td><td>charakteristische Lasten, keine γ-Kombinatorik</td><td>Programmwahl</td></tr>
+      <tr><td>Zulässige Schiefstellung</td><td>1:200 nur veränderlich · 1:100 ständig + veränderlich</td><td>SBB 0161.1011.0007</td></tr>
+      <tr><td>Seitliche Auffüllung</td><td>zählt nicht zur Vertikallast</td><td>Nutzerentscheid, vorsichtiger als die ST-Kalibrierung</td></tr>
+      <tr><th colspan="3">Baugrund</th></tr>
+      <tr><td>Teilsicherheiten</td><td>γ_φ 1.20 · γ_c 1.50 · γ_Ea 1.35 · γ_Ep 1.40</td><td>SIA 267 Tab. 1 und Ziff. 8.5.2.3</td></tr>
+      <tr><td>Kennwerte der Bodenprofile</td><td>Vorgaben je Bodenart (φ′, c′, γ, M_E, q_s)</td><td>Vorschlag des Programms; massgebend ist das Baugrundgutachten</td></tr>
+      <tr><td>Böschung endlicher Höhe h_β</td><td>Abminderung anteilig: X = 1 − (1 − X_voll)·min(1, h_β/D_ref)</td><td>Ergänzung des Programms; die Quellen kennen nur die durchlaufende Böschung</td></tr>
+      <tr><th colspan="3">Blockfundament (Steckner 1989)</th></tr>
+      <tr><td>Wandreibung Erdwiderstand</td><td>δ_p = 0.5·φ_k, stufenweise reduziert bis N_u ≥ 0</td><td>wie DC-Fundament; vorsichtiger als das Steckner-Papier</td></tr>
+      <tr><td>Wandreibung aktiv / Ruhedruck</td><td>δ₁ = ⅔·φ_k</td><td>Steckner Gl. 8</td></tr>
+      <tr><td>Mobilisierung des Erdwiderstands</td><td>E_p = E_p0 + 0.25·(E_p − E_p0) über der Nulllinie</td><td>wie DC-Fundament; abschaltbar</td></tr>
+      <tr><td>Beiwerte γ_Ea, γ_Ep</td><td>auf den Kräften, Erddruckbeiwerte mit φ_k</td><td>DC-Fundament / ST-Kalibrierung</td></tr>
+      <tr><td>Böschung im Tragsicherheitsnachweis</td><td>Vorgabe aus; ein: K_p,β/K_p talseitig, nur quer</td><td>Erweiterung über Steckner hinaus</td></tr>
+      <tr><td>Bettungsziffer C₁</td><td>min(Steckner Gl. 3 ; M_E·K_p/B)</td><td>Annahme des Programms (Okt 2026), Abschn. 3.4.1a; SIA 267 Gl. (53) als Bezug</td></tr>
+      <tr><td>Bettungsziffer, Wahlmethode «Setzung mit Wiederbelastung»</td><td>k_sm = p/s aus dem Eigengewicht des Fundamentkörpers; M′_E = 5·M_E (Startwert); gleicher Wert für Sohle und Stirnflächen</td><td>Lang/Huder/Amann Abschn. 11.6 und 8.5. Annahmen des Programms: das Verhältnis 5 (pauschal, kein Literaturwert) und die Übertragung des vertikalen Werts auf die Stirnflächen; Abschn. 3.4.1b</td></tr>
+      <tr><td>C₂ (Sohle)</td><td>= C₁</td><td>Steckner</td></tr>
+      <tr><td>Stirnbettung</td><td>über die Blockfläche D = t − ü</td><td>Programmwahl; ü = 0 entspricht Steckner</td></tr>
+      <tr><td>Sohlspannung, Grundbruch, Gleiten</td><td>informativ, kein Versagenskriterium</td><td>die Standsicherheit führt Gl. 66</td></tr>
+      <tr><td>Bettungsvergleich k_h = 0.5·M_E/t</td><td>reine Anzeige</td><td>EAB EB 102</td></tr>
+      <tr><th colspan="3">Flachfundament</th></tr>
+      <tr><td>Grundbruch</td><td>erweiterte Tragfähigkeitsformel mit Form-, Tiefen-, Neigungs- und Geländefaktoren; N_γ ≈ 1.8·(N_q − 1)·tan φ</td><td>Lang/Huder/Amann Abschn. 9.2.5–9.2.17 wie SIA D 0197 Kap. 5.3.4.3; die SIA 267 gibt keine Formel vor</td></tr>
+      <tr><td>Ersatzfläche</td><td>B′ = B − 2·e (Meyerhof); |e|/B > 1/3 Näherung, ≥ 1/2 nicht führbar</td><td>Programmwahl</td></tr>
+      <tr><td>Widerstandsbeiwert γ_R</td><td>1.00</td><td>SIA 267 Ziff. 8.5.2.1 (1.0 … 1.2)</td></tr>
+      <tr><td>Gleiten</td><td>R = N_d·tan δ_d + A′·c′_d, δ_k ≤ 35°, kein Erdwiderstand</td><td>SIA 267 Gl. (31), Ziff. 8.4.1.1</td></tr>
+      <tr><td>Kohäsion im Gleitwiderstand</td><td>Vorgabe nicht angesetzt</td><td>SIA 267 Ziff. 8.4.1.2: nur bei dauerhafter Wirkung</td></tr>
+      <tr><td>Kippen</td><td>(e_x/B)² + (e_y/L)² ≤ 1/9</td><td>SIA 267 Ziff. 8.5.3.6</td></tr>
+      <tr><td>GZG Lastexzentrizität</td><td>einfache Kernweite</td><td>SIA 267 Ziff. 8.5.4.7</td></tr>
+      <tr><td>GZG Verkippung</td><td>starres Fundament auf dem Halbraum (Borowicka), ν = 0.3, M_E harmonisch gemittelt bis 1.5·Breite</td><td>Annahme des Programms; die Norm regelt kein Verfahren</td></tr>
+      <tr><td>Globale Standsicherheit</td><td>Bishop, nur mit Böschung, Vorgabe aus</td><td>Programmwahl</td></tr>
+      <tr><th colspan="3">Pfahlfundament</th></tr>
+      <tr><td>Äusserer Widerstand</td><td>R_a,d = η_a·R_a,k/γ_M,a mit η_a 0.7 · γ_M,a 1.30 Druck / 1.60 Zug / 1.40 quer</td><td>SIA 267 Gl. (42)–(49)</td></tr>
+      <tr><td>Innerer Widerstand</td><td>Mikropfahl η_i 0.80, γ_s 1.15 · Stahlprofil γ_M1 1.05</td><td>SIA 267 Ziff. 9.5.2.4 · SIA 263</td></tr>
+      <tr><td>Mantelreibung verpresst</td><td>q_s,k tiefenkonstant, Vorgabe je Bodenart (untere Grenze der niedrigsten tragfähigen Klasse)</td><td>EA-Pfähle Tab. 5.29/5.30 — Annahme des Programms, massgebend ist die Probebelastung</td></tr>
+      <tr><td>Mantelreibung gerammt</td><td>q_s = K₀·σ′_v·tan(⅔·φ′) am Profilumriss, ohne Kohäsion</td><td>Annahme des Programms</td></tr>
+      <tr><td>Spitzenwiderstand</td><td>Vorgabe 0; nur Einzelpfahl ab 300 mm Breite, nur Druck</td><td>EA-Pfähle; Wert liefert der Nutzer</td></tr>
+      <tr><td>Zyklische Abminderung</td><td>Vorgabe 1.00 (keine)</td><td>SIA 267 Ziff. 8.5.1.3 nennt keinen Wert</td></tr>
+      <tr><td>Wirksame Verpresslänge L_crit</td><td>Vorgabe keine Begrenzung</td><td>konstruktive Regel, Nutzerentscheid</td></tr>
+      <tr><td>Seitliche Bettung</td><td>k_s = E_s/D mit E_s = M_E</td><td>SIA 267 Ziff. 9.5.4.5 Gl. (53). Bis Oktober 2026 rechnete das Programm pauschal mit 0.30·M_E/((1 − ν²)·d), einer Faustregel ohne belegte Quelle; der Faktor α bleibt einstellbar</td></tr>
+      <tr><td>Bettung oberflächennah</td><td>linearer Anstieg von 0 an der Geländeoberfläche auf den vollen Wert in der Tiefe 3·d</td><td>Annahme des Programms; die Norm verlangt die Abminderung, nennt aber kein Mass. Gruppenpfähle beginnen an der UK Bankett und liegen meist unterhalb dieses Bereichs</td></tr>
+      <tr><td>Bettung für Knicken und Kopf-Drehfeder</td><td>ohne die oberflächennahe Abminderung</td><td>Annahme des Programms (Knick-Halbwelle liegt in der Tiefe)</td></tr>
+      <tr><td>Seitlicher Gruppeneffekt</td><td>ein Abminderungsfaktor je Gruppe aus s/D</td><td>Programmwahl</td></tr>
+      <tr><td>Bankett / Pfahlkopf</td><td>starr / gelenkig</td><td>Annahme des Programms; Bankett nicht bemessen</td></tr>
+      <tr><td>Verformung der Gruppe</td><td>mit senkrechter Pfahlachse</td><td>Programmwahl, nur Gebrauchstauglichkeit</td></tr>
+      <tr><td>Aufbruchsicherheit Zugpfähle</td><td>0.90·G_E,k ≥ Z_d mit angehängtem Bodenkörper, η_Z 0.80</td><td>SIA 267 Ziff. 9.5.3.3 verlangt den Nachweis; Verfahren nach EA-Pfähle / DIN 1054 aus dem Fachwissen, Quelle nicht in den Projektunterlagen</td></tr>
+      <tr><td>Torsion</td><td>Stahl St. Venant (I-Profil ohne Ausrundungen, Rohr nach Bredt); Boden T_Rd = r_T·R_s,d</td><td>Annahme des Programms; Wölbkrafttorsion nicht erfasst</td></tr>
+      <tr><td>Knicken</td><td>Kurve c, N_cr = 2·√(k·EI)</td><td>SIA 263; elastische Bettung der weichsten Schicht</td></tr>
+      <tr><td>Querschnittsklasse Rohre</td><td>ab d/t > 70·ε² elastisch</td><td>SIA 263</td></tr>
+      <tr><td>Krinner V-Serie</td><td>S235, 1.5 mm Abrostung, planmässig nur axial</td><td>DIBt Z-34.15-253; Biegung liegt ausserhalb der Genehmigung</td></tr>
+      <tr><td>Korrosion Mikropfähle</td><td>kein Abrostzuschlag, Schutz über die Schutzart</td><td>SIA 267 Ziff. 9.6.1.5</td></tr>
+      <tr><th colspan="3">Sicherung / Aushub</th></tr>
+      <tr><td>Lastverteilung Block ↔ Pfahl</td><td>über Drehfedern</td><td>Annahme des Programms</td></tr>
+      <tr><td>Laterale Tragwirkung</td><td>p-y-Bettungsbalken, elasto-plastisch</td><td>gegen Hetényi geprüft</td></tr>
+      <tr><td>Seitliche Bettung</td><td>k_s = E_s/D, oberflächennah linear bis 3·B</td><td>SIA 267 Gl. (53); Abminderung wie beim Pfahlfundament</td></tr>
+      <tr><td>Überlagerung Block ↔ Pfahl</td><td>im Erdkeil des Blocks (bis zur Tiefe z_ov) Bettung und Grenzwiderstand zu 50 %, gewichtet mit dem Anteil der Pfähle im Keil</td><td>Annahme des Programms: die Spannungen von Block und Pfahl überlagern sich nur dort; darunter gilt der volle Wert</td></tr>
+      <tr><td>Wirkungsschatten Block → Pfahl</td><td>Rankine-Keil ohne Wandreibung, seitliche Spreizung φ/2</td><td>Ingenieurnäherung des Programms</td></tr>
+      <tr><td>Aushub</td><td>durchgehend angenommen; wirksame Breite linear</td><td>Näherung, im Programm ausgewiesen</td></tr>
+      <tr><td>Kernweite im Aushubzustand</td><td>e ≤ b/6</td><td>Vorgabe des Programms</td></tr>
+      <tr><td>Stahl</td><td>N + M mit γ_M 1.05</td><td>SIA 263</td></tr>
+      <tr><td>γ_G,red für Bauzustände</td><td>Vorgabe aus; 1.20 nur Standard-Blockfundament</td><td>Nutzerentscheid</td></tr>
+    </tbody>
+  </table>
+
+  <div class="np-sh2">Nicht Gegenstand der Nachweise</div>
+  <div class="np-p">
+    Erdbeben und Anprall · Ermüdung und zyklische Aufweichung der Bettung · Bemessung der Betonbauteile (Bewehrung,
+    Durchstanzen) · Setzungen · hydraulischer Grundbruch · Rammbarkeit · Fels- und Ankerverankerung · Anschluss des
+    Mastes an das Fundament.
+  </div>
+
+</div><!-- /anhC -->
+
+
 
 
 </div><!-- /np-wrap -->
@@ -2356,7 +2508,7 @@ nav a { position:relative; }
 </div><!-- /hb-layout -->
 
 <!-- GZT-Diagramm: dieselbe Datei wie in der App (keine zweite Kopie mehr) -->
-<script src="js/diagramm-gzt.js?v=2026-10-10h"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10i"></script>
 <script>
 
 let _lastResults=null, _lastG=null;

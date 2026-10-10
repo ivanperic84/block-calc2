@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10h">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10i">
 </head>
 <body>
 
@@ -549,8 +549,14 @@
                   <option value="auto">Automatisch</option>
                   <option value="winkler">Winkler — M_E · Kp / B</option>
                   <option value="steckner">Steckner Gl.3 — φ-abhängig</option>
+                  <option value="setzung">Setzung mit Wiederbelastung</option>
                 </select>
                 <span id="c1-methode-hint" style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block">auto — Methode nach M_E und Bodenart</span>
+              </div>
+              <div class="field" id="bg_me_ratio_field" style="display:none">
+                <label>Wiederbelastung M′_E / M_E</label>
+                <input id="bg_me_ratio" type="number" value="5" step="0.5" min="1" oninput="autoC1();scheduleCalc()"/>
+                <div class="hint">Startwert <b>5</b> ist eine pauschale Annahme — massgebend ist der Ödometerversuch bzw. das Baugrundgutachten. 1 = keine Wiederbelastung.</div>
               </div>
               <div class="g2">
                 <div class="field">
@@ -1021,8 +1027,7 @@
       <!-- Lastfall- und Kombinationswahl oben mittig -->
       <div id="viewer-lf" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <div class="vc-lf-bar">
-          <select id="vc-lf-sel" class="vc-sel" onchange="selectVcLfSel(this.value)" title="Gezeigter Lastfall: der massgebende (kleinstes η, folgt dem Ergebnis) oder ein bestimmter"></select>
-          <select id="vc-komb" class="vc-sel" onchange="selectVcKomb(this.value)" title="Kombination nach SIA 260: massgebende oder eine der 8 Einzelkombinationen (Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q). Wirkt auf Einwirkungen (Modus d), Spannungsbild und Resultierende."></select>
+          <select id="vc-lf-sel" class="vc-sel" onchange="selectVcLfSel(this.value)" title="Gezeigt wird der massgebende Lastfall mit seiner massgebenden Kombination (kleinstes η, folgt dem Ergebnis) — über alle Lastfälle, nur quer oder nur längs"></select>
           <button id="vc-char-toggle" class="on" onclick="toggleGZTChar(event)" title="Einwirkungen und Erddrücke im Modell: k = charakteristische Werte (Start) · d = Bemessungswerte">k</button>
         </div>
       </div>
@@ -1082,7 +1087,7 @@
         Eingaben definieren<br>und Berechnen drücken
       </div>
     </div>
-    <div style="flex-shrink:0;border-top:1px solid var(--ol);padding:10px 14px">
+    <div class="res-foot" style="flex-shrink:0;border-top:1px solid var(--ol);padding:10px 14px">
       <button class="btn btn-tonal btn-full btn-sm" onclick="openNachweisplot()" id="btn-plot" style="display:none">
         <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="16" height="16" rx="1.5"/><path d="M5 14l3-4 3 3 2-3 2 2"/></svg>
         Nachweisplot exportieren
@@ -1467,12 +1472,12 @@
           <div class="hint">Pfahlmitte → nächste Bankettkante. Steuert die automatischen Maximal-Abstände und die Ampel in der Draufsicht.</div>
         </div>
         <div class="field" style="margin-top:8px">
-          <label>α_lat — Laterale Bettung k_s = M_E·α_lat/((1−ν²)·d)</label>
-          <div style="display:flex;align-items:center;gap:8px">
-            <input id="set-pfahl-alat" type="number" value="0.30" step="0.05" min="0.1" max="1.0" style="flex:1"/>
-            <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">Vesić ≈ 0.65</span>
+          <label>Seitliche Bettung der Pfähle — Faktor α auf k_s = E_s/D</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div style="font-size:9px;color:var(--xdim);margin-bottom:2px">Pfahlfundament</div><input id="set-pfahl-alat" type="number" value="1.00" step="0.05" min="0.1" max="1.0" style="width:100%"/></div>
+            <div><div style="font-size:9px;color:var(--xdim);margin-bottom:2px">Sicherungspfähle</div><input id="set-sich-alat" type="number" value="1.00" step="0.05" min="0.1" max="1.0" style="width:100%"/></div>
           </div>
-          <div class="hint"><b>0.30</b> konservativ/weich (Default) · <b>0.50</b> moderat · <b>0.65</b> Vesić-Mittel · höher = steifer. Wirkt auf Verformung, Biegemoment und Knicken — nur Pfahlfundament und Sicherung, nicht den Block.</div>
+          <div class="hint"><b>1.00</b> = SIA 267 Ziff. 9.5.4.5 Gl. (53), Vorgabe. Kleiner = weicher (bis Oktober 2026 rechnete das Programm pauschal mit 0.30). Oberflächennah steigt die Bettung linear von 0 auf den vollen Wert in der Tiefe 3·d; Sicherungspfähle im Erdkeil des Blocks tragen dort nur zur Hälfte. Wirkt auf Verformung, Biegemoment und Knicken — nicht auf den Block.</div>
         </div>
         <div class="field" style="margin-top:8px">
           <label>L_crit — Wirksame Verpresslänge <em>m</em></label>
@@ -1752,44 +1757,44 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10h"></script>
-<script src="js/helfer.js?v=2026-10-10h"></script>
-<script src="js/speicher.js?v=2026-10-10h"></script>
-<script src="js/einstellungen.js?v=2026-10-10h"></script>
-<script src="js/templates.js?v=2026-10-10h"></script>
-<script src="js/viewer.js?v=2026-10-10h"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10h"></script>
-<script src="js/lasten.js?v=2026-10-10h"></script>
-<script src="js/boden.js?v=2026-10-10h"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10h"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10h"></script>
-<script src="js/modell.js?v=2026-10-10h"></script>
-<script src="js/lastniveaus.js?v=2026-10-10h"></script>
-<script src="js/bettung.js?v=2026-10-10h"></script>
-<script src="js/erddruck.js?v=2026-10-10h"></script>
-<script src="js/kataloge.js?v=2026-10-10h"></script>
-<script src="js/bishop.js?v=2026-10-10h"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10h"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10h"></script>
-<script src="js/sicherung.js?v=2026-10-10h"></script>
-<script src="js/rechenkern.js?v=2026-10-10h"></script>
-<script src="js/dimensionierung.js?v=2026-10-10h"></script>
-<script src="js/bemessung.js?v=2026-10-10h"></script>
-<script src="js/fundamentliste.js?v=2026-10-10h"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10h"></script>
-<script src="js/bericht.js?v=2026-10-10h"></script>
-<script src="js/bericht-flach.js?v=2026-10-10h"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10h"></script>
-<script src="js/diagramme.js?v=2026-10-10h"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10h"></script>
-<script src="js/ergebnis.js?v=2026-10-10h"></script>
-<script src="js/layout.js?v=2026-10-10h"></script>
-<script src="js/projekt.js?v=2026-10-10h"></script>
-<script src="js/mobil.js?v=2026-10-10h"></script>
-<script src="js/selbsttest.js?v=2026-10-10h"></script>
-<script src="js/tastatur.js?v=2026-10-10h"></script>
-<script src="js/embed.js?v=2026-10-10h"></script>
-<script src="js/start.js?v=2026-10-10h"></script>
+<script src="js/boot.js?v=2026-10-10i"></script>
+<script src="js/helfer.js?v=2026-10-10i"></script>
+<script src="js/speicher.js?v=2026-10-10i"></script>
+<script src="js/einstellungen.js?v=2026-10-10i"></script>
+<script src="js/templates.js?v=2026-10-10i"></script>
+<script src="js/viewer.js?v=2026-10-10i"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10i"></script>
+<script src="js/lasten.js?v=2026-10-10i"></script>
+<script src="js/boden.js?v=2026-10-10i"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10i"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10i"></script>
+<script src="js/modell.js?v=2026-10-10i"></script>
+<script src="js/lastniveaus.js?v=2026-10-10i"></script>
+<script src="js/bettung.js?v=2026-10-10i"></script>
+<script src="js/erddruck.js?v=2026-10-10i"></script>
+<script src="js/kataloge.js?v=2026-10-10i"></script>
+<script src="js/bishop.js?v=2026-10-10i"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10i"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10i"></script>
+<script src="js/sicherung.js?v=2026-10-10i"></script>
+<script src="js/rechenkern.js?v=2026-10-10i"></script>
+<script src="js/dimensionierung.js?v=2026-10-10i"></script>
+<script src="js/bemessung.js?v=2026-10-10i"></script>
+<script src="js/fundamentliste.js?v=2026-10-10i"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10i"></script>
+<script src="js/bericht.js?v=2026-10-10i"></script>
+<script src="js/bericht-flach.js?v=2026-10-10i"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10i"></script>
+<script src="js/diagramme.js?v=2026-10-10i"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10i"></script>
+<script src="js/ergebnis.js?v=2026-10-10i"></script>
+<script src="js/layout.js?v=2026-10-10i"></script>
+<script src="js/projekt.js?v=2026-10-10i"></script>
+<script src="js/mobil.js?v=2026-10-10i"></script>
+<script src="js/selbsttest.js?v=2026-10-10i"></script>
+<script src="js/tastatur.js?v=2026-10-10i"></script>
+<script src="js/embed.js?v=2026-10-10i"></script>
+<script src="js/start.js?v=2026-10-10i"></script>
 
 </body>
 </html>

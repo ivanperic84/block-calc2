@@ -204,9 +204,10 @@ function setLFPreset(i, preset){
 function addLF(){
   LF.push({
     name: `LF ${LF.length + 1}`,
-    preset: 'custom', gG: 1.35, gW: 1.5, nw: 'beide',
-    comp: { NG:true, HGx:true, HGy:true, MGx:false, MGy:false,
-            HWx:true, HWy:true, MWx:false, MWy:false }
+    preset: 'quer', gG: 1.35, gW: 1.5, nw: 'beide',
+    // Vorgabe: eine Richtung (quer). Beide Richtungen überlagert nur auf ausdrückliche Wahl («Alle»).
+    comp: { NG:true, HGx:true, HGy:false, MGx:false, MGy:true,
+            HWx:true, HWy:false, MWx:false, MWy:true }
   });
   renderLF();
 }
@@ -283,74 +284,57 @@ function buildLFMatrix(){
   });
   html += `</tr></thead><tbody>`;
 
-  // Block: Typ 2 / ST als 8 generierte Kombinationen direkt in der Matrix
-  // (EG ∈ {γ_G,inf, γ_G,sup} × Ständig ∈ {inf, sup} × Variabel ∈ {0, γ_Q})
-  {
-    html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)">Typ 2 — ${esc(gzLabel('t2_'+sys))} · 8 Kombinationen (SIA 260): Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td></tr>`;
-    let _k = 1;
-    for(const fE of [gG2i, gG2s]) for(const fG of [gG2i, gG2s]) for(const fQ of [0, gQ2]){
-      const bg = _k%2===0 ? `background:var(--s1)` : '';
-      html += `<tr style="${bg}">
-        <td style="${tdN}">
-          <span style="color:var(--acc);font-weight:500">Komb. ${_k}</span>
-        </td>
-        <td style="${tdS};color:var(--on2)">${fE.toFixed(2)}</td>`;
-      cols.forEach(c => {
-        const isW = c[3]==='W';
-        const v = isW ? fQ : fG;
-        html += `<td style="${tdS};${isW ? 'color:var(--acc)' : 'color:var(--ok)'}">${v.toFixed(2)}</td>`;
-      });
-      html += `</tr>`;
-      _k++;
-    }
-  }
-
-  GZ.forEach((gz, i) => {
-    const bg = i%2===1 ? `background:var(--s1)` : '';
-    html += `<tr style="${bg}">
+  // Je Lastfall ein eigener Block mit den WIRKSAMEN Beiwerten: eine im Lastfall nicht aktivierte
+  // Komponente trägt keinen Beiwert («·»). Quer und längs werden damit sichtbar getrennt geführt
+  // (so rechnet der Kern seit jeher — lf.comp); überlagert wird nur, was ein Lastfall ausdrücklich
+  // aktiviert (Vorlage «Alle» oder einzelne Häkchen).
+  const dot = `<span style="color:var(--xdim);font-size:9px">·</span>`;
+  const hdS = `padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)`;
+  const zelle = (lf, c, v, farbe) => lf.comp?.[c[0]]
+    ? `<td style="${tdS};color:${farbe}">${v.toFixed(2)}</td>`
+    : `<td style="${tdS}">${dot}</td>`;
+  const richt = lf => { const r = _lfRichtung(lf); const c = lf.comp||{}, h = LF_COMP_DEFS.some(d => d[0]!=='NG' && c[d[0]]);
+    return r==='quer' ? 'quer (x)' : r==='laengs' ? 'längs (y)' : h ? 'quer + längs überlagert' : 'nur vertikal'; };
+  const gzZeile = (lf, gz, i) => {
+    let h = `<tr style="${i%2===1 ? 'background:var(--s1)' : ''}">
       <td style="${tdN}">
         <span style="color:${gz.color};font-weight:500">${gz.label}</span>
         <span style="color:var(--xdim);font-size:9px;display:block;margin-top:1px">${gz.sub}</span>
-        ${gz.footnote ? `<span style="color:var(--dim);font-size:8.5px;font-style:italic">*${gz.footnote}</span>` : ''}
       </td>
-      <td style="${tdS};color:var(--on2)">${gz.gk !== undefined ? gz.gk.toFixed(2) : '<span style="color:var(--xdim);font-size:9px">·</span>'}</td>`;
+      <td style="${tdS};color:var(--on2)">${gz.gk !== undefined ? gz.gk.toFixed(2) : dot}</td>`;
     cols.forEach(c => {
-      const val = gz.gamma(c);
       const isN_G_inf = gz.label==='Typ 1' && c[0]==='NG';
-      const col = c[3]==='W' ? 'color:var(--acc)' : `color:${isN_G_inf ? 'var(--warn)' : 'var(--ok)'}`;
-      html += `<td style="${tdS};${col}">${val}</td>`;
+      h += zelle(lf, c, +gz.gamma(c), c[3]==='W' ? 'var(--acc)' : (isN_G_inf ? 'var(--warn)' : 'var(--ok)'));
     });
-    html += `</tr>`;
-  });
+    return h + `</tr>`;
+  };
 
-  // Trennzeile + LF-Aktivierungsmatrix darunter
-  html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);border-top:2px solid var(--ol);background:var(--s2)">Lastfall-Aktivierung</td></tr>`;
-
-  const ck = `<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="2,6 5,9 10,3"/></svg>`;
-  const dot = `<span style="color:var(--xdim);font-size:9px">·</span>`;
-  LF.forEach((lf, i) => {
-    const bg = i%2===0 ? '' : `background:var(--s1)`;
-    const {gG: lgG} = getGF(lf);
-    const typ = lgG <= 1.05 ? 'GZG' : 'Typ 2';
-    html += `<tr style="${bg}">
-      <td style="${tdN};color:var(--on2)">
-        ${lf.name}
-        <span style="color:var(--xdim);font-size:8.5px;margin-left:4px">${typ}</span>
-      </td>
-      <td style="${tdS}">${dot}</td>`;
-    cols.forEach(c => {
-      const active = lf.comp?.[c[0]];
-      const col = active ? (c[3]==='W' ? 'color:var(--acc)' : 'color:var(--on2)') : '';
-      html += `<td style="${tdS};${col}">${active ? ck : dot}</td>`;
+  LF.forEach((lf, li) => {
+    const nwLf = lf.nw || 'beide';
+    const doGZT = nwLf !== 'gzg', doGZG = nwLf !== 'gzt';
+    html += `<tr><td colspan="${cols.length+2}" style="${hdS};color:var(--on2);${li ? 'border-top:2px solid var(--ol);' : ''}">${esc(lf.name)} <span style="color:var(--xdim)">· ${richt(lf)}</span></td></tr>`;
+    if(doGZT){
+      html += `<tr><td colspan="${cols.length+2}" style="${hdS}">Typ 2 — ${esc(gzLabel('t2_'+sys))}</td></tr>`;
+      let _k = 1;
+      for(const fE of [gG2i, gG2s]) for(const fG of [gG2i, gG2s]) for(const fQ of [0, gQ2]){
+        html += `<tr style="${_k%2===0 ? 'background:var(--s1)' : ''}">
+          <td style="${tdN}"><span style="color:var(--acc);font-weight:500">Komb. ${_k}</span></td>
+          <td style="${tdS};color:var(--on2)">${fE.toFixed(2)}</td>`;
+        cols.forEach(c => { const isW = c[3]==='W'; html += zelle(lf, c, isW ? fQ : fG, isW ? 'var(--acc)' : 'var(--ok)'); });
+        html += `</tr>`;
+        _k++;
+      }
+    }
+    GZ.forEach((gz, i) => {
+      const istGzg = gz.label === 'GZG';
+      if(istGzg ? !doGZG : !doGZT) return;
+      html += gzZeile(lf, gz, i);
     });
-    html += `</tr>`;
   });
 
   html += `</tbody></table>`;
 
-  if(isBlock){
-    html += `<div class="hint" style="margin-top:6px">Alle 8 Kombinationen werden im GZT iteriert — die massgebende (min. η) wird im Nachweis ausgewiesen. G_k = Eigengewicht Fundament. Anpassung über die Lastbeiwerte (γ_G sup/inf, γ_Q).</div>`;
-  }
+  html += `<div class="hint" style="margin-top:6px">Je Lastfall werden nur die aktivierten Komponenten angesetzt («·» = nicht angesetzt): quer und längs werden getrennt nachgewiesen, nicht überlagert. Sollen beide Richtungen gleichzeitig wirken, einen Lastfall mit der Vorlage «Alle» oder eigenen Häkchen anlegen. Je Lastfall laufen alle 8 Kombinationen; massgebend ist das kleinste η. G_k = Eigengewicht Fundament.</div>`;
   return html;
 }
 

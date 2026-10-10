@@ -244,7 +244,7 @@ function _npAnnahmen(sys, ph){
     z('Mobilisierung des Erdwiderstands über der Nulllinie', S.stecknerMob!==false ? 'mob = '+(+S.mob).toFixed(2) : 'aus (voller λ_p)', 'mob = 0.25', 'wie DC-Fundament: E_p = E_p0 + mob·(E_p − E_p0)');
     z('Böschung im Tragsicherheitsnachweis', an(S.stecknerSlope===true), 'aus', 'Erweiterung über Steckner hinaus (K_p,β/K_p talseitig)');
     var _c1t=(num('bg_c1')!=null?num('bg_c1').toFixed(1):'–')+' MN/m³ · '+(_c1Manual?'manuell':'automatisch');
-    z('Bettungsziffer C₁', _c1t, _c1Manual ? 'automatisch' : _c1t, 'aus M_E, φ, B, t (Mischung Winkler / Steckner Gl. 4); Böschung mindert ab');
+    z('Bettungsziffer C₁', _c1t, _c1Manual ? 'automatisch' : _c1t, _c1Methode==='setzung' ? 'Setzung aus Eigengewicht mit Wiederbelastung (Lang/Huder/Amann 11.6 / 8.5); Annahmen: M′_E/M_E = '+(+gi('bg_me_ratio')||5)+' (Startwert 5), gleicher Wert für Sohle und Stirnflächen' : 'automatisch: kleinerer Wert aus Steckner Gl. 3 (φ, t) und M_E·K_p/B — der Steifemodul begrenzt Steckner; Böschung mindert ab (Gl. 4)');
     z('Zulässige Schiefstellung (veränderlich / ständig + veränderlich)', '1:'+Math.round(1/(S.alphaZul||0.005))+' / 1:'+Math.round(1/(S.alphaZulFull||0.01)), '1:200 / 1:100', 'SBB 0161.1011.0007');
     z('Seitliche Auffüllung in der Vertikallast', 'nicht angesetzt', 'nicht angesetzt', 'fest; nur Betonkörper abzüglich Auftrieb');
     z('Sohlspannung, Grundbruch, Gleiten', 'informativ', 'informativ', 'die Standsicherheit des eingespannten Blocks führt Gl. 66');
@@ -283,7 +283,8 @@ function _npAnnahmen(sys, ph){
     }
     z('Mantelreibung: Abminderung zyklisch', num('pb_zykfac')==null ? 1 : num('pb_zykfac'), 1.00, 'Eingabe; SIA 267 Ziff. 8.5.1.3 verlangt die Berücksichtigung, nennt keinen Wert. 1.00 = nicht abgemindert');
     z('Spitzenwiderstand', ein && (num('pb_qb')||0)>0 ? 'q_b,k = '+num('pb_qb').toFixed(0)+' kPa (eingegeben)' : 'nicht angesetzt', 'nicht angesetzt', 'nur Einzelpfahl ab 300 mm Breite (EA-Pfähle), nur Druck');
-    z('Seitliche Bettung k_s = α·M_E/((1−ν²)·d)', 'α = '+(+(S.pfahlAlphaLat??0.30)).toFixed(2), 'α = 0.30', 'Vorgabe des Programms; EA-Pfähle k_s ≈ E_s/D wäre rund dreimal steifer');
+    z('Seitliche Bettung k_s = α·E_s/D', 'α = '+(+(S.pfahlAlphaLat??1.0)).toFixed(2), 'α = 1.00', 'SIA 267 Ziff. 9.5.4.5 Gl. (53), E_s = M_E');
+    z('Bettung oberflächennah', 'linear von 0 bis '+KS_RAMPE_D+'·d unter Gelände', 'linear von 0 bis '+KS_RAMPE_D+'·d unter Gelände', 'Annahme des Programms; die Norm verlangt die Abminderung, nennt aber kein Mass'+(ein ? '' : '. Gruppenpfähle beginnen an der UK Bankett, meist unterhalb dieses Bereichs'));
     if(!ein){
       z('Seitlicher Gruppeneffekt (p-Multiplier)', an(S.pfahlLatGroup!==false), 'ein', 'ein Mittelwert je Gruppe aus s/D');
       z('Verformung mit senkrechter Pfahlachse', an(S.pfahlGzgDecouple!==false), 'ein', 'nur Gebrauchstauglichkeit; Kräfte immer mit Neigung');
@@ -292,6 +293,7 @@ function _npAnnahmen(sys, ph){
     } else {
       z('Einzelpfahl: Bettung', 'linear', 'linear', 'fest; Bettungsbalken mit H und M am Kopf, Bodenfliessen nur in der getrennten Grenzlastprüfung');
     }
+    if(!ein) z('Aufbruchsicherheit der Zugpfähle', 'angehängter Bodenkörper, η_Z = 0.80, γ_G,inf = 0.90', 'angehängter Bodenkörper, η_Z = 0.80, γ_G,inf = 0.90', 'SIA 267 Ziff. 9.5.3.3 verlangt den Nachweis; Verfahren nach EA-Pfähle / DIN 1054 (Quelle nicht in den Projektunterlagen)');
     z('Knicken', 'Kurve c, N_cr = 2·√(k·EI)', 'Kurve c, N_cr = 2·√(k·EI)', 'fest; SIA 263, elastische Bettung der weichsten Schicht');
     z('Korrosion', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag',
       ein && KRINNER_PILES[gi('pb_prof')] ? 'DIBt Z-34.15-253' : 'ASTRA-Bericht 717: Schutz über die Schutzart (SIA 267 Ziff. 9.6.6.4: ≥ 40 mm Zementstein bei Nutzungsdauer > 5 Jahre)');
@@ -313,7 +315,7 @@ function _npAnnahmen(sys, ph){
     _npSh2('Nicht Gegenstand dieses Nachweises')+
     '<div style="font-size:8.5px;color:var(--dim);line-height:1.6">Erdbeben und Anprall · Ermüdung'+(sys==='pfahl' ? ' und zyklische Aufweichung der seitlichen Bettung (die Mantelreibung hat einen wählbaren Abminderungsfaktor)' : ' und zyklische Einflüsse auf Widerstand und Verformung')+' · '+
       'Bemessung der Betonbauteile (Bewehrung, Durchstanzen) · Setzungen · hydraulischer Grundbruch · '+
-      (sys==='pfahl' ? 'angehängter Bodenkörper bei Zugpfahlgruppen · Rammbarkeit · ' : '')+
+      (sys==='pfahl' ? 'Rammbarkeit · ' : '')+
       'Anschluss des Mastes an das Fundament. Die Kennwerte des Baugrunds sind Eingaben des Nutzers.</div>'+
   '</div>';
 }
@@ -717,9 +719,12 @@ function buildNachweisDoc(results,G){
         '<tr><td>M_ok</td><td>Moment an OK Block (Steckner Bezugspunkt, char.)</td><td class="r">'+_npN(M_ok_g)+' kNm</td></tr>'+
         '<tr><td>C₁ = C₂</td><td>Bettungsziffer</td><td class="r">'+_npN(+gi('bg_c1'))+' MN/m³</td></tr>'+(function(){
           var cd=window._c1Calc||{};
-          var meth=cd.zoneKey==='ok'  ? 'Steckner Gl.3 (M_E ≥ '+cd.grenzwert+' MN/m²)' :
-                   cd.zoneKey==='mid' ? 'Blend: '+(((cd.w||0)*100).toFixed(0))+'% Steckner + '+((((1-(cd.w||0))*100).toFixed(0)))+'% Winkler M_E·Kp/B' :
-                   cd.zoneKey==='soft'? 'Winkler M_E·Kp/B (Steckner nicht gültig — M_E < 12 MN/m²)' : '—';
+          var vgl=(cd.c1_steck!=null && cd.c1_me!=null) ? ' — Steckner '+cd.c1_steck.toFixed(1)+' / M_E·Kp/B '+cd.c1_me.toFixed(1)+' MN/m³' : '';
+          var meth=cd.manual ? 'manuell eingegeben'+vgl :
+                   cd.methode==='setzung' ? 'Setzung aus Eigengewicht mit Wiederbelastung (Lang/Huder/Amann 11.6 / 8.5): p = '+((cd.setz||{}).p||0).toFixed(0)+' kPa, davon Wiederbelastung '+((cd.setz||{}).pWB||0).toFixed(0)+' kPa, M′_E = '+((cd.setz||{}).ratio||5).toFixed(1)+'·M_E, s = '+(((cd.setz||{}).s||0)*1000).toFixed(2)+' mm; Annahme: gilt für Sohle und Stirnflächen'+vgl :
+                   _c1Methode!=='auto' ? (cd.zoneKey==='ok' ? 'Steckner Gl.3 (fest gewählt)' : 'Winkler M_E·Kp/B (fest gewählt)')+vgl :
+                   cd.zoneKey==='ok'  ? 'kleinerer Wert: Steckner Gl.3'+vgl :
+                   cd.zoneKey==='soft'? 'kleinerer Wert: M_E·Kp/B (begrenzt Steckner Gl.3)'+vgl : '—';
           var me_info = cd.me_avg!=null ? ' · M_E,avg = '+cd.me_avg.toFixed(0)+' MN/m²' : '';
           return '<tr><td style="font-size:7.5px;color:var(--dim)">C₁-Methode</td><td style="font-size:7.5px;color:var(--dim)">'+meth+me_info+'</td><td></td></tr>';
         })()+

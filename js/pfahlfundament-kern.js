@@ -242,11 +242,17 @@ function pfahlbockAnalyse(cfg){
   const latGrpOn  = (typeof SETTINGS === 'undefined') || SETTINGS.pfahlLatGroup !== false;
   const latGrpFac = latGrpOn ? latGroupFactor(grp.sd) : 1;
   // Laterale Bettung (schichtweise M_E) + p-y-Kopfsteifigkeit
-  const nu = 0.3, alat = Math.min(1, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 0.30)));
+  const nu = 0.3, alat = Math.min(1, Math.max(0.1, +(SETTINGS.pfahlAlphaLat ?? 1.0)));
   // Böschung (abfallend) reduziert die laterale Bettung/Stützung (Talseite) — Faktor Kp,β/Kp aus renderPfahlbock.
   const bettungFac = Math.min(1, Math.max(0.1, cfg.bettungFac ?? 1));
-  const ksAt = z => { const s = schichtAtDepth(Math.max(0,z)); const me = Math.max(0.5, s.me ?? (+gi('bg_me')||10));
-                      return me*1000 / ((1-nu*nu)*dG) * alat * bettungFac * latGrpFac; };
+  // k_s = E_s/D (SIA 267 Gl. 53); ksVoll = ohne, ksAt = mit oberflächennaher Abminderung (ksRampe).
+  // Knicken und die Kopf-Drehfeder rechnen mit ksVoll (Knick-Halbwelle liegt in der Tiefe).
+  const ksVoll = z => { const s = schichtAtDepth(Math.max(0,z)); const me = Math.max(0.5, s.me ?? (+gi('bg_me')||10));
+                        return me*1000 / dG * alat * bettungFac * latGrpFac; };
+  // Die Abminderung zählt ab GELÄNDE: Gruppenpfähle beginnen an der UK Bankett in der Tiefe cfg.zKopf und
+  // liegen dort meist schon unter 3·d; der Einzelpfahl beginnt an der Oberfläche (zKopf = 0).
+  const zKopf = Math.max(0, +cfg.zKopf || 0);
+  const ksAt = z => ksVoll(z) * ksRampe(z + zKopf, dG);
   const py1 = bddBeamPY(EI, dG, e, L, 1, ksAt);
   const kLat = py1 ? Math.max(1, 1000/Math.max(1e-3, py1.yHead_mm)) : 0.02*kAx;
   // Mantelreibung am Verpresskörper — schichtweise, q_s je Schicht (s.qs) oder α_c·c + β·σ'v.
@@ -298,7 +304,7 @@ function pfahlbockAnalyse(cfg){
   // Knick-Deckel: die Euler-auf-Bettung-Formel N_cr=2√(k·EI) ist längenunabhängig und nur gültig, wenn die
   // Einbindelänge mindestens eine Knick-Halbwelle L_hw=π·(EI/(k·B))^0.25 umfasst — sonst ist sie ungültig
   // (der laterale Nachweis wird dann massgebend). Flag zur Kennzeichnung im Panel/Bericht.
-  let _ksMinL = Infinity; for(let i=0;i<=20;i++) _ksMinL = Math.min(_ksMinL, ksAt(i/20*L));
+  let _ksMinL = Infinity; for(let i=0;i<=20;i++) _ksMinL = Math.min(_ksMinL, ksVoll(i/20*L));
   const kbedL = Math.max(1e-6, _ksMinL * dG);
   const L_hw = Math.PI * Math.pow(EI/kbedL, 0.25);   // Knick-Halbwellenlänge [m]
   const knickValid = L >= L_hw;                       // Euler-auf-Bettung nur oberhalb gültig
@@ -318,7 +324,7 @@ function pfahlbockAnalyse(cfg){
   // (≥3 nicht-kollinear, 2D-Raster). Bei kollinearer/Einzel-Anordnung bliebe die Rotation um
   // die Pfahllinie frei → singulär; NUR dort Drehfixität kRot=2·EI·λ ansetzen, was einen
   // biegesteifen Kopfanschluss VORAUSSETZT (Warnung im Panel via headFixReq).
-  const lam = Math.pow(Math.max(1e-9, ksAt(0)*dG/(4*EI)), 0.25);
+  const lam = Math.pow(Math.max(1e-9, ksVoll(0)*dG/(4*EI)), 0.25);
   const _xs = cfg.piles.map(p => +(p.x||0)), _ys = cfg.piles.map(p => +(p.y||0));
   const _spanX = Math.max(..._xs) - Math.min(..._xs), _spanY = Math.max(..._ys) - Math.min(..._ys);
   const headFixReq = cfg.piles.length < 3 || _spanX < 0.05 || _spanY < 0.05;  // kollinear/Einzel
@@ -383,6 +389,33 @@ function pfahlbockAnalyse(cfg){
     const eL = util>1e-9 ? 1/util : Infinity;
     if(eL < etaLat){ etaLat = eL; latGovCombo = ci; latVd = Vd; latMd = Mgl; }
   });
+  // ══ AUFBRUCHSICHERHEIT der Zugpfähle (SIA 267 Ziff. 9.5.3.3 / 9.5.3.2.1) ═══════════════════════
+  // «Die Sicherheit einer Pfahlfundation gegen Versagen durch Heben des gepfählten Bodenkörpers ist
+  // nachzuweisen.» Die Norm gibt kein Verfahren. Angesetzt wird der angehängte Bodenkörper je Zugpfahl
+  // nach EA-Pfähle / DIN 1054 (Quelle NICHT in Grundlagen/ — aus dem Fachwissen, zu bestätigen):
+  //     G_E,k = n_Z · [ l_a·l_b·(L − ⅓·√(l_a² + l_b²)·cot φ′) ] · η_Z · γ′      mit η_Z = 0.80
+  // l_a, l_b = Rastermass der Pfähle (Kopfabstand, bei geneigten Pfählen die sichere Seite), γ′ = wirksame
+  // Wichte über die Pfahllänge. Nachweis als Grenzzustand Typ 1 (Abheben): Z_d ≤ γ_G,inf · G_E,k mit
+  // γ_G,inf = 0.90 (SIA 260 Tab. 1). Z_d = Summe der lotrechten Zugkräfte der Kombination. Mantelreibung am
+  // Umfang des Bodenkörpers wird nicht angesetzt (SIA 267 Ziff. 5.4.2.3).
+  const store_uz = i => { const p=cfg.piles[i]||{}, tx=Math.tan((p.axDeg||0)*Math.PI/180), ty=Math.tan((p.ayDeg||0)*Math.PI/180); return 1/Math.hypot(tx,ty,1); };
+  let auf = null;
+  if(np >= 2 && !cfg.einzel){
+    const la = Math.max(0.1, cfg.sx || grp.sCap || 1), lb0 = Math.max(0.1, cfg.sy || la);
+    const reihe = _spanX < 0.05 || _spanY < 0.05;                                // Einzelreihe: Raster = Pfahlabstand, quadratisch
+    const la2 = reihe ? Math.max(0.1, grp.sCap || la) : la, lb = reihe ? la2 : lb0;
+    const phK = Math.max(5, +(schichtAtDepth(L/2).phi ?? 30)) * Math.PI/180;
+    const gamEff = L > 0 ? sigVeffTo(L)/L : 0;
+    const hE = Math.max(0, L - Math.sqrt(la2*la2 + lb*lb)/3/Math.tan(phK));
+    const GE1 = la2*lb*hE*0.80*gamEff;                                            // je Zugpfahl [kN]
+    ulsData.forEach((u,ci) => { if(!u.F) return;
+      let Z = 0, nZ = 0;
+      u.F.forEach((F,i) => { if(F < -0.05){ nZ++; Z += -F * Math.abs(store_uz(i)); } });
+      if(nZ === 0) return;
+      const eta = 0.90*nZ*GE1 / Math.max(0.01, Z);
+      if(!auf || eta < auf.eta) auf = { eta, Z, nZ, GE1, GEk:nZ*GE1, la:la2, lb, hE, gamEff, phi:phK*180/Math.PI, label:u.label };
+    });
+  }
   // ══ EINZELPFAHL — eigener Biege- und Verformungsansatz (Okt 2026) ═══════════════════════════
   // Das Gruppenmodell (solvePfahlbock) trägt ein Kopfmoment über eine Drehfeder am Bankett; in die
   // Biegung des Pfahls ging es NICHT ein. Beim Einzelpfahl ist das Mastmoment aber die massgebende
@@ -463,7 +496,7 @@ function pfahlbockAnalyse(cfg){
   // ── Knicknachweis SIA 263: elast. Verzweigungslast (Euler auf Winkler-Bettung, weichste
   // Schicht) → bez. Schlankheit λ̄ = √(N_pl,k/N_cr) → Abminderung χ (Knickkurve c, α=0.49
   // für Stahl-Voll/Hohlstäbe) → Knickwiderstand N_b,Rd = χ·N_pl,k/γ_s. η = N_b,Rd/N_Ed.
-  let ksMin = Infinity; for(let i=0;i<=20;i++) ksMin = Math.min(ksMin, ksAt(i/20*L));
+  let ksMin = Infinity; for(let i=0;i<=20;i++) ksMin = Math.min(ksMin, ksVoll(i/20*L));
   const N_cr  = 2 * Math.sqrt(Math.max(1e-6, ksMin*dG*(ein ? ein.EIknick : EI)));  // [kN] elastische Knicklast (Einzelpfahl: schwache Achse)
   const N_pl_k = micropileRtk(tdn);                          // char. Streckgrenzkraft (= R_t,k)
   const lamBar = Math.sqrt(Math.max(1e-9, N_pl_k / Math.max(1e-6, N_cr)));   // bez. Schlankheit
@@ -553,11 +586,15 @@ function pfahlbockAnalyse(cfg){
            eta_massg:+Math.min(
              nwOn('pfahl','geo')   ? etaGeo   : Infinity,
              (nwOn('pfahl','geo') && ein && ein.tGov) ? ein.eT : Infinity,
+             (nwOn('pfahl','geo') && auf) ? auf.eta : Infinity,
              nwOn('pfahl','stahl') ? etaSteel : Infinity,
              nwOn('pfahl','knick') ? etaKnick : Infinity,
              nwOn('pfahl','gzg')   ? etaGZG   : Infinity,
              nwOn('pfahl','lat')   ? etaLat   : Infinity).toFixed(2),
            skinModel: _ramm ? 'ramm' : 'verpresst',
+           // Aufbruchsicherheit der Zugpfähle (nur wenn eine Kombination Zug erzeugt)
+           ...(auf ? { etaAuf:+auf.eta.toFixed(2), auf:{ Z:+auf.Z.toFixed(1), nZ:auf.nZ, GE1:+auf.GE1.toFixed(1), GEk:+auf.GEk.toFixed(1),
+             la:+auf.la.toFixed(2), lb:+auf.lb.toFixed(2), hE:+auf.hE.toFixed(2), gam:+auf.gamEff.toFixed(1), phi:+auf.phi.toFixed(1), label:auf.label } } : {}),
            // alle Kombinationen (Auswahl im 3D): Lasten, Pfahlkräfte und kleinste η aus Mantel/Querschnitt
            kombs: ulsData.map(u => ({ label:u.label, lf:u.lf, nr:u.nr, load:u.load, loadChar:u.loadChar, F:u.F, eta:u.etaK })),
            // Spitzenwiderstand (nur Einzelpfahl, nur Druck)

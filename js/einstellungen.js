@@ -131,6 +131,8 @@ function loadSettings(){
   // Vorgabewert 10 m wurde bei jedem «Speichern» der Optionen mitgeschrieben und ist von einer
   // bewussten Eingabe nicht zu unterscheiden — er wird EINMAL auf 0 gesetzt; wer eine Begrenzung
   // will, trägt sie danach wieder ein.
+  // Einmalig (Okt 2026): Pfahlbettung von der Faustregel α = 0.30 auf SIA 267 Gl. (53) (α = 1.0) umstellen.
+  if(!SETTINGS.ksV2){ SETTINGS.pfahlAlphaLat = 1.0; SETTINGS.sichAlphaLat = 1.0; SETTINGS.ksV2 = true; try{ dbSet('bc_settings', SETTINGS); }catch(_){ } }
   if(!SETTINGS.lcritV2){ SETTINGS.pfahlLcrit = 0; SETTINGS.lcritV2 = true; try{ dbSet('bc_settings', SETTINGS); }catch(_){ } }
   // Theme
   document.documentElement.setAttribute('data-theme', SETTINGS.theme||'dark');
@@ -159,7 +161,8 @@ function loadSettings(){
   try{ if(typeof _applySichEnabledUI==='function') _applySichEnabledUI(); }catch(_){ }
   chk('set-steckner-slope', SETTINGS.stecknerSlope===true);   // Standard aus (Original-Steckner)
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
-  set('set-pfahl-alat', SETTINGS.pfahlAlphaLat??0.30);
+  set('set-pfahl-alat', SETTINGS.pfahlAlphaLat??1.0);
+  set('set-sich-alat', SETTINGS.sichAlphaLat??1.0);
   set('set-pfahl-lcrit', SETTINGS.pfahlLcrit??0);
   { const _ke=document.getElementById('set-kappa-e');
     if(_ke) _ke.value = ((SETTINGS.kappaE ?? (1/6)) > 0.25) ? '0.3333' : '0.1667'; }
@@ -301,7 +304,8 @@ function applySettings(){
   SETTINGS.stecknerMob = gc('set-steckner-mob');   // Passivdruck-Mobilisierung (Standard an)
   SETTINGS.stecknerSlope = gc('set-steckner-slope');
   SETTINGS.pfahlRandMin = gv('set-pfahl-randmin');
-  SETTINGS.pfahlAlphaLat = Math.min(1.0, Math.max(0.1, gv('set-pfahl-alat')||0.30));   // laterale Bettung k_s
+  SETTINGS.pfahlAlphaLat = Math.min(1.0, Math.max(0.1, gv('set-pfahl-alat')||1.0));   // laterale Bettung k_s = α·E_s/D (Pfahlfundament)
+  SETTINGS.sichAlphaLat  = Math.min(1.0, Math.max(0.1, gv('set-sich-alat')||1.0));    // dito Sicherungspfähle
   // 0 = kein Deckel (bewusst zugelassen), sonst auf einen sinnvollen Bereich geklemmt
   { const _lc = gv('set-pfahl-lcrit'); SETTINGS.pfahlLcrit = (_lc>0) ? Math.min(40, Math.max(1, _lc)) : 0; }
   // Kernweite-Grenze: nur die zwei normativ sinnvollen Stufen (1/6 klaffungsfrei, 1/3 SIA)

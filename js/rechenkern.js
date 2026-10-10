@@ -33,7 +33,7 @@ function _evalPfahl(){
   const num=id=>+gi(id)||0;
   if(typeof renderPfahlbock==='function') renderPfahlbock();
   const r=(RESULT.pfahlbock&&RESULT.pfahlbock.r)||{};
-  const uls=[[r.etaGeo,'Mantelreibung'],[r.etaTors,'Torsion'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
+  const uls=[[r.etaGeo,'Mantelreibung'],[r.etaTors,'Torsion'],[r.etaAuf,'Aufbruchsicherheit'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
              [r.etaLat,'Laterale Bodentragfähigkeit']].filter(([v])=>isFinite(v));
   const o={ dims:'—', geom:null, gov:'–', lf:r.govCombo||null,
             etaT: uls.length?Math.min(...uls.map(([v])=>v)):null,
@@ -262,7 +262,7 @@ function _doCalculateKern(P){
   const hbeta_c1 = Math.max(0, +gi('bg_bhoehe') || 0);   // Böschungshöhe (0 = durchlaufend)
   const phi_k_c1 = SCHICHTEN.length > 1 ? avgPhiToDepth(t) : (phi_k * 180/Math.PI);
   const C1_auto = c1Steckner(phi_k_c1, t, beta_deg_c1, hbeta_c1);  // MN/m³ (Steckner-Anteil, Fallback)
-  // C₁: im Auto-Modus den vollen 3-Zonen-Blend live nehmen (folgt β/B/t/φ) und das
+  // C₁: im Auto-Modus den Auto-Wert (min Steckner / M_E·Kp/B) live nehmen (folgt β/B/t/φ) und das
   // Feld nachführen; im manuellen Modus (_c1Manual) den Feldwert verwenden.
   const _c1m = P.c1_manual;
   const C1_val = _c1m

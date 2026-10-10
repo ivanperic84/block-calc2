@@ -235,6 +235,16 @@ function fitCameraToModel(){
   const g=scene.getObjectByName('pb3d')||scene.getObjectByName('blk'); if(!g) return;
   if(_camTarget) _camTarget.set(0,0,0);   // Gesamtmodell wieder origin-zentriert rahmen
   const box=new THREE.Box3().setFromObject(g); if(box.isEmpty()) return;
+  // Pfahlfundament: das Modell liegt fast ganz UNTER dem Ursprung (Pfähle bis 10–30 m tief). Um den
+  // Ursprung gerahmt blieb die obere Bildhälfte leer und Bankett/Kopf wurden winzig. Darum auf die
+  // Mitte des Modells zielen und nur dessen halbe Diagonale rahmen.
+  if(g.name==='pb3d'){
+    const c=box.getCenter(new THREE.Vector3()), halb=box.getSize(new THREE.Vector3()).length()/2;
+    if(_camTarget) _camTarget.copy(c);
+    const r0=Math.max(1.5, halb);
+    sph.r=Math.max(3, Math.min(70, camera.isOrthographicCamera ? r0*2.2 : r0/Math.sin(((camera.fov||44)/2)*Math.PI/180)*1.12));
+    moveCam(); return;
+  }
   const cs=[[box.min.x,box.min.y,box.min.z],[box.max.x,box.max.y,box.max.z],
     [box.min.x,box.min.y,box.max.z],[box.min.x,box.max.y,box.min.z],[box.max.x,box.min.y,box.min.z],
     [box.max.x,box.max.y,box.min.z],[box.max.x,box.min.y,box.max.z],[box.min.x,box.max.y,box.max.z]];
@@ -1649,10 +1659,13 @@ function syncLFSel(){
   const dirs=LF.map(_lfRichtung), beide = dirs.includes('quer') && dirs.includes('laengs');
   if(!beide && (_vcLfMode==='quer' || _vcLfMode==='laengs')){ _vcLfMode='global'; _vcResolveLf(); }
   const kurz=i=>'LF '+(i+1);
-  const hL = `<option value="m:global">Massgebend${_vcLfMode==='global'&&LF.length>1?' · '+kurz(_vcLfIdx):''}</option>`
-    + (beide ? `<option value="m:quer">Massgebend quer${_vcLfMode==='quer'?' · '+kurz(_vcLfIdx):''}</option>`
-             + `<option value="m:laengs">Massgebend längs${_vcLfMode==='laengs'?' · '+kurz(_vcLfIdx):''}</option>` : '')
-    + LF.map((lf,i)=>`<option value="lf:${i}">${kurz(i)} · ${esc((lf.name||'').replace(/^LF\s*\d+\s*[—–-]\s*/,'').slice(0,28))}</option>`).join('');
+  // Nutzerentscheid Okt 2026: nur die massgebenden Fälle (global / quer / längs). Die Wahl einzelner
+  // Lastfälle und der 8 Einzelkombinationen ist entfernt — die Kombinationen mit η stehen im Bericht.
+  _vcKomb = 0; if(_vcLfMode==='lf'){ _vcLfMode='global'; _vcResolveLf(); }
+  const _Kg=_vcKombListe(), zus = ' · '+kurz(_vcLfIdx)+(_Kg.gov ? ' · Komb. '+_Kg.gov : '');
+  const hL = `<option value="m:global">Massgebend${_vcLfMode==='global'?zus:''}</option>`
+    + (beide ? `<option value="m:quer">Massgebend quer${_vcLfMode==='quer'?zus:''}</option>`
+             + `<option value="m:laengs">Massgebend längs${_vcLfMode==='laengs'?zus:''}</option>` : '');
   if(lfSel._h!==hL){ lfSel.innerHTML=hL; lfSel._h=hL; }
   lfSel.value = _vcLfMode==='lf' ? 'lf:'+_vcLfIdx : 'm:'+_vcLfMode;
   lfSel.classList.toggle('on', _vcLfMode==='lf');

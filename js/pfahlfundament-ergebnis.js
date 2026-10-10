@@ -42,9 +42,9 @@ function buildPbAxialDiagram(r, n, wide){
   if(hasZ) s+=poly(pZ,TEAL,true);
   s+=poly(pD,AMB,false);
   s+=`<circle cx="${X(Rd).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${AMB}"/>
-      <text x="${(X(Rd)+4).toFixed(1)}" y="${(Y(L)-2).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${AMB}">R_s,d ${Rd.toFixed(0)}${hasZ?' Druck':''}</text>`;
+      <text x="${(X(Rd)-5).toFixed(1)}" y="${(Y(L)-5).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${AMB}">R_s,d ${Rd.toFixed(0)} kN${hasZ?' Druck':''}</text>`;   // links vom Punkt: rechts lief die Beschriftung aus dem Bild
   if(hasZ) s+=`<circle cx="${X(RdZ).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${TEAL}"/>
-      <text x="${(X(RdZ)+4).toFixed(1)}" y="${(Y(L)+9).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${TEAL}">${RdZ.toFixed(0)} Zug</text>`;
+      <text x="${(X(RdZ)+4).toFixed(1)}" y="${(Y(L)+9).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${TEAL}">${RdZ.toFixed(0)} kN Zug</text>`;
   // Angesetzte max. Pfahl-Axialkräfte als Vergleichslinien (Druck/Zug)
   const appl=(N,col,lbl,yl)=>N>0.5?`<line x1="${X(N).toFixed(1)}" y1="${padTop}" x2="${X(N).toFixed(1)}" y2="${(padTop+plotH).toFixed(1)}" stroke="${col}" stroke-width="1" stroke-dasharray="2,2"/>
       <text x="${X(N).toFixed(1)}" y="${yl}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${col}">${lbl} ${N.toFixed(0)}</text>`:'';
@@ -69,10 +69,12 @@ function buildPbSteelDiagram(r, n, wide){
    <text x="${x0-4}" y="${(Y(1)+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="var(--xdim)">1.0</text>
    <text x="${((x0+X(1.2))/2).toFixed(1)}" y="${y0+24}" font-family="var(--f-mono)" font-size="8" text-anchor="middle" fill="var(--dim)">M / M_Rd</text>
    <text x="13" y="${((y0+Y(1.2))/2).toFixed(1)}" font-family="var(--f-mono)" font-size="8" text-anchor="middle" fill="var(--dim)" transform="rotate(-90 13 ${((y0+Y(1.2))/2).toFixed(1)})">|N| / R_t,d</text>`;
+  let govDone=false;   // gleich ausgenutzte Pfähle liegen aufeinander → nur einmal beschriften
   r.pileRes.forEach((p,i)=>{ const un=Math.abs(p.F)/Math.max(0.01,r.Rt_d), um=Math.abs(p.Mp)/Math.max(0.01,r.M_Rd);
     const cx=X(um), cy=Y(un), gov=(p.eSteel===r.etaSteel), col=_pbE(p.eSteel);
     s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${gov?4.6:3}" fill="${col}" stroke="var(--s2)" stroke-width="0.8"/>`;
-    if(gov) s+=`<text x="${(cx+6).toFixed(1)}" y="${(cy+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${col}">P${i+1}</text>`; });
+    if(gov && !govDone){ govDone=true; const gl=r.pileRes.map((q,j)=>q.eSteel===r.etaSteel?'P'+(j+1):null).filter(Boolean).join(', ');
+      s+=`<text x="${(cx+6).toFixed(1)}" y="${(cy+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" fill="${col}">${gl} · η = ${(+r.etaSteel).toFixed(2)}</text>`; } });
   return s+`</svg>`;
 }
 
@@ -261,7 +263,7 @@ function buildPbSystemSVG(r, piles, n, wide){
     s+=`<line x1="${ox.toFixed(1)}" y1="${(yD-5).toFixed(1)}" x2="${ox.toFixed(1)}" y2="${(yD+5).toFixed(1)}" stroke="var(--xdim)" stroke-width="0.7"/>`;
     s+=seg(ox,xH,'var(--acc)') + seg(xH,xR,MCOL);
     s+=`<text x="${((ox+xH)/2).toFixed(1)}" y="${(yD-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--acc)">aus H ${Math.abs(uH).toFixed(1)}</text>`;
-    s+=`<text x="${((xH+xR)/2).toFixed(1)}" y="${(yD+9).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${MCOL}">aus M ${Math.abs(uM).toFixed(1)}</text>`;
+    s+=`<text x="${((xH+xR)/2).toFixed(1)}" y="${(yD-11.5).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${MCOL}">aus M ${Math.abs(uM).toFixed(1)}</text>`;
     s+=`<text x="${rEnd.toFixed(1)}" y="${(yD+3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="start" fill="var(--on)">Σ=${uR>=0?'':'−'}${Math.abs(uR).toFixed(1)} mm</text>`;
   }
   return s+`</svg>`;
@@ -290,7 +292,7 @@ function _pbResultHTML(r, piles, n){
     ${svg}</div>`:'';
   // ── massgebenden Nachweis identifizieren
   const govName=(()=>{ const m=r.eta_massg;
-    if(m===r.etaGeo || (r.etaTors!=null && m===r.etaTors)) return 'Geo'; if(m===r.etaSteel) return 'Stahl';
+    if(m===r.etaGeo || (r.etaTors!=null && m===r.etaTors) || (r.etaAuf!=null && m===r.etaAuf)) return 'Geo'; if(m===r.etaSteel) return 'Stahl';
     if(m===r.etaKnick) return 'Knick'; if(r.etaLat!=null && m===r.etaLat) return 'Lat';
     if(m===r.etaGZG) return 'GZG'; return ''; })();
   const gL=r.govLoad||{}, Hd=Math.hypot(gL.Hx||0, gL.Hy||0);   // Sohlkräfte massg. Kombo (UK Bankett)
@@ -299,7 +301,7 @@ function _pbResultHTML(r, piles, n){
   const gRv=r.gMD||1.3;   // γ_M,a Druck (SIA 267 Gl. 43)
   const _aTxt='η_a = '+(r.etaA||0.7).toFixed(2)+' · γ_M,a = '+(r.gMD||1.3).toFixed(2)+' Druck / '+(r.gMZ||1.6).toFixed(2)+' Zug';
   const RdGeo = govZug ? r.Rskin_dZ : +(r.Rskin_d + (r.Rb_d||0)).toFixed(1);   // Zug: nur Mantel · Druck: Mantel + Spitze
-  const etaGeoK = Math.min(r.etaGeo, r.etaTors!=null ? r.etaTors : Infinity);
+  const etaGeoK = Math.min(r.etaGeo, r.etaTors!=null ? r.etaTors : Infinity, r.etaAuf!=null ? r.etaAuf : Infinity);
   const g=r.gzgFull, gv=r.gzgVar;
   const shortLF=s=>/quer/i.test(s||'')?'quer':/l(ä|ae)ngs/i.test(s||'')?'längs':(s||'').replace(/\s*·.*/,'').slice(0,10);
   const pll=r.pileRes.map((p,i)=>{ const eg=Math.min(p.eGeo,p.eSteel);
@@ -385,6 +387,9 @@ function _pbResultHTML(r, piles, n){
       ${r.zykFac<0.999?row('Abminderung zyklische Beanspruchung (in R_s,k enthalten)', '×'+r.zykFac.toFixed(2)):''}
       ${row('|N|_max (P'+(r.govPile+1)+', '+(govZug?'Zug':'Druck')+')', govF.toFixed(1)+' kN')}
       ${etaRow('η Geotechnik', r.etaGeo, 'η = '+(r.Rb_k>0&&!govZug?'R_d':'R_s,d')+' '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(+RdGeo).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
+      ${r.auf ? row('Aufbruch: Zugkraft Z_d ('+r.auf.nZ+' Zugpf'+(r.auf.nZ>1?'ähle':'ahl')+')', r.auf.Z+' kN')
+        + row('angehängter Bodenkörper G_E,k', r.auf.GEk+' kN &nbsp;<span style="color:var(--xdim)">'+r.auf.la+' × '+r.auf.lb+' × '+r.auf.hE+' m · η_Z 0.80 · γ′ '+r.auf.gam+'</span>')
+        + etaRow('η Aufbruchsicherheit (SIA 267 Ziff. 9.5.3.3)', r.etaAuf, 'η = 0.90·G_E,k / Z_d = 0.90·'+r.auf.GEk+' / '+r.auf.Z+' = '+r.etaAuf.toFixed(2)+'<br>G_E,k = n_Z·[l_a·l_b·(L − ⅓·√(l_a²+l_b²)·cot φ′)]·η_Z·γ′<br>'+(r.auf.label||'')) : ''}
       ${r.tors ? row('Torsion T_Ed / T_Rd = r_T·R_s,d', r.tors.T+' / '+r.tors.TRgeo+' kNm &nbsp;<span style="color:var(--xdim)">r_T = '+(r.tors.rT*1000).toFixed(0)+' mm</span>')
         + etaRow('η Torsion (Mantelreibung, mit N überlagert)', r.etaTors, 'η = 1 / √((|N|/R_d)² + (T/T_Rd)²)<br>= 1 / √('+r.tors.uN.toFixed(2)+'² + '+r.tors.uT.toFixed(2)+'²) = '+(isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞')+'<br>'+(r.tors.label||'')) : ''}
       <div style="font-size:9px;color:var(--xdim);margin-top:2px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig, Kohäsion nicht angesetzt'+(r.Rb_k>0?', Spitzenwiderstand aus eingegebenem q_b,k)':', <b>Spitzenwiderstand nicht angesetzt</b>)') : 'q_s,k Erfahrungswert je Schicht (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant — Vordimensionierung)'} · ${_aTxt} (SIA 267 Ziff. 9.5.2.2) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k (nur Druck)' : '<b>Spitzendruck NICHT angesetzt</b>'+(r.einzel?'':' (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand)')} · wirksame Verpresslänge L_eff = ${(r.skinLeff||0).toFixed(2)} m${r.skinCapped?' (auf L_crit = '+(r.skinLcrit||0).toFixed(2)+' m gedeckelt)':(r.skinLcrit?' (unter L_crit = '+(r.skinLcrit||0).toFixed(2)+' m)':' (kein Deckel)')}</div>

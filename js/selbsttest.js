@@ -22,14 +22,14 @@ function runSelfTest(){
   const bak={ mob:SETTINGS.mob, alphaZul:SETTINGS.alphaZul, alphaZulFull:SETTINGS.alphaZulFull,
     pfahlRandMin:SETTINGS.pfahlRandMin,
               stecknerSlope:SETTINGS.stecknerSlope, stecknerMob:SETTINGS.stecknerMob,
-              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat,
+              pfahlGzgDecouple:SETTINGS.pfahlGzgDecouple, pfahlAlphaLat:SETTINGS.pfahlAlphaLat, sichAlphaLat:SETTINGS.sichAlphaLat,
               pfahlLatGroup:SETTINGS.pfahlLatGroup, pfahlLcrit:SETTINGS.pfahlLcrit,
               kappaE:SETTINGS.kappaE, bzG:SETTINGS.bauzustandGred,
               bzGv:SETTINGS.bauzustandGredVal, bzGs:SETTINGS.bauzustandGredSpezial,
               nw:SETTINGS.nw };
   SETTINGS.mob=0.25; SETTINGS.alphaZul=0.005; SETTINGS.alphaZulFull=0.010;
   SETTINGS.pfahlRandMin=0.30; SETTINGS.pfahlGzgDecouple=true;
-  SETTINGS.pfahlAlphaLat=0.30;     // Golden = konservativer Default (laterale Pfahlbettung)
+  SETTINGS.pfahlAlphaLat=1.0; SETTINGS.sichAlphaLat=1.0;   // Golden = SIA 267 Gl. (53), k_s = E_s/D
   SETTINGS.pfahlLatGroup=true;     // Golden = p-Multiplier AN (bei gespreizten Pfählen ohnehin 1.0)
   SETTINGS.pfahlLcrit=10;          // Golden = Default-Deckel; T6-Pfahl hat L=10 m ⇒ kein Abzug
   SETTINGS.kappaE=1/6;             // Golden = Voreinstellung (wirkt nur bei aktivem Aushub)
@@ -86,6 +86,26 @@ function runSelfTest(){
       add('Block σ_max [kPa] (arm-abhängig)', _stRes()[0].smax, 647.6133932635412, 1e-4,'rel');
       add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 1.01509, 1e-4,'rel');
       add('Block N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 233.65125, 1e-6,'rel'); })();
+    // ── T4c Bettungsziffer C₁ (Okt 2026): automatisch der KLEINERE Wert aus Steckner Gl.3 und M_E·Kp/B.
+    // Im Referenzfall deckelt M_u,char den GZG (η unverändert 4.415) — die Regel wird darum an C₁, tan α
+    // und einem weichen Boden (M_E = 10) gepinnt.
+    (()=>{ const mB=_c1Methode, cB=_c1Manual; _c1Methode='auto'; _c1Manual=false;
+      const lauf=me=>{ applyState(_ST_STATE); _c1Methode='auto'; _c1Manual=false; SCHICHTEN[0].me=me; si('bg_me',String(me)); calculate();
+                       return { a:c1AutoValue(), r:(_stRes()||[])[1]||{} }; };
+      const m30=lauf(30), m10=lauf(10), m100=lauf(100);
+      add('C₁ auto, M_E 30: min(Steckner 155 ; 30·3/1.3) [MN/m³]', m30.a.c1_eff, 30*3/1.3, 1e-6,'rel');
+      add('C₁ auto, M_E 30: tan α',                               m30.r.alpha_GZG_calc, 0.0008031687995, 1e-4,'rel');
+      add('C₁ auto, M_E 10: η_GZG (M_E begrenzt Steckner)',        m10.r.etaGZG, 2.014396844, 1e-4,'rel');
+      add('C₁ auto, M_E 100: Steckner Gl.3 ist der kleinere Wert', m100.a.c1_eff, 155, 1e-6,'rel');
+      // Setzungsmethode (Lang/Huder/Amann 11.6 / 8.5), unabhängig in Python nachgerechnet: G = 123.075 kN,
+      // p = 72.83 kPa, davon 62 kPa Wiederbelastung; M′_E = 5·M_E → s = 0.6353 mm, k = 114.63 MN/m³; Verhältnis 1 → 36.56.
+      applyState(_ST_STATE); _c1Methode='setzung'; _c1Manual=false; si('bg_me_ratio','5'); calculate();
+      add('C₁ Setzung mit Wiederbelastung (M′_E = 5·M_E) [MN/m³]', c1AutoValue().c1_eff, 114.6324118, 1e-5,'rel');
+      add('C₁ Setzung: Rechenkern übernimmt den Wert',            +gi('bg_c1'), 114.6, 0.06,'abs');
+      si('bg_me_ratio','1');
+      add('C₁ Setzung ohne Wiederbelastung (Verhältnis 1) [MN/m³]', c1AutoValue().c1_eff, 36.55849519, 1e-5,'rel');
+      si('bg_me_ratio','5');
+      _c1Methode=mB; _c1Manual=cB; applyState(_ST_STATE); calculate(); })();
     // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
     // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
     // AUSSERHALB der Sohlfläche; dort ist die Meyerhof-Ersatzfläche nicht definiert. Der frühere
@@ -162,8 +182,8 @@ function runSelfTest(){
       //   η_Stahl 2.09·0.80 = 1.672   ·   η_Knick 2.42·0.80 = 1.936   ·   η_GZG unverändert (charakteristisch)
       add('Pfahl η_Geo (Mantelreibung)', r.etaGeo,   2.46, 0.015,'abs');
       add('Pfahl: η_Geo folgt R_k·η_a/γ_M,a (0.7/1.3 gegen 1/1.4)', r.etaGeo, 3.27*1.4*0.7/1.3, 0.015,'abs');
-      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 1.67, 0.015,'abs');
-      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 1.94, 0.015,'abs');
+      add('Pfahl η_Stahl (N+M)',         r.etaSteel, 1.84, 0.015,'abs');   // Okt 2026: k_s = E_s/D (vorher 1.67 mit α = 0.30)
+      add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 2.32, 0.015,'abs');
       add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
       // Zyklische Abminderung der Mantelreibung: Faktor 0.80 ⇒ R_s,d = 0.80·336.6 = 269.3 kN; 1.0 ⇒ unverändert
       si('pb_zykfac','0.8'); renderPfahlbock();
@@ -177,7 +197,17 @@ function runSelfTest(){
       si('pb_etaA','1.0'); renderPfahlbock();
       add('Pfahl η_a = 1.0: R_s,d = R_s,k/1.3', (RESULT.pfahlbock.r||{}).Rskin_d, 253.75/0.7, 0.1,'abs');
       si('pb_etaA','0.7'); renderPfahlbock();
-      add('Pfahl R_s,d [kN]',            r.Rskin_d,  253.75, 0.5,'abs'); })();
+      add('Pfahl R_s,d [kN]',            r.Rskin_d,  253.75, 0.5,'abs');
+      // Aufbruchsicherheit der Zugpfähle (SIA 267 Ziff. 9.5.3.3): ohne Zug kein Nachweis; mit grossem Moment
+      // G_E,k je Zugpfahl = l_a·l_b·(L − ⅓·√(l_a²+l_b²)·cot 30°)·0.80·γ, η = 0.90·n_Z·G_E,1/Z_d
+      // (im Referenzfall zieht bereits die Kombination mit γ_G,inf und vollem γ_Q an zwei Pfählen)
+      add('Aufbruch: Referenzfall hat Zugpfähle und erfüllt den Nachweis', (r.etaAuf!=null && r.etaAuf>1 && r.auf.nZ===2)?1:0, 1, 0,'abs');
+      si('l_MWy','600'); renderPfahlbock();
+      { const q=RESULT.pfahlbock.r||{}, a=q.auf||{}, sx=+gi('pb_sx'), sy=+gi('pb_sy'), L=+gi('pb_L');
+        const GE1=sx*sy*(L-Math.hypot(sx,sy)/3/Math.tan(Math.PI/6))*0.80*20;
+        add('Aufbruch: G_E,k je Zugpfahl (EA-Pfähle-Formel)', a.GE1, GE1, 0.06,'abs');
+        add('Aufbruch: η = 0.90·n_Z·G_E,1/Z_d', q.etaAuf, 0.90*a.nZ*GE1/a.Z, 0.011,'abs'); }
+      si('l_MWy','35'); renderPfahlbock(); })();
     // ── T6b Lastbeiwerte wirken auch beim Pfahlfundament (Okt 2026: es las bis dahin die im
     // LF-Objekt eingefrorenen 1.35/1.50 statt der Felder). Mit γ = 1.00: N_d = N_G + G_eig
     // = 50 + (2.0·2.0·0.8 + 0.6·0.6·1.0)·25 = 139.00 kN.
@@ -238,8 +268,8 @@ function runSelfTest(){
     (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{}, ld=r.govLoad||{};
       add('Einzelpfahl: M_Ed ≥ Kopfmoment M_d', (r.Mmax>=Math.abs(ld.My||0)-0.5)?1:0, 1, 0,'abs');
       // Stahlprofil nach SIA 263 Ziff. 4.1.3: γ_M1 = 1.05 statt 1.15 ⇒ η 1.65·1.15/1.05 = 1.807
-      add('Einzelpfahl HEB 200: η_Stahl', r.etaSteel, 1.80, 0.015,'abs');
-      add('Einzelpfahl HEB 200: η_GZG', r.etaGZG, 0.89, 0.015,'abs'); })();
+      add('Einzelpfahl HEB 200: η_Stahl', r.etaSteel, 1.77, 0.015,'abs');
+      add('Einzelpfahl HEB 200: η_GZG', r.etaGZG, 0.97, 0.015,'abs'); })();
     // ── T13 Ergänzungen Okt 2026: Spitzenwiderstand, Torsion, Rammrohr, Längenbemessung
     (()=>{ const R=()=>RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
       const eta0=R().etaGeo;
@@ -280,7 +310,7 @@ function runSelfTest(){
     SETTINGS.mob=bak.mob; SETTINGS.alphaZul=bak.alphaZul; SETTINGS.alphaZulFull=bak.alphaZulFull;
     SETTINGS.pfahlRandMin=bak.pfahlRandMin;
     SETTINGS.stecknerSlope=bak.stecknerSlope; SETTINGS.stecknerMob=bak.stecknerMob;
-    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat;
+    SETTINGS.pfahlGzgDecouple=bak.pfahlGzgDecouple; SETTINGS.pfahlAlphaLat=bak.pfahlAlphaLat; SETTINGS.sichAlphaLat=bak.sichAlphaLat;
     SETTINGS.pfahlLatGroup=bak.pfahlLatGroup; SETTINGS.pfahlLcrit=bak.pfahlLcrit;
     SETTINGS.kappaE=bak.kappaE; SETTINGS.bauzustandGred=bak.bzG;
     SETTINGS.bauzustandGredVal=bak.bzGv; SETTINGS.bauzustandGredSpezial=bak.bzGs;
