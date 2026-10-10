@@ -26,9 +26,8 @@ function buildNachweisDocPfahl(r, piles, n){
   let tdn=(sys.vars&&sys.vars[+gi('pb_var')])||(sys.vars&&sys.vars[0])||{};
   // Einzelpfahl: Querschnitt aus dem Sicherungs-Profilkatalog (HEB/Krinner) statt Tragglied
   if(_pbEinzel()){
-    const pt=(document.getElementById('pb_prof')||{}).value||'HEB200', ps=pfahlSection(pt);
-    tdn={ bez:pt, As:ps.A*1e6, da:ps.b*1000, fy:355 };
-    sys={ grade:(KRINNER_PILES[pt] ? 'Krinner V · Stahlrohr S355' : 'HEB · S355'), vars:[tdn] };
+    const ep=_pbEinzelProfil();
+    tdn=ep.tdn; sys={ grade:ep.grade, vars:[tdn] };
   }
   const modelImg=window._npModelImg||null;
   const viewImg=(typeof captureViewerWithDimPNG==='function')?captureViewerWithDimPNG():null;
@@ -70,7 +69,7 @@ function buildNachweisDocPfahl(r, piles, n){
       ${_pbEinzel()
         ? 'Die Mastlasten greifen <b>direkt am Pfahlkopf</b> an (kein Bankett, kein Fundamentkopf, kein Lasthebel, kein Eigengewicht). Der Pfahl trägt die Vertikallast axial'
         : 'Das starre Bankett verteilt die Mastlasten über räumliches Gruppengleichgewicht (6 Freiheitsgrade) auf die geneigten Mikropfähle. Jeder Pfahl trägt primär axial'}
-      (Mantelreibung; Spitzendruck bei d_G ≤ 300 mm vernachlässigt); die laterale
+      (${r.Rb_k>0 ? 'Mantelreibung und Spitzenwiderstand aus eingegebenem q_b,k' : _pbEinzel() ? 'Mantelreibung; Spitzenwiderstand nicht angesetzt' : 'Mantelreibung; Spitzendruck bei d_G ≤ 300 mm vernachlässigt'}); die laterale
       Bettung (p-y, geschichtet) liefert die Biegung${_pbEinzel()?' — das Moment wird allein über Biegung und Bettung abgetragen (biegesteifer Kopfanschluss vorausgesetzt)':''}. Nachgewiesen: äusserer Tragwiderstand (R_s,d), innerer Tragwiderstand
       (Querschnitt N+M sowie Knicken SIA 263) und GZG (Schiefstellung / Verschiebung nach SBB).
       Nachweis η = Widerstand / Einwirkung ≥ 1.0. Bei geneigtem Gelände wird die laterale Bettung talseitig abgemindert.
@@ -133,7 +132,7 @@ function buildNachweisDocPfahl(r, piles, n){
       ${skRows}
       <tr class="hl"><td colspan="4"><b>Σ R_s,k (charakteristisch, η_g = ${N(r.grpEta||1,2)})</b></td><td class="r"><b>${N(r.Rskin_k)} kN</b></td></tr>
     </table>
-    <div style="font-size:8px;color:var(--xdim);margin-top:4px">q_s,k = Erfahrungswert (EA-Pfähle / DIN 4128, Verpresspfahl, tiefenkonstant) bzw. Tabellen-/Probebelastungswert. Gruppenwirkungsgrad η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D). Spitzendruck nicht angesetzt.</div>
+    <div style="font-size:8px;color:var(--xdim);margin-top:4px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig); Kohäsion nicht angesetzt.' : 'q_s,k = Erfahrungswert (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant) bzw. Tabellen-/Probebelastungswert.'} Gruppenwirkungsgrad η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D). ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k = '+r.qb+' kPa (nur Druck).' : 'Spitzendruck nicht angesetzt.'}</div>
   </div>`;
 
   // ── Kap 3: Einwirkungen
@@ -147,6 +146,7 @@ function buildNachweisDocPfahl(r, piles, n){
       <tr><td>Horizontalkraft längs</td><td>H_y</td><td class="r">${N(+gi('l_HGy'))}</td><td class="r">${N(+gi('l_HWy'))}</td><td>kN</td></tr>
       <tr><td>Moment x-Achse</td><td>M_x</td><td class="r">${N(+gi('l_MGx'))}</td><td class="r">${N(+gi('l_MWx'))}</td><td>kNm</td></tr>
       <tr><td>Moment y-Achse</td><td>M_y</td><td class="r">${N(+gi('l_MGy'))}</td><td class="r">${N(+gi('l_MWy'))}</td><td>kNm</td></tr>
+      ${(+gi('l_TG')||+gi('l_TW')) ? `<tr><td>Torsion um die Mastachse</td><td>T</td><td class="r">${N(+gi('l_TG'))}</td><td class="r">${N(+gi('l_TW'))}</td><td>kNm</td></tr>` : ''}
     </table>
     ${sh2(_pbEinzel() ? 'Kräfte am Pfahlkopf — massgebende Kombination' : 'Sohlkräfte UK Bankett — massgebende Kombination')}
     <div style="font-size:8px;color:var(--xdim);margin-bottom:6px">${_pbEinzel()
@@ -184,16 +184,23 @@ function buildNachweisDocPfahl(r, piles, n){
         ${r.qsMax>r.qsMin+0.1?`<tr><td>q_s,k Bereich je Schicht</td><td class="r">${r.qsMin} … ${r.qsMax} kPa</td></tr>`:''}
         ${isFinite(r.grpSd) ? `<tr><td>Gruppenwirkungsgrad η_g (s̄/D = ${r.grpSd})</td><td class="r">× ${N(r.grpEta||1,2)}</td></tr>` : `<tr><td>Gruppenwirkungsgrad η_g</td><td class="r">entfällt (Einzelpfahl)</td></tr>`}
         <tr><td>R_s,d Druck</td><td class="r">${N(r.Rskin_d)} kN</td></tr>
+        ${r.Rb_k>0?`<tr><td>Spitzenwiderstand R_b,k = q_b,k · A_b = ${r.qb} kPa · ${(r.Ab*1e4).toFixed(0)} cm² (nur Druck, q_b,k eingegeben)</td><td class="r">${N(r.Rb_k)} kN</td></tr>
+        <tr><td>R_d Druck = (R_s,k + R_b,k) / γ_R</td><td class="r">${N(r.Rskin_d+r.Rb_d)} kN</td></tr>`:''}
         ${r.zugFac<0.999?`<tr><td>R_s,d Zug (× ${N(r.zugFac,2)}, Herausziehen)</td><td class="r">${N(r.Rskin_dZ)} kN</td></tr>`:''}
         <tr><td>|N|_max (P${r.govPile+1}, ${govZug?'Zug':'Druck'})</td><td class="r">${N(govF)} kN</td></tr>
       </table>
-      ${fml("η_Geo = R_s,d / |N|_max", `${N(govZug?r.Rskin_dZ:r.Rskin_d)} / ${N(govF)}`, `${isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞'}`)}
+      ${fml(r.Rb_k>0&&!govZug ? "η_Geo = R_d / |N|_max" : "η_Geo = R_s,d / |N|_max", `${N(govZug?r.Rskin_dZ:r.Rskin_d+(r.Rb_d||0))} / ${N(govF)}`, `${isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞'}`)}
       ${eta(r.etaGeo)}
+      ${r.tors ? fml("Torsion: T_Rd = r_T · R_s,d  ·  η = 1 / √((|N|/R_d)² + (T_Ed/T_Rd)²)", `T_Ed = ${N(r.tors.T)} kNm · r_T = ${(r.tors.rT*1000).toFixed(0)} mm · T_Rd = ${N(r.tors.TRgeo)} kNm · Anteile ${N(r.tors.uN,2)} / ${N(r.tors.uT,2)} (${r.tors.label||''})`, `η = ${isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞'}`) + eta(r.etaTors)
+        + `<div style="font-size:8px;color:var(--xdim);margin-top:3px">Das Torsionsmoment um die Pfahlachse wird über die Mantelreibung mit dem Hebel r_T abgetragen (Rohr d/2, I-Profil ≈ 0.375·b); dieselbe Mantelreibung trägt die Axialkraft, darum die vektorielle Überlagerung. Der Erdwiderstand an den Flanschen ist nicht angesetzt.</div>` : ''}
       ${figFn(()=>buildPbAxialDiagram(r,n,true),'Abb. — Mantelreibungswiderstand R(z) über die Tiefe (Druck/Zug) vs. angesetzte Pfahlkräfte')}
     </div>
     <div class="np-nw">
       ${nwh('5.2','Innerer Tragwiderstand — Querschnitt (N+M)','SIA 267')}
-      ${fml("|N|/R_t,d + |M|/M_Rd ≤ 1  ·  M_Rd = W_pl·f_yk/γ_s", `R_t,d = ${N(r.Rt_d)} kN · M_Rd = ${N(r.M_Rd)} kNm · M_max = ${N(r.Mmax)} kNm`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)}
+      ${r.einzel
+        ? fml("|N|/R_t,d + M_quer/M_Rd,quer + M_längs/M_Rd,längs ≤ 1  ·  M aus dem Bettungsbalken mit H und M am Pfahlkopf", `R_t,d = ${N(r.Rt_d)} kN · M_Rd quer/längs = ${N(r.einzel.MRq)} / ${N(r.einzel.MRl)} kNm · M_Ed quer/längs = ${N(r.einzel.Mq)} / ${N(r.einzel.Ml)} kNm (${r.einzel.starkQuer?'starke Achse trägt quer':'starke Achse trägt längs'})`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)
+        : fml("|N|/R_t,d + |M|/M_Rd ≤ 1  ·  M_Rd = W_pl·f_yk/γ_s", `R_t,d = ${N(r.Rt_d)} kN · M_Rd = ${N(r.M_Rd)} kNm · M_max = ${N(r.Mmax)} kNm`, `η = ${isFinite(r.etaSteel)?r.etaSteel.toFixed(2):'∞'}`)}
+      ${r.einzel && r.einzel.T>0.005 ? fml("Torsion: τ = T_Ed/W_t ≤ f_yk/(√3·γ_s)  ·  Überlagerung √(σ-Anteil² + τ-Anteil²) ≤ 1 (von Mises)", `T_Ed = ${N(r.einzel.T)} kNm · T_Rd = ${N(r.einzel.TRst)} kNm · σ-Anteil ${N(r.einzel.us,2)} · τ-Anteil ${N(r.einzel.uT,2)}`, `Ausnutzung ${N(Math.hypot(r.einzel.us,r.einzel.uT),2)}`) : ''}
       ${eta(r.etaSteel)}
       ${figFn(()=>buildPbSchnittSVG(r,n,true),'Abb. — Schnittgrössen massg. Pfahl: Verschiebung y, Querkraft V, Moment M über die Tiefe')}
       ${figFn(()=>buildPbSteelDiagram(r,n,true),'Abb. — N+M-Interaktion (Betriebspunkte je Pfahl vs. Grenzlinie)')}
@@ -251,7 +258,8 @@ function buildNachweisDocPfahl(r, piles, n){
     <div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">Übersicht der Nachweis-Ausnutzungsgrade η. Nachweis erbracht wenn η ≥ 1.0.</div>
     <table class="np-tbl" style="margin-bottom:14px">
       <thead><tr><th>Nachweis / Grenzzustand</th><th class="r">η</th></tr></thead><tbody>
-        ${sumRow('GZT — Äusserer Tragwiderstand (Mantelreibung)', r.etaGeo)}
+        ${sumRow(r.Rb_k>0 ? 'GZT — Äusserer Tragwiderstand (Mantel + Spitze)' : 'GZT — Äusserer Tragwiderstand (Mantelreibung)', r.etaGeo)}
+        ${r.etaTors!=null?sumRow('GZT — Torsion über Mantelreibung', r.etaTors):''}
         ${r.etaLat!=null?sumRow('GZT — Laterale Bodentragfähigkeit (Kick-out)', r.etaLat):''}
         ${sumRow('GZT — Innerer Tragwiderstand (Querschnitt N+M)', r.etaSteel)}
         ${sumRow('GZT — Innerer Tragwiderstand (Knicken)', r.etaKnick)}

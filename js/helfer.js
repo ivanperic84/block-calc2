@@ -21,8 +21,15 @@ function switchTab(n){
   document.getElementById('tab-'+n)?.classList.add('active');
 }
 function updateSB(){
-  const B = gi('g_bx'), L = gi('g_by'), H = gi('g_hblock');
-  document.getElementById('sb-geo').textContent = `${B}×${L}×${H} m`;
+  let geo;
+  if(typeof CALC_MODEL!=='undefined' && CALC_MODEL==='pfahlbock'){
+    const ein = gi('pb_mode')==='einzel';
+    geo = ein ? `Einzelpfahl · L ${gi('pb_L')} m`
+              : `Bankett ${gi('pb_bx')}×${gi('pb_by')}×${gi('pb_bank_d')} m · ${gi('pb_n')} Pfähle · L ${gi('pb_L')} m`;
+  } else {
+    geo = `${gi('g_bx')}×${gi('g_by')}×${gi('g_hblock')} m`;
+  }
+  document.getElementById('sb-geo').textContent = geo;
   document.getElementById('sb-lf').textContent  = `${LF.length} Lastfälle`;
   // Projektname im Topbar
   const pname = (gi('p_name') || '').trim();

@@ -116,6 +116,13 @@ function renderResults(res,worst,g){
     gh.innerHTML=`${r.name}<span style="font-size:8.5px;font-weight:400;letter-spacing:0;text-transform:none;margin-left:4px">${compHint}</span>`;
     scroll.appendChild(gh);
 
+    // Flachfundament + reiner GZG-Lastfall: keine Karten (früher standen hier dieselben vier
+    // Tragfähigkeitsnachweise ein zweites Mal, mit γ = 1 und unter der Überschrift «GZT»).
+    if(!g.isBlock && r.nw==='gzg'){
+      const hn=document.createElement('div'); hn.className='hint'; hn.style.cssText='margin:2px 2px 10px';
+      hn.textContent='Gebrauchstauglichkeits-Lastfall: das Flachfundament führt hier keinen Nachweis (Tragfähigkeit siehe GZT-Lastfälle).';
+      scroll.appendChild(hn); return;
+    }
     // Je Typ-2-Nachweis die Sicht seiner massgebenden Kombination
     const rS=t2View(r,'sig'), rG=t2View(r,'gb'), rL=t2View(r,'gl');
     // Build cards dynamically based on model
@@ -290,7 +297,7 @@ function renderResults(res,worst,g){
             <div class="nw-row"><span>Radius R</span><span>${bres.R.toFixed(2)} m</span></div>
             <div class="nw-row"><span>Scherfestigkeit (SIA 267)</span><span>φ′_d = φ′/γ_φ · c′_d = c′/γ_c</span></div>
             ${_svg?`<div style="margin-top:6px">${_svg}</div>`:''}
-            <div style="font-size:8px;color:var(--xdim);margin-top:3px"><b>Ergänzt den Grundbruch</b> (dort: lokaler Bruchkörper unter der Sohle; hier: globaler Gleitkreis durch die Böschung, Fundament nur als Auflast). Freie Zentrum-Grid-Suche, Fundamentlast als Flächenpressung (G_k+N_G)/(B·L), GW-Porendruck. Ebenes 2D-Verfahren — seitliche 3D-Stirnscherung konservativ vernachlässigt; gegen Taylor φ_u=0 auf &lt;2 % validiert. Bei η &lt; 1.3 vertiefte GEO-Untersuchung.</div>
+            <div style="font-size:9px;color:var(--xdim);margin-top:3px"><b>Ergänzt den Grundbruch</b> (dort: lokaler Bruchkörper unter der Sohle; hier: globaler Gleitkreis durch die Böschung, Fundament nur als Auflast). Freie Zentrum-Grid-Suche, Fundamentlast als Flächenpressung (G_k+N_G)/(B·L), GW-Porendruck. Ebenes 2D-Verfahren — seitliche 3D-Stirnscherung konservativ vernachlässigt; gegen Taylor φ_u=0 auf &lt;2 % validiert. Bei η &lt; 1.3 vertiefte GEO-Untersuchung.</div>
           </div>`;
       } else {
         el.innerHTML=`<div class="nw-hd"><span class="nw-ttl">Globale Standsicherheit (Gleitkreis, Bishop)</span><span class="nw-eta dim">n.m.</span></div>

@@ -84,6 +84,10 @@ function bddBeamPY(EI, B, e, L, H, ksAt, opts){
       for(let a = 0; a < 4; a++) for(let bb = 0; bb < 4; bb++) K[map[a]][map[bb]] += Ke[a][bb];
     }
     F[0] = H;                                                          // Schub am Kopf
+    // Kopfmoment M0 [kNm], positiv im SELBEN Drehsinn wie H·e (kippt den Kopf in Lastrichtung).
+    // Der Drehfreiheitsgrad ist θ = dw/ds (s nach unten); ein solches Moment verkleinert dw/ds,
+    // die arbeitskonjugierte Knotenlast ist darum −M0.
+    if(opts.M0) F[1] = -opts.M0;
     return solveLinearDense(K, F);
   };
   // Element-Mittenverschiebung aus Knoten-DOF (Hermite, ξ=0.5)
@@ -152,6 +156,7 @@ function bddBeamPY(EI, B, e, L, H, ksAt, opts){
   for(const p of profile){ if(p.z >= -1e-9 && Math.abs(p.M) > Math.abs(Mmax)){ Mmax = p.M; sMmax = p.z + e; } }
   const iGround = nFree;
   return { yHead_mm: u[0]*1000, yGround_mm: u[2*iGround]*1000,
+           thetaHead: -u[1],                          // Kopfverdrehung [rad], positiv = Neigung in Lastrichtung
            Mmax_kNm: Math.abs(Mmax), sMmax, Vhead_kN: profile[0].V,
            profile, converged, yielded };
 }

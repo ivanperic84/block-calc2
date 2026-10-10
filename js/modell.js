@@ -42,6 +42,8 @@ function setModel(m, silent){
   document.getElementById('model-btn-flach').classList.toggle('active', m==='flach');
   const pbBtn = document.getElementById('model-btn-pfahlbock');
   if(pbBtn) pbBtn.classList.toggle('active', m==='pfahlbock');
+  // Torsion führt nur das Pfahlfundament → Zeile der Lasttabelle sonst ausblenden
+  document.querySelectorAll('.lt-tors').forEach(el => { el.style.display = m==='pfahlbock' ? '' : 'none'; });
   // ── Pfahlbock: eigenständiges Panel, separate Pipeline (block/flach-Logik übersprungen)
   const geoStd = document.getElementById('geo-standard');
   const pbSec  = document.getElementById('pfahlbock-section');
@@ -53,7 +55,7 @@ function setModel(m, silent){
     const sub = document.querySelector('.tb-sub');
     if(sub) sub.textContent = 'SIA 267 · Pfahlfundament (Mikropfähle)';
     // Tabs/Buttons ausblenden, die nur Block/Flach betreffen
-    const sNavEl = document.getElementById('tab-nav-sicherung'); if(sNavEl) sNavEl.style.display = 'none';
+    _applySichEnabledUI();   // Schalter-Zeile und Tab «Sicherung» gibt es nur beim Block
     const vcPf = document.getElementById('vc-pfahl');     if(vcPf)  vcPf.style.display  = 'none';
     const vcKeil = document.getElementById('vc-pfahl-keil'); if(vcKeil) vcKeil.style.display = 'none';
     populatePfahlbockUI();

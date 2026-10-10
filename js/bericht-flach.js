@@ -163,7 +163,7 @@ function buildNachweisDocFlach(results, G){
   '</div>';
 
   // ── Nachweisseiten pro LF ──────────────────────────────────────
-  var nwPages = results.map(function(r){
+  var nwPages = results.filter(function(r){ return r.nw!=='gzg'; }).map(function(r){   // GZG-Lastfälle: kein Nachweis beim Flach
     var gf = getGF(LF.find(function(l){return l.name===r.name;})||{nw:'gzt'});
     var A = B*L;
     var G_plt  = G.G_platte    !== undefined ? G.G_platte    : B*L*dPl*(+st.g_gbeton||24);

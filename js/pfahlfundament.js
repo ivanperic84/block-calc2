@@ -103,12 +103,25 @@ function _pbApplyModeUI(){
   const prof=document.getElementById('pb-grp-prof'), tdn=document.getElementById('pb-grp-tendon');
   if(prof) prof.style.display = ein ? '' : 'none';
   if(tdn)  tdn.style.display  = ein ? 'none' : '';
-  const rdG=document.getElementById('pb-row-dG'); if(rdG) rdG.style.display = ein ? 'none' : '';
+  const _vp=(document.getElementById('pb_einbau')||{}).value==='verpresst';
+  const rdG=document.getElementById('pb-row-dG'); if(rdG) rdG.style.display = (ein && !_vp) ? 'none' : '';   // Bohr-/Verpress-Ø nur wenn verpresst
   const rub=document.getElementById('pb-row-ueber'); if(rub) rub.style.display = ein ? '' : 'none';   // Überstand nur Einzelpfahl
   const h=document.getElementById('pb_mode_hint');
   if(h) h.textContent = ein
-    ? 'Ein einzelner Mikropfahl, Mastlasten wirken direkt am Pfahlkopf (kein Bankett/Kopf, kein Hebel, kein Eigengewicht). Momente trägt der Pfahl über Biegung + Bettung → biegesteifer Kopfanschluss erforderlich.'
+    ? 'Ein einzelner Pfahl (Stahlprofil), Mastlasten wirken direkt am Pfahlkopf (kein Bankett/Kopf, kein Hebel, kein Eigengewicht). Momente trägt der Pfahl über Biegung + Bettung → biegesteifer Kopfanschluss erforderlich.'
     : 'Starres Bankett auf mehreren Pfählen; Lasten werden über das Bankett verteilt.';
+}
+// Querschnitt des Einzelpfahls aus Profil (HEB / Krinner V / Rammrohr) und Stahlgüte — EINE Quelle
+// für Rechnung, Panel und Bericht. Krinner bleibt S355 (Produktannahme), die Güte gilt für HEB und Rohr.
+function _pbEinzelProfil(){
+  const pt=(document.getElementById('pb_prof')||{}).value||'HEB200', ps=pfahlSection(pt);
+  const kr=!!KRINNER_PILES[pt], rr=!!RAMMROHRE[pt];
+  const fy=kr ? 355 : (STAHLGUETEN[(document.getElementById('pb_stahl')||{}).value] || 355);
+  const tor=profilTorsion(ps);
+  const grade=kr ? 'Krinner V · Stahlrohr S355' : rr ? 'Rammrohr Ø '+(ps.da*1000).toFixed(1)+' × '+(ps.t*1000).toFixed(1)+' mm · S'+fy : 'HEB · S'+fy;
+  const tdn={ bez:rr ? '' : pt, As:ps.A*1e6, da:ps.b*1000, fy, Ryk:ps.A*fy*1000, I:ps.Iy, Wpl:ps.Wply,
+              round:!!ps.round, Iz:(ps.Iz!=null?ps.Iz:ps.Iy), Wplz:(ps.Wplz!=null?ps.Wplz:ps.Wply), Wt:tor.Wt };
+  return { pt, ps, fy, kr, rr, grade, tdn };
 }
 function onPbMode(){ _pbApplyModeUI(); if(typeof renderPfahlbock==='function') renderPfahlbock(); }
 // Randabstand Pfahlmitte → nächste Bankettkante (auf UK-Bankett-Niveau, am Pfahlkopf)
@@ -148,29 +161,48 @@ function _pbApplySpacingMode(autoSp, n, Bbank, Lbank, randMin){
     ? `Abstände automatisch = max. bei Randabstand ≥ ${randMin.toFixed(2)} m (aus Bankett B/L). Für kleinere Abstände auf «manuell» wechseln.`
     : 'Abstände manuell — frei wählbar (kleiner als das Auto-Maximum für grössere Randabstände).';
 }
-function renderPfahlbock(){
+// opt (nur intern): {nurRechnen:true, L:<m>} rechnet mit einer abweichenden Pfahllänge und gibt das
+// Ergebnis zurück, ohne Panel, Bericht-Ablage und 3D anzufassen (Längenbemessung pbDimLaenge).
+function renderPfahlbock(opt){
   if(CALC_MODEL!=='pfahlbock') return;
+  const _nur = !!(opt && opt.nurRechnen === true);
   const cat=getMicropileSystems();
   let sys=cat[+gi('pb_sys')] || cat[0];
   let tdn=sys && (sys.vars[+gi('pb_var')] || sys.vars[0]);
   if(!sys || !tdn) return;
-  let _dGrout=(+gi('pb_dG')||150)/1000;
+  let _dGrout=(+gi('pb_dG')||150)/1000, _einbau='verpresst', _Uramm=0, _starkQuer=true, _qb=0, _Ab=0, _rT=0;
   // ── Einzelpfahl: Querschnitt aus dem PROFIL-KATALOG der Fundamentsicherung (HEB / Krinner V,
   //    S355) statt eines Mikropfahl-Traggliedes. Die Profiltabelle liefert I_y und W_pl direkt
   //    (kein Kreisquerschnitt) → als tendon-Objekt mit I/Wpl-Override an pfahlbockAnalyse.
   //    Es gibt keinen Verpresskörper: laterale Breite und Mantelumfang folgen der Profilbreite.
   if(_pbEinzel()){
-    const pt=(document.getElementById('pb_prof')||{}).value||'HEB200';
-    const ps=pfahlSection(pt), fy=355;
-    tdn={ bez:pt, As:ps.A*1e6, da:ps.b*1000, fy, Ryk:ps.A*fy*1000, I:ps.Iy, Wpl:ps.Wply, round:!!ps.round };
-    sys={ grade:(KRINNER_PILES[pt] ? 'Krinner V · Stahlrohr S355' : 'HEB · S355'), E:210000,
-          vars:[tdn], LelemMax:(ps.round ? 2.0 : 0) };   // Krinner gestossen (Stoss = Gelenk), wie Sicherung
-    _dGrout=Math.max(0.05, ps.b);
+    const _ep=_pbEinzelProfil(), ps=_ep.ps, fy=_ep.fy;
+    tdn=_ep.tdn;
+    sys={ grade:_ep.grade, E:210000,
+          vars:[tdn], LelemMax:(_ep.kr ? 2.0 : 0) };   // nur Krinner gestossen (Stoss = Gelenk), wie Sicherung
+    { const rs=document.getElementById('pb-row-stahl'); if(rs) rs.style.display = _ep.kr ? 'none' : ''; }
+    // Einbauart: gerammt/eingestellt (kein Verpresskörper, Breite = Profil) oder in einer Bohrung
+    // verpresst/einbetoniert (Breite und Mantelfläche = Bohrdurchmesser).
+    _einbau=(document.getElementById('pb_einbau')||{}).value==='verpresst' ? 'verpresst' : 'ramm';
+    _dGrout=_einbau==='verpresst' ? Math.max(ps.b, (+gi('pb_dG')||150)/1000) : Math.max(0.05, ps.b);
+    _Uramm = ps.round ? Math.PI*ps.b : 2*(ps.b + (ps.h||ps.b));           // Umriss für die Mantelreibung
+    _starkQuer=(document.getElementById('pb_orient')||{}).value!=='laengs';
+    // Spitzenwiderstand (nur Druck): q_b,k frei einzugeben, 0 = nicht angesetzt. Fläche: Stahlquerschnitt
+    // oder umschriebene Fläche (Pfropfenbildung bzw. geschlossene Spitze / Bohrlochquerschnitt).
+    _qb=Math.max(0,+gi('pb_qb')||0);
+    { const voll=(document.getElementById('pb_spitze')||{}).value==='voll';
+      _Ab = !voll ? ps.A : _einbau==='verpresst' ? Math.PI*_dGrout*_dGrout/4
+                  : ps.round ? Math.PI*ps.b*ps.b/4 : ps.b*(ps.h||ps.b);
+      // Hebelarm der Mantelreibung um die Pfahlachse (Torsion): Rohr d/2; I-Profil ≈ 0.375·b
+      // (Reibung an den Flanschaussenflächen mit Hebel h/2 und am Steg, bezogen auf den Umriss 2·(b+h)).
+      _rT = _einbau==='verpresst' ? _dGrout/2 : ps.round ? ps.b/2 : 0.375*Math.min(ps.b, ps.h||ps.b); }
+    { const ro=document.getElementById('pb-row-orient'); if(ro) ro.style.display = ps.round ? 'none' : ''; }
     const pi=document.getElementById('pb_prof_info');
     if(pi) pi.innerHTML=`${sys.grade} · A=${(ps.A*1e4).toFixed(1)} cm² · I_y=${(ps.Iy*1e8).toFixed(0)} cm⁴ · `
-      +`W_pl=${(ps.Wply*1e6).toFixed(0)} cm³ · N_pl,k=${(ps.A*fy*1000).toFixed(0)} kN · Breite/Ø=${(ps.b*1000).toFixed(0)} mm`;
+      +`W_pl=${(ps.Wply*1e6).toFixed(0)} cm³`
+      +(ps.round ? '' : ` · schwache Achse I_z=${((ps.Iz||ps.Iy)*1e8).toFixed(0)} cm⁴ / W_pl,z=${((ps.Wplz||ps.Wply)*1e6).toFixed(0)} cm³`)+` · N_pl,k=${(ps.A*fy*1000).toFixed(0)} kN · Breite/Ø=${(ps.b*1000).toFixed(0)} mm`;
   }
-  const _Lfull=+gi('pb_L')||10;                                  // Gesamtlänge (gestossen) — Axial/Bettung/Knicken
+  const _Lfull=(opt && opt.L > 0) ? +opt.L : (+gi('pb_L')||10);                                  // Gesamtlänge (gestossen) — Axial/Bettung/Knicken
   const _LbendMax = sys.LelemMax || 0;                          // längstes Einzelelement → Biegelänge M+N (Stoss=Gelenk)
   // ── Böschung: geneigtes Gelände (auf- ODER abfallend, Pfahl auf/an der Böschung) reduziert die
   //    laterale Bettung der talseitigen (bergab zeigenden) Seite — bei umkehrender Lastrichtung
@@ -216,6 +248,9 @@ function renderPfahlbock(){
   //    Vertikallast (Druck- vs. Zug/Herausziehen-massgebend). Massgebenden je Pfahl/Nachweis.
   const NG=+gi('l_NG')||0, HGx=+gi('l_HGx')||0, HGy=+gi('l_HGy')||0, MGx=+gi('l_MGx')||0, MGy=+gi('l_MGy')||0;
   const HQx=+gi('l_HWx')||0, HQy=+gi('l_HWy')||0, MQx=+gi('l_MWx')||0, MQy=+gi('l_MWy')||0;
+  // Torsionsmoment um die Mastachse (ständig / veränderlich). Es hat keine Komponenten-Maske und
+  // wirkt in JEDEM Lastfall (sichere Seite). Nur das Pfahlfundament führt es.
+  const TG=+gi('l_TG')||0, TQ=+gi('l_TW')||0;
   const gGinf=+gi('lw_G_inf')||1.0;
   // Lastvektor auf UK Bankett aus den im LF aktiven Komponenten — dieselben drei Faktoren wie
   // beim Block (buildCombos, SIA 260 Typ 2): fE = Eigengewicht Fundament (Bankett + Kopf),
@@ -232,6 +267,7 @@ function renderPfahlbock(){
       Mx:fG*(MxG+HyG*hl)+fQ*(MxW+HyW*hl) + Necc*eyK, My:fG*(MyG+HxG*hl)+fQ*(MyW+HxW*hl) + Necc*exK,
       // Mast-Moment am OK Kopf (ohne H·Hebel) — für die 3D-Einwirkung, konsistent zum Block (inkl. Exzentrizität)
       MxApp:fG*MxG+fQ*MxW + Necc*eyK, MyApp:fG*MyG+fQ*MyW + Necc*exK,
+      Mz:fG*TG+fQ*TQ,
       NMast:fG*Ng, fE, fG, fQ }; };
   const ulsLF=LF.filter(lf=>lf.nw!=='gzg'), gzgLF=LF.filter(lf=>lf.nw!=='gzt');
   const ulsCombos=[];
@@ -245,11 +281,13 @@ function renderPfahlbock(){
   const gzgFullC=(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,1,1,1)}));
   const gzgVarC =(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,0,0,1)}));
   const r=pfahlbockAnalyse({ piles, L:_Lfull, e:_ein ? Math.max(0,+gi('pb_e')||0) : 0, LbendMax:_LbendMax, bettungFac:_bettungFac,
-    dGrout:_dGrout, tendon:tdn, E_steel:sys.E,
+    dGrout:_dGrout, tendon:tdn, E_steel:sys.E, einzel:_ein, einbau:_einbau, Uramm:_Uramm, starkQuer:_starkQuer,
+    qb:_qb, Ab:_Ab, rT:_rT,
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
     alphaZul:_tanZul(true), alphaZulVar:_tanZul(false),   // SBB 1:100 / 1:200 aus den Optionen
     skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
+  if(_nur) return r;
   // Böschungs-Status fürs Panel + Greifer
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;
   // Globale Böschungsstandsicherheit (Bishop) hier ENTFERNT (Jul 2026, Nutzerentscheid): der kritische
@@ -307,6 +345,40 @@ function renderPfahlbock(){
   const mastN = { k: Math.max(0, (r.govLoadChar&&r.govLoadChar.NMast)||0), d: Math.max(0, (r.govLoad&&r.govLoad.NMast)||0) };
   RESULT.pfahlbock.viz = { pileRes:r.pileRes, govLoad:r.govLoad, govLoadChar:r.govLoadChar, govCombo:r.govCombo, mastN };
   try{ rebuildScene(); }catch(err){ console.error('Pfahlfundament-3D rebuild:', err); }
+}
+// ── Bemessung der Pfahllänge bei gegebenem Querschnitt ──────────────────────────────────────────
+// Sucht im 0.5-m-Raster die kleinste Länge, bei der alle aktiven Nachweise erfüllt sind. Einige
+// Nachweise hängen nicht von der Länge ab (Querschnitt, Knicken, bei langen Pfählen auch die
+// Kopfverformung) — bleibt einer davon unter 1, wird das gemeldet statt endlos zu verlängern.
+function _pbGov(r){
+  const c=[[nwOn('pfahl','geo')?r.etaGeo:Infinity,'Mantelreibung'],[nwOn('pfahl','geo')&&r.etaTors!=null?r.etaTors:Infinity,'Torsion'],
+           [nwOn('pfahl','stahl')?r.etaSteel:Infinity,'Querschnitt'],[nwOn('pfahl','knick')?r.etaKnick:Infinity,'Knicken'],
+           [nwOn('pfahl','lat')?r.etaLat:Infinity,'laterale Bodentragfähigkeit'],[nwOn('pfahl','gzg')?r.etaGZG:Infinity,'Gebrauchstauglichkeit']]
+          .filter(x=>x[0]!=null && !isNaN(x[0])).sort((a,b)=>a[0]-b[0]);
+  return c[0] || [Infinity,'–'];
+}
+function pbDimLaenge(){
+  const msg=document.getElementById('pb_dim_msg'), LMIN=1.0, LMAX=30, STEP=0.5;
+  const say=(t,bad)=>{ if(msg){ msg.style.display=''; msg.style.color=bad?'var(--fail)':'var(--dim)'; msg.innerHTML=t; } };
+  let found=null, last=null;
+  for(let L=LMIN; L<=LMAX+1e-9; L+=STEP){
+    const r=renderPfahlbock({nurRechnen:true, L}); if(!r) continue;
+    last={L, r};
+    if(etaErf(r.eta_massg)){ found=last; break; }
+  }
+  if(!found){
+    if(!last){ say('Keine Berechnung möglich.', true); return; }
+    const g=_pbGov(last.r);
+    say(`Bis L = ${LMAX.toFixed(0)} m nicht erfüllbar: massgebend bleibt <b>${g[1]}</b> mit η = ${isFinite(g[0])?g[0].toFixed(2):'∞'}. `
+       +`Die Länge hilft hier nicht — grösseres Profil wählen`+(g[1]==='Querschnitt'||g[1]==='Knicken'?`, höhere Stahlgüte oder andere Ausrichtung`:``)+`.`, true);
+    return;
+  }
+  const el=document.getElementById('pb_L'), rg=document.getElementById('pb_L_r');
+  if(el) el.value=found.L.toFixed(2); if(rg) rg.value=found.L;
+  renderPfahlbock();
+  const g=_pbGov(found.r);
+  say(`Kleinste Länge im 0.5-m-Raster: <b>L = ${found.L.toFixed(2)} m</b> · massgebend ${g[1]}, η = ${isFinite(g[0])?g[0].toFixed(2):'∞'}.`);
+  if(typeof _checkDirty==='function') try{ _checkDirty(); }catch(_){}
 }
 // Pfahlfundament-Nachweise in die rechte Ergebnis-Sidebar (#res-scroll) + Pill
 function _renderPfahlbockResultsRight(r, piles, n){

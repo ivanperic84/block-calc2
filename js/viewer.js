@@ -257,9 +257,37 @@ function _vlUpdate(){
     el.style.left=((tmp.x*.5+.5)*W)+'px';
     el.style.top= ((-.5*tmp.y+.5)*H)+'px';
   });
+  _vlEntzerren();
   updateAxisWidget();
 }
 
+// Überlappende Beschriftungen auseinanderschieben (Bildschirmebene). Liegen zwei Labels
+// übereinander, wandert das untere nach unten — bei kleinem Modell (Pfahlfundament mit langen
+// Pfählen) oder flachem Blickwinkel fielen sonst mehrere Masse und Lastwerte auf einen Fleck.
+// Die 3D-Ankerpunkte bleiben, verschoben wird nur die Anzeige; wenige Durchgänge genügen.
+function _vlEntzerren(){
+  const items=[];
+  _vlEls.forEach(({el})=>{ if(el.style.display==='none') return;
+    const w=el.offsetWidth, h=el.offsetHeight; if(!w||!h) return;
+    items.push({el, x:parseFloat(el.style.left)||0, y:parseFloat(el.style.top)||0, w, h}); });
+  if(items.length<2) return;
+  items.sort((a,b)=>a.y-b.y);
+  const PAD=3;
+  for(let pass=0; pass<4; pass++){
+    let moved=false;
+    for(let i=0;i<items.length;i++) for(let j=i+1;j<items.length;j++){
+      const a=items[i], b=items[j];
+      // Labels sind um ihren Ankerpunkt zentriert (CSS translate(-50%,-50%))
+      const dx=Math.abs(a.x-b.x), dy=b.y-a.y;
+      if(dx < (a.w+b.w)/2+PAD && Math.abs(dy) < (a.h+b.h)/2+PAD){
+        b.y = a.y + (a.h+b.h)/2 + PAD; moved=true;
+      }
+    }
+    if(!moved) break;
+    items.sort((a,b)=>a.y-b.y);
+  }
+  items.forEach(it=>{ it.el.style.top=it.y+'px'; });
+}
 function updateAxisWidget(){
   const w=document.getElementById('axis-widget');
   if(!w||!camera)return;

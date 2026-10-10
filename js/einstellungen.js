@@ -127,6 +127,11 @@ function _tanZul(hasPermanent){
 function loadSettings(){
   const s = dbGet('bc_settings');
   if(s) SETTINGS = Object.assign(SETTINGS, s);
+  // Wirksame Verpresslänge: Vorgabe seit Okt 2026 = 0 (keine Begrenzung, Nutzerentscheid). Der frühere
+  // Vorgabewert 10 m wurde bei jedem «Speichern» der Optionen mitgeschrieben und ist von einer
+  // bewussten Eingabe nicht zu unterscheiden — er wird EINMAL auf 0 gesetzt; wer eine Begrenzung
+  // will, trägt sie danach wieder ein.
+  if(!SETTINGS.lcritV2){ SETTINGS.pfahlLcrit = 0; SETTINGS.lcritV2 = true; try{ dbSet('bc_settings', SETTINGS); }catch(_){ } }
   // Theme
   document.documentElement.setAttribute('data-theme', SETTINGS.theme||'dark');
   const lEl = document.getElementById('set-light');
@@ -155,7 +160,7 @@ function loadSettings(){
   chk('set-steckner-slope', SETTINGS.stecknerSlope===true);   // Standard aus (Original-Steckner)
   set('set-pfahl-randmin', SETTINGS.pfahlRandMin??0.30);
   set('set-pfahl-alat', SETTINGS.pfahlAlphaLat??0.30);
-  set('set-pfahl-lcrit', SETTINGS.pfahlLcrit??10);
+  set('set-pfahl-lcrit', SETTINGS.pfahlLcrit??0);
   { const _ke=document.getElementById('set-kappa-e');
     if(_ke) _ke.value = ((SETTINGS.kappaE ?? (1/6)) > 0.25) ? '0.3333' : '0.1667'; }
   chk('set-bz-gred', SETTINGS.bauzustandGred===true);

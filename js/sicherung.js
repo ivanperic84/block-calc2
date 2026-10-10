@@ -701,11 +701,11 @@ function calcPfahlsicherung(){
         const needSich = dEx_degen || (isFinite(etaGZT_ex)&&etaGZT_ex<1)||(isFinite(etaGZG_ex)&&etaGZG_ex<1);
         const warnDeep = d_ex >= t_bl - 0.01;
         const colC = (tt, rows) => `<div style="flex:1;min-width:90px;background:var(--s2);border-radius:var(--r1);padding:6px 8px">
-          <div style="font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--xdim);margin-bottom:4px">${tt}</div>${rows}</div>`;
+          <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--xdim);margin-bottom:4px">${tt}</div>${rows}</div>`;
         const kv = (k,v) => `<div style="display:flex;justify-content:space-between;font-size:9.5px;padding:1px 0;gap:4px"><span style="color:var(--dim)">${k}</span><span style="font-family:var(--f-mono);white-space:nowrap">${v}</span></div>`;
         return `
         <div style="margin:8px 0 10px">
-          <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim);margin-bottom:4px">Zustandsvergleich — Aushub ${d_ex.toFixed(2)} m (${ex_seite==='gleis'?'Gleisseite':'Feldseite'} · ${sideLbl})</div>
+          <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim);margin-bottom:4px">Zustandsvergleich — Aushub ${d_ex.toFixed(2)} m (${ex_seite==='gleis'?'Gleisseite':'Feldseite'} · ${sideLbl})</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${colC('Bestand',
                 kv('GZT η', pill(etaGZT_block)) +
@@ -742,7 +742,7 @@ function calcPfahlsicherung(){
             'Steckner-Modell nicht mehr gültig — gesonderter Nachweis erforderlich.') : ''}
           ${hasGW && z_gw < d_ex ? wBox('warn', 'GW über Aushubsohle',
             'Wasserhaltung vorausgesetzt; einseitiger Wasserdruck ist nicht modelliert.') : ''}
-          <div style="margin-top:4px;font-size:8px;color:var(--xdim);line-height:1.5">Näherungen: GZG D_eff = t − d_ex · Rankine-Keil ohne δ${dEx_side==='parallel'?' · Aushub parallel: nur die freigelegte E₀-Seitenfläche angesetzt (passive Stirnflächen intakt)':''}</div>
+          <div style="margin-top:4px;font-size:9px;color:var(--xdim);line-height:1.5">Näherungen: GZG D_eff = t − d_ex · Rankine-Keil ohne δ${dEx_side==='parallel'?' · Aushub parallel: nur die freigelegte E₀-Seitenfläche angesetzt (passive Stirnflächen intakt)':''}</div>
         </div>`;
       })()}
 
@@ -763,7 +763,7 @@ function calcPfahlsicherung(){
       ${cardHd('Einwirkung + Lastverteilung', null, 'F_s = '+F_s.toFixed(1)+' kN '+(fall_zug?'(Zug)':'(Druck)'))}
       <!-- Stützenstabkraft — prominent -->
       <div style="background:var(--s3);border-radius:var(--r1);padding:8px 10px;margin-bottom:8px">
-        <div style="font-size:8px;color:${fall_zug?'var(--warn)':'var(--xdim)'};margin-bottom:3px">Stützenstabkraft (H + M-Anteil) — ${fall_zug?'ZUG (Moment zum Aushub)':'Druck'}</div>
+        <div style="font-size:9px;color:${fall_zug?'var(--warn)':'var(--xdim)'};margin-bottom:3px">Stützenstabkraft (H + M-Anteil) — ${fall_zug?'ZUG (Moment zum Aushub)':'Druck'}</div>
         <div style="display:flex;justify-content:space-between;align-items:baseline">
           <span>F_s = H_eff / cos(${alpha.toFixed(1)}°)</span>
           <span style="font-size:13px;font-weight:500;color:var(--on)">${F_s.toFixed(1)} kN</span>
@@ -774,7 +774,7 @@ function calcPfahlsicherung(){
       ${row('M_d Bemessung (Sohle)', M_d_bemessung.toFixed(1), 'kNm')}
       ${lv_auto ? `
       <div style="margin:3px 0;padding:5px 8px;background:var(--s2);border-left:2px solid var(--ol2);border-radius:3px;font-size:9.5px">
-        <div style="color:var(--dim);margin-bottom:2px;font-size:8px;letter-spacing:.05em;text-transform:uppercase">Steifigkeitsverteilung (Drehfedern um Sohle)</div>
+        <div style="color:var(--dim);margin-bottom:2px;font-size:9px;letter-spacing:.05em;text-transform:uppercase">Steifigkeitsverteilung (Drehfedern um Sohle)</div>
         ${row('K_Block (C₁-Bettung'+(exPas_lv?', D_eff='+D_lv.toFixed(2)+' m':'')+')', (K_block_rot/1000).toFixed(0), 'MNm/rad')}
         ${row('K_Pfahl (Winkler + Stütze, Serie)', (K_pfahl_rot/1000).toFixed(0), 'MNm/rad')}
         ${row('f_auto = K_Pf / (K_Bl + K_Pf)', f_eff.toFixed(2), '')}
@@ -791,11 +791,11 @@ function calcPfahlsicherung(){
       ${row('F_s = H_eff / cos(α) — Stützenstab', F_s.toFixed(1), 'kN')}
       ${N_bRd_stab > 0 ? row('N_b,Rd Stütze (Datenblatt)', N_bRd_stab.toFixed(0), 'kN')
         + `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--ol)"><span style="color:var(--dim)">η Knick Stütze = N_b,Rd / F_s${fall_zug?' (Zug — n.a.)':''}</span><span style="font-weight:600;font-family:var(--f-mono)">${isFinite(eta_knick_stab)?eta_cls(eta_knick_stab)('η = '+eta_knick_stab.toFixed(2)):'n.a.'}</span></div>` : ''}
-      ${Math.abs(alpha) < 4 ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">α = ${alpha.toFixed(1)}° — Stütze fast waagrecht (Pfahlkopf ≈ Anschlusshöhe) → geringe Axialkraft</div>` : ''}
+      ${Math.abs(alpha) < 4 ? `<div style="font-size:9px;color:var(--xdim);padding:1px 0 2px">α = ${alpha.toFixed(1)}° — Stütze fast waagrecht (Pfahlkopf ≈ Anschlusshöhe) → geringe Axialkraft</div>` : ''}
       <div style="margin-top:6px">${buildStrutDecompSVG(alpha, H_eff, F_s, V_pfahl, H_pfahl_d, fall_zug, axial_pullout)}</div>
       ${dH_ep > 0.01 ? `
       <div style="margin:6px 0 2px;padding:6px 8px;background:${lv_auto?'var(--s2)':'var(--warn-s)'};border-left:2px solid ${lv_auto?'var(--ol2)':'var(--warn)'};border-radius:3px">
-        <div style="font-size:8px;color:${lv_auto?'var(--xdim)':'var(--warn)'};margin-bottom:3px;letter-spacing:.05em">Ep-Verlust durch Aushub (d_ex = ${d_ex.toFixed(1)} m)${lv_auto?' — informativ, steckt im Auto-Modus in M_u,ex / D_eff':''}</div>
+        <div style="font-size:9px;color:${lv_auto?'var(--xdim)':'var(--warn)'};margin-bottom:3px;letter-spacing:.05em">Ep-Verlust durch Aushub (d_ex = ${d_ex.toFixed(1)} m)${lv_auto?' — informativ, steckt im Auto-Modus in M_u,ex / D_eff':''}</div>
         ${row('Ep_lost (Block, h='+h_ep_los.toFixed(2)+'m)', Ep_lost.toFixed(1), 'kN')}
         ${row('Arm Ep-Schwerpunkt → Sohle', arm_Ep_sohle.toFixed(2), 'm')}
         ${row('Arm Stütze → Sohle', arm_st_sohle.toFixed(2), 'm')}
@@ -822,7 +822,7 @@ function calcPfahlsicherung(){
         </span>
         <span style="font-weight:500;font-family:var(--f-mono);color:var(--warn)">H_u −${(exClipRed*100).toFixed(0)}%</span>
       </div>
-      <div style="font-size:8px;color:var(--xdim);padding:1px 0 3px;border-bottom:1px solid var(--ol)">Block-Abschirmung konservativ vernachlässigt — globale Standsicherheit gesondert prüfen</div>` : ''}
+      <div style="font-size:9px;color:var(--xdim);padding:1px 0 3px;border-bottom:1px solid var(--ol)">Block-Abschirmung konservativ vernachlässigt — globale Standsicherheit gesondert prüfen</div>` : ''}
       ${row('p_u,max Bettungsgrenzwert (3·Kp·σ′v·B)', Ep_max.toFixed(0), 'kN/m')}
       ${row('H_u,1,k (p-y-Push, Rotationsmech.)'+(exClip&&exClipRed>0.005?' (Aushub-red.)':''), Hu_1k.toFixed(1), 'kN')}
       ${row('γ_R Widerstandsteilsicherheit', gamma_R.toFixed(2), '')}
@@ -850,14 +850,14 @@ function calcPfahlsicherung(){
         <span style="color:var(--dim)">η_Axial</span>
         <span style="font-weight:500">${eta_cls(eta_ax)(isFinite(eta_ax)?'η = '+eta_ax.toFixed(2):'n.m.')}</span>
       </div>
-      <div style="font-size:8px;color:var(--xdim);margin-top:2px">Mantelreibung HEB-Kasten, Spitzendruck vernachlässigt (konservativ)${fall_zug?' · Herausziehen: gleiche Mantelreibung, Eigengewicht günstig vernachlässigt':''}</div>
+      <div style="font-size:9px;color:var(--xdim);margin-top:2px">Mantelreibung HEB-Kasten, Spitzendruck vernachlässigt (konservativ)${fall_zug?' · Herausziehen: gleiche Mantelreibung, Eigengewicht günstig vernachlässigt':''}</div>
       ${CARD_END}
 
       <div class="lf-grp">Innere Tragsicherheit — Bauteil (GZT)</div>
       ${cardHd('Stahlquerschnitt ('+typ+')', etaStahl, null, nw_massgebend==='Stahl')}
       ${row('M_max,1 (p-y'+(pyBUse?((pyBUse.yielded?', plastisch':', elastisch')+', z='+(pyBUse.sMmax-e_eff).toFixed(2)+'m u.GOK'):(pyBDiverg?' — Grenzlast':' — Näherung'))+')', nfx(M_max_1), 'kNm')}
       ${pyBDiverg ? divNote : ''}
-      ${spliced_p ? `<div style="font-size:8px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
+      ${spliced_p ? `<div style="font-size:9px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
       ${row('M_pl,k (S355, f_yk = 355 N/mm²)', Mpl.toFixed(1), 'kNm')}
       ${row('γ_M (SIA 263, Querschnitt)', gamma_M.toFixed(2), '')}
       ${row('M_pl,Rd = M_pl,k / γ_M', M_pl_Rd.toFixed(1), 'kNm')}
@@ -869,7 +869,7 @@ function calcPfahlsicherung(){
         <span style="color:var(--dim)">η_Stahl = 1 / (|N|/N_pl,Rd + |M|/M_pl,Rd)</span>
         <span style="font-weight:500">${eta_cls(etaStahl)(isFinite(etaStahl)?'η = '+etaStahl.toFixed(2):'n.m.')}</span>
       </div>
-      <div style="font-size:8px;color:var(--xdim);margin-top:2px">N+M-Interaktion (SIA 263) mit γ_M = ${gamma_M.toFixed(2)} auf beide Terme; Knicken des Pfahls nicht massgebend (allseitig gebettet)</div>
+      <div style="font-size:9px;color:var(--xdim);margin-top:2px">N+M-Interaktion (SIA 263) mit γ_M = ${gamma_M.toFixed(2)} auf beide Terme; Knicken des Pfahls nicht massgebend (allseitig gebettet)</div>
       ${CARD_END}
       ${(isFinite(etaGZT_block) && Md_Hst_block >= 0.1) ? '<div class="lf-grp">Stabilität — System Block + Pfahl (GZT)</div>' : ''}
       ${(() => {
@@ -897,8 +897,8 @@ function calcPfahlsicherung(){
               <span style="color:var(--dim)">M_u aus Starrkörperbilanz (Fusskante)</span>
               <span style="font-family:var(--f-mono);color:${etaCol(rb.eta_equiv)}">${rb.Mu_equiv.toFixed(1)} kNm · η=${isFinite(rb.eta_equiv)?rb.eta_equiv.toFixed(2):'n.m.'}</span>
             </div>
-            <div style="font-size:8px;color:var(--warn);padding:0 0 3px;line-height:1.5">Steckner Gl.66 verlässt bei diesem Aushub den Gültigkeitsbereich (NL in Sohle). Angerechnet wird stattdessen die <b>Starrkörperbilanz um die Fusskante</b> — durchgehend konservativer, aber bis h_p = 0 gültig.</div>`
-            : `<div style="font-size:8px;color:var(--fail);padding:0 0 3px;line-height:1.5">Mechanismus degeneriert (NL in Sohle) → das System trägt allein über die Pfähle</div>`}` : `<div style="display:flex;justify-content:space-between;padding:3px 0">
+            <div style="font-size:9px;color:var(--warn);padding:0 0 3px;line-height:1.5">Steckner Gl.66 verlässt bei diesem Aushub den Gültigkeitsbereich (NL in Sohle). Angerechnet wird stattdessen die <b>Starrkörperbilanz um die Fusskante</b> — durchgehend konservativer, aber bis h_p = 0 gültig.</div>`
+            : `<div style="font-size:9px;color:var(--fail);padding:0 0 3px;line-height:1.5">Mechanismus degeneriert (NL in Sohle) → das System trägt allein über die Pfähle</div>`}` : `<div style="display:flex;justify-content:space-between;padding:3px 0">
               <span style="color:var(--dim)">M_u,ex Block (Aushub${dEx_side?', '+dEx_side:''})</span>
               <span style="font-family:var(--f-mono);color:${eta_ex_c}">${Mu_block_ex.toFixed(1)} kNm · η=${isFinite(etaGZT_ex)?etaGZT_ex.toFixed(2):'n.m.'}</span>
             </div>
@@ -915,10 +915,10 @@ function calcPfahlsicherung(){
               <span style="font-family:var(--f-mono);color:${eta_sys_c}">η = ${eta_sys.toFixed(2)}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--ol);font-size:9.5px">
-              <span style="color:var(--dim)">Schiefstellung System (Block+Pfahl, GZG)${nw_massgebend==='GZG System'?' <span style="color:var(--acc);font-size:8px;letter-spacing:.05em">MASSGEBEND</span>':''}</span>
+              <span style="color:var(--dim)">Schiefstellung System (Block+Pfahl, GZG)${nw_massgebend==='GZG System'?' <span style="color:var(--acc);font-size:9px;letter-spacing:.05em">MASSGEBEND</span>':''}</span>
               <span style="font-family:var(--f-mono)">${neig_sys_mm.toFixed(1)} mm/m · ${eta_cls(eta_GZG_sys)(isFinite(eta_GZG_sys)?'η = '+eta_GZG_sys.toFixed(2):'n.m.')}</span>
             </div>
-            <div style="font-size:8px;color:var(--xdim);margin-top:3px">Kapazitätssumme: Blockwiderstand im Aushubzustand + kapazitätsgedeckelter Pfahlbeitrag vs. volle Bemessungslast</div>
+            <div style="font-size:9px;color:var(--xdim);margin-top:3px">Kapazitätssumme: Blockwiderstand im Aushubzustand + kapazitätsgedeckelter Pfahlbeitrag vs. volle Bemessungslast</div>
         ` + CARD_END;
       })()}
 
@@ -947,7 +947,7 @@ function calcPfahlsicherung(){
             ${rb.HR_tot > rb.HR + 0.05 ? `<div style="font-size:9px;color:var(--warn);padding:4px 0 0;line-height:1.5">
               Erforderliche Rückhaltekraft aus dieser Bedingung: <b>${rb.HR_eLim.toFixed(1)} kN</b>
               (aus der reinen Momentenbilanz: ${rb.HR_St.toFixed(1)} kN) — vorhanden ${rb.HR.toFixed(1)} kN.</div>` : ''}
-            <div style="font-size:8px;color:var(--xdim);margin-top:3px">κ_e in den Optionen einstellbar: 1/6 = klaffungsfreie Kernweite (Voreinstellung, für provisorische Zustände) · 1/3 = SIA 267 Ziff. 5.4.2.4. Nur im Aushubzustand geführt — beim voll eingebundenen Block deckt Steckner Gl.66 die Standsicherheit ab.</div>
+            <div style="font-size:9px;color:var(--xdim);margin-top:3px">κ_e in den Optionen einstellbar: 1/6 = klaffungsfreie Kernweite (Voreinstellung, für provisorische Zustände) · 1/3 = SIA 267 Ziff. 5.4.2.4. Nur im Aushubzustand geführt — beim voll eingebundenen Block deckt Steckner Gl.66 die Standsicherheit ab.</div>
         ` + CARD_END;
       })() : ''}
 
@@ -977,7 +977,7 @@ function calcPfahlsicherung(){
 
       <div class="lf-grp">Gebrauchstauglichkeit (GZG)</div>
       ${cardHd('Verformung (p-y-Bettung, FE)', eta_V, null, nw_massgebend==='Verform.')}
-      <div style="font-size:8px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
+      <div style="font-size:9px;color:var(--xdim);margin:0 0 4px">Biegelinie/Moment siehe Schnittgrössen-Diagramm (FE-Bettung)</div>
       ${row('k_s lateral'+(multiLayer?' (schichtweise, M̄_E='+me_eff.toFixed(0)+')':' (M_E)'), (k_s/1000).toFixed(0), 'MN/m³')}
       ${row('α_lat Lateral-Faktor', alpha_lat.toFixed(2), '')}
       ${row('λL Pfahlklasse', aL.toFixed(2)+' → '+pfahlTypLabel, '')}
@@ -1000,7 +1000,7 @@ function calcPfahlsicherung(){
       ${warn_s}
       ${CARD_END}
 
-      <div style="margin-top:10px;padding:5px 8px;background:var(--s3);border-radius:3px;font-size:8px;color:var(--xdim);line-height:1.55">
+      <div style="margin-top:10px;padding:5px 8px;background:var(--s3);border-radius:3px;font-size:9px;color:var(--xdim);line-height:1.55">
         Vordimensionierung · p-y-Bettungsmodell (elasto-plastisch, Grenzlast aus p_u-Hüllkurve) · Stütze: ${fall_zug?'Zugfall':'Druckfall (Knicknachweis offen)'} · ${multiLayer?'schichtweiser Boden':'Boden Schicht 1'} · Kein Ersatz für normativen Nachweis
       </div>
     </div>`;
@@ -1023,7 +1023,7 @@ function calcPfahlsicherung(){
   sysDiv.style.cssText = 'margin-top:12px';
   sysDiv.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Systemschnitt Block / Pfahl</span>
+      <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Systemschnitt Block / Pfahl</span>
       <button onclick="togglePfahlDiagWide('${sysId}')"
         style="background:var(--s3);border:1px solid var(--ol);border-radius:3px;color:var(--dim);font-family:var(--f-mono);font-size:9px;padding:1px 7px;cursor:pointer">
         ${sysWide ? '↙' : '⤢'}
@@ -1039,7 +1039,7 @@ function calcPfahlsicherung(){
   snDiv.style.cssText = 'margin-top:10px';
   snDiv.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Schnittgrössen — p-y (FE)</span>
+      <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--xdim)">Schnittgrössen — p-y (FE)</span>
       <button onclick="togglePfahlDiagWide('${snId}')"
         style="background:var(--s3);border:1px solid var(--ol);border-radius:3px;color:var(--dim);font-family:var(--f-mono);font-size:9px;padding:1px 7px;cursor:pointer">
         ${snWide ? '↙' : '⤢'}
@@ -1054,7 +1054,7 @@ function calcPfahlsicherung(){
       puAt, pyYielded: pyUse ? pyUse.yielded : false, pyNonlin: !!pyUse, multiLayer
     }, snWide)}
     <details style="margin-top:6px">
-      <summary style="font-family:var(--f-mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--xdim);cursor:pointer">p-y-Kennlinie erklärt</summary>
+      <summary style="font-family:var(--f-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--xdim);cursor:pointer">p-y-Kennlinie erklärt</summary>
       <div style="margin-top:4px">${buildPyKennlinieSVG(pyMob, pyUse?pyUse.yielded:false)}</div>
       <div style="font-size:8.5px;color:var(--xdim);line-height:1.5;margin-top:4px">
         Jede Bodentiefe ist eine Feder: Reaktion <b>p</b> steigt elastisch mit der Verschiebung (Steigung k_s·B),

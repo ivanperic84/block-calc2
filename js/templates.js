@@ -91,7 +91,7 @@ function renderTemplates(){
     if(isCustom){
       d.innerHTML += `<button class="btn btn-danger btn-xs" style="margin-top:8px;width:100%" onclick="deleteTpl('${tpl.id}',event)">Löschen</button>`;
     } else {
-      d.innerHTML += `<div style="font-size:7.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:6px;text-align:center;letter-spacing:0.06em">REFERENZ</div>`;
+      d.innerHTML += `<div style="font-size:8.5px;color:var(--xdim);font-family:var(--f-mono);margin-top:6px;text-align:center;letter-spacing:0.06em">REFERENZ</div>`;
     }
     d.addEventListener('click', e=>{if(e.target.closest('.btn-danger'))return; loadTemplate(tpl);});
     grid.appendChild(d);

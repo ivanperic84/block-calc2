@@ -5,7 +5,7 @@
 // Mantelreibung) + eingefrorene Golden-Werte eines vollständig expliziten Zustands.
 // Draft-Save ist im Selbsttest unterdrückt (echter Arbeitsstand bleibt unberührt).
 // ════════════════════════════════════════════
-const _ST_STATE = {"AUFLASTEN":"[]","FLACH_MAT":"beton","LF":"[{\"name\":\"LF 1 — GZT (quer)\",\"preset\":\"quer\",\"gG\":1.35,\"gW\":1.5,\"nw\":\"gzt\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}},{\"name\":\"LF 2 — GZG (quer)\",\"preset\":\"quer\",\"gG\":1,\"gW\":1,\"nw\":\"gzg\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}}]","MODEL":"block","SCHICHTEN":"[{\"phi\":30,\"c\":0,\"gamma\":20,\"gamma2\":10,\"d\":999,\"name\":\"Testboden\",\"preset\":\"custom\",\"me\":30}]","bg_beta":"0","bg_bfuss":"0.00","bg_bhoehe":"0","bg_btyp":"none","bg_c":"0","bg_c1":"155.0","bg_c1_methode":"auto","bg_delta_fac":"0.667","bg_delta_sohle":"0.667","bg_gamma":"20","bg_gamma2":"10","bg_gw":"","bg_gwt":"3.00","bg_koernig":"grob","bg_me":"30","bg_phi":"30","bg_qu":"400","flach-material":"beton","g_bx":"1.3","g_by":"1.3","g_ex":"0","g_ey":"0","g_gauf":"20","g_gbeton":"25","g_hblock":"2.7","g_hkopf":"1.0","g_kx":"0.6","g_ky":"0.6","g_uberd":"0.4","g_uberd_flach":"0.40","hkopf_conv":2,"kopf_in_gk":true,"l_HGx":"8","l_HGy":"8","l_HWx":"6","l_HWy":"6","l_MGx":"45","l_MGy":"45","l_MWx":"35","l_MWy":"35","l_NG":"50","lw_G":"1.35","lw_G1_inf":"0.80","lw_G1_sup":"1.20","lw_G_eig":"1","lw_G_gzg":"1.00","lw_G_inf":"0.8","lw_Q":"1.5","lw_Q1":"1.50","lw_Q_gzg":"1.00","p_bearbeiter":"","p_bemerk":"","p_datum":"2026-01-01","p_fundname":"Selbsttest","p_km":"","p_mastnr":"","p_name":"Selbsttest","p_nr":"","pb_L":"10.00","pb_auto":"1","pb_ax":"12","pb_ay":"12","pb_bank_d":"0.80","pb_bx":"2.00","pb_by":"2.00","pb_dG":"150","pb_ex":"0.00","pb_ey":"0.00","pb_gR":"1.40","pb_gS":"1.15","pb_hk":"1.00","pb_korr":"temp","pb_kx":"0.60","pb_ky":"0.60","pb_mode":"gruppe","pb_n":"4","pb_rot":"0","pb_skinfac":"1.0","pb_sx":"1.40","pb_sy":"1.40","pb_sys":"0","pb_ue":"0.40","pb_var":"0","pb_zugfac":"1.0","pfahl_abstand":"2.50","pfahl_alpha":"2.3","pfahl_anzahl":"2","pfahl_dex":"1.8","pfahl_dex_seite":"gleis","pfahl_dk":"15","pfahl_dm":"5","pfahl_e":"0.5","pfahl_hs":"0","pfahl_l":"4.00","pfahl_laf":"1.0","pfahl_lv_mode":"auto","pfahl_s":"4.00","pfahl_stab_nrd":"0","pfahl_typ":"HEB200","pfahl_zugfest":"ja","tw_Ea":"1.35","tw_Ep":"1.4","tw_c":"1.5","tw_phi":"1.2"};
+const _ST_STATE = {"AUFLASTEN":"[]","FLACH_MAT":"beton","LF":"[{\"name\":\"LF 1 — GZT (quer)\",\"preset\":\"quer\",\"gG\":1.35,\"gW\":1.5,\"nw\":\"gzt\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}},{\"name\":\"LF 2 — GZG (quer)\",\"preset\":\"quer\",\"gG\":1,\"gW\":1,\"nw\":\"gzg\",\"comp\":{\"NG\":true,\"HGx\":true,\"HGy\":false,\"MGx\":false,\"MGy\":true,\"HWx\":true,\"HWy\":false,\"MWx\":false,\"MWy\":true}}]","MODEL":"block","SCHICHTEN":"[{\"phi\":30,\"c\":0,\"gamma\":20,\"gamma2\":10,\"d\":999,\"name\":\"Testboden\",\"preset\":\"custom\",\"me\":30}]","bg_beta":"0","bg_bfuss":"0.00","bg_bhoehe":"0","bg_btyp":"none","bg_c":"0","bg_c1":"155.0","bg_c1_methode":"auto","bg_delta_fac":"0.667","bg_delta_sohle":"0.667","bg_gamma":"20","bg_gamma2":"10","bg_gw":"","bg_gwt":"3.00","bg_koernig":"grob","bg_me":"30","bg_phi":"30","bg_qu":"400","flach-material":"beton","g_bx":"1.3","g_by":"1.3","g_ex":"0","g_ey":"0","g_gauf":"20","g_gbeton":"25","g_hblock":"2.7","g_hkopf":"1.0","g_kx":"0.6","g_ky":"0.6","g_uberd":"0.4","g_uberd_flach":"0.40","hkopf_conv":2,"kopf_in_gk":true,"l_HGx":"8","l_HGy":"8","l_HWx":"6","l_HWy":"6","l_MGx":"45","l_MGy":"45","l_MWx":"35","l_MWy":"35","l_NG":"50","lw_G":"1.35","lw_G1_inf":"0.80","lw_G1_sup":"1.20","lw_G_eig":"1","lw_G_gzg":"1.00","lw_G_inf":"0.8","lw_Q":"1.5","lw_Q1":"1.50","lw_Q_gzg":"1.00","p_bearbeiter":"","p_bemerk":"","p_datum":"2026-01-01","p_fundname":"Selbsttest","p_km":"","p_mastnr":"","p_name":"Selbsttest","p_nr":"","pb_L":"10.00","pb_auto":"1","pb_ax":"12","pb_ay":"12","pb_bank_d":"0.80","pb_bx":"2.00","pb_by":"2.00","pb_dG":"150","pb_ex":"0.00","pb_ey":"0.00","pb_gR":"1.40","pb_gS":"1.15","pb_hk":"1.00","pb_korr":"temp","pb_kx":"0.60","pb_ky":"0.60","pb_mode":"gruppe","pb_orient":"quer","pb_einbau":"ramm","pb_n":"4","pb_rot":"0","pb_skinfac":"1.0","pb_sx":"1.40","pb_sy":"1.40","pb_sys":"0","pb_ue":"0.40","pb_var":"0","pb_zugfac":"1.0","pfahl_abstand":"2.50","pfahl_alpha":"2.3","pfahl_anzahl":"2","pfahl_dex":"1.8","pfahl_dex_seite":"gleis","pfahl_dk":"15","pfahl_dm":"5","pfahl_e":"0.5","pfahl_hs":"0","pfahl_l":"4.00","pfahl_laf":"1.0","pfahl_lv_mode":"auto","pfahl_s":"4.00","pfahl_stab_nrd":"0","pfahl_typ":"HEB200","pfahl_zugfest":"ja","tw_Ea":"1.35","tw_Ep":"1.4","tw_c":"1.5","tw_phi":"1.2"};
 
 function runSelfTest(){
   const _stRes=()=>(curResult()||{}).results;   // Ergebnisliste des aktiven Modells
@@ -174,6 +174,44 @@ function runSelfTest(){
     // 0.20 m ein: ΔAuftrieb = B_K·L_K·0.20·10 = 0.6·0.6·0.20·10 = 0.72 kN gegenüber GW an OK Block.
     (()=>{ const b=collectCalcInputs(), A=z=>_doCalculate({...b, raw:{...b.raw, bg_gw:'ja', bg_gwt:z}, _pure:true}).G.G_auftrieb;
       add('Auftrieb am Kopf: Δ bei GW 0.20 m über OK Block [kN]', A('0.20')-A('0.40'), 0.72, 1e-9,'abs'); })();
+    // ── T11 Bettungsbalken mit KOPFMOMENT gegen Hetényi (langer Balken, k_w = k_s·B konstant):
+    // y0 = 2·M·λ²/k_w, θ0 = 4·M·λ³/k_w. Grundlage des Einzelpfahl-Nachweises (Okt 2026).
+    (()=>{ const EI=11962, B=0.2, ks=30000, kw=ks*B, lam=Math.pow(kw/(4*EI),0.25);
+      const m=bddBeamPY(EI,B,0,14,0,()=>ks,{M0:1});
+      add('p-y-FE Kopfmoment: y0 = 2Mλ²/k_w', m?m.yHead_mm/1000:NaN, 2*lam*lam/kw, 5e-3,'rel');
+      add('p-y-FE Kopfmoment: θ0 = 4Mλ³/k_w', m?m.thetaHead:NaN, 4*Math.pow(lam,3)/kw, 5e-3,'rel'); })();
+    // ── T12 Einzelpfahl: das Mastmoment am Kopf muss in den Stahlnachweis eingehen
+    // (bis Okt 2026 rechnete er nur mit dem Moment aus der Querkraft: η 13.2 statt 1.65).
+    applyState(_ST_STATE); setModel('pfahlbock'); si('pb_mode','einzel'); si('pb_prof','HEB200');
+    si('pb_orient','quer'); si('pb_einbau','ramm'); si('pb_e','0'); onPbMode();
+    (()=>{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{}, ld=r.govLoad||{};
+      add('Einzelpfahl: M_Ed ≥ Kopfmoment M_d', (r.Mmax>=Math.abs(ld.My||0)-0.5)?1:0, 1, 0,'abs');
+      add('Einzelpfahl HEB 200: η_Stahl', r.etaSteel, 1.65, 0.015,'abs');
+      add('Einzelpfahl HEB 200: η_GZG', r.etaGZG, 0.89, 0.015,'abs'); })();
+    // ── T13 Ergänzungen Okt 2026: Spitzenwiderstand, Torsion, Rammrohr, Längenbemessung
+    (()=>{ const R=()=>RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
+      const eta0=R().etaGeo;
+      si('pb_qb','5000'); si('pb_spitze','voll'); renderPfahlbock();
+      add('Spitze: R_b,k = q_b,k·b·h = 5000·0.04', R().Rb_k, 200, 0.05,'abs');
+      add('Spitze erhöht η_Geo (Druck)', R().etaGeo>eta0?1:0, 1, 0,'abs');
+      si('pb_qb','0'); si('pb_spitze','stahl');
+      // Torsion HEB 200: W_t = I_T/t_f, I_T = (2·b·t_f³ + h_w·t_w³)/3 ⇒ T_Rd = W_t·f_yk/(√3·γ_s)
+      const eS0=R().etaSteel; si('l_TW','2'); renderPfahlbock();
+      const It=(2*0.2*Math.pow(0.015,3)+0.17*Math.pow(0.009,3))/3;
+      add('Torsion: T_Rd Stahl HEB 200', R().tors?R().tors.TRst:NaN, It/0.015*355000/Math.sqrt(3)/(+gi('pb_gS')||1.15), 0.01,'abs');
+      add('Torsion senkt η_Stahl', R().etaSteel<eS0?1:0, 1, 0,'abs');
+      add('Torsion: Nachweis über Mantelreibung geführt', (R().etaTors!=null&&isFinite(R().etaTors))?1:0, 1, 0,'abs');
+      si('l_TW','0'); renderPfahlbock();
+      add('Ohne Torsion: η_Stahl unverändert', R().etaSteel, eS0, 1e-9,'abs');
+      si('pb_prof','RR324'); renderPfahlbock();
+      add('Rammrohr Ø 323.9: Breite im Rechenkern', R().dG, 0.3239, 1e-4,'abs');
+      si('pb_prof','HEB200'); })();
+    si('pb_mode','gruppe'); onPbMode(); applyState(_ST_STATE); setModel('pfahlbock');
+    (()=>{ pbDimLaenge(); const L=+gi('pb_L'), r=RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
+      const kurz=renderPfahlbock({nurRechnen:true, L:L-0.5});
+      add('Längenbemessung: gefundene Länge erfüllt', etaErf(r.eta_massg)?1:0, 1, 0,'abs');
+      add('Längenbemessung: 0.5 m kürzer erfüllt nicht', (L<=1.0 || !etaErf(kurz.eta_massg))?1:0, 1, 0,'abs'); })();
+    applyState(_ST_STATE);
     // ── T10 Erfüllt-Regel: entschieden wird auf dem angezeigten 2-Dezimal-Wert
     add('etaErf(0.997) = erfüllt', etaErf(0.997)?1:0, 1, 0,'abs');
     add('etaErf(0.994) = nicht erfüllt', etaErf(0.994)?1:0, 0, 0,'abs');

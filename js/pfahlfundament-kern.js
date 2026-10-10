@@ -107,6 +107,26 @@ function microQsExp(s){
   if(c >= 15 && phi <= 27) return Math.min(100, Math.max(30, 2.75*c));  // bindig: aus c′ (Ton/Schluff)
   return Math.min(160, Math.max(80, 100 + (phi-30)*10));                // nichtbindig: φ als Dichte-Proxy
 }
+// ── Mantelreibung eines GERAMMTEN / EINGESTELLTEN Stahlprofils (Einzelpfahl, Okt 2026) ─────────
+// Ein gerammter HEB-Träger oder ein Schraubfundament hat KEINEN Verpresskörper — die q_s,k der
+// EA-Pfähle für verpresste Mikropfähle (135–315 kPa) gelten dafür nicht und wären um ein Vielfaches
+// zu günstig. Angesetzt wird die Mantelreibung aus dem Ruhedruck am Profilumriss, wie im Modul
+// Sicherung:  q_s(z) = K₀·σ'v(z)·tan(⅔·φ'),  K₀ = 1 − sin φ'  (tiefenabhängig, GW-wirksam,
+// Kohäsion konservativ vernachlässigt). U = Umriss: HEB 2·(b+h), Rohr π·d.
+function rammSkinFriction(L, U){
+  let Rk=0, z=0, qMin=Infinity, qMax=0; const layers=[];
+  const S=(typeof cSchichten==='function') ? cSchichten() : SCHICHTEN;
+  for(let i=0;i<S.length && z<L-1e-9;i++){
+    const s=S[i], bot=(s.d===999||i===S.length-1) ? L : Math.min(L, z+s.d), dz=bot-z;
+    if(dz<=1e-9){ z=bot; continue; }
+    const ph=Math.max(0,+(s.phi??30))*Math.PI/180, K0=1-Math.sin(ph), tn=Math.tan(2/3*ph);
+    let dR=0; const n=20;
+    for(let j=0;j<n;j++){ const zm=z+(j+0.5)*dz/n; const q=K0*sigVeffTo(zm)*tn; dR+=q*U*dz/n; qMin=Math.min(qMin,q); qMax=Math.max(qMax,q); }
+    layers.push({ name:s.name||('Schicht '+(i+1)), preset:s.preset, z0:z, z1:bot, dz, qs:dR/(U*dz), dRk:dR });
+    Rk+=dR; z=bot;
+  }
+  return { Rk, qsAvg: L>0 ? Rk/(U*L) : 0, qsMin: isFinite(qMin)?qMin:0, qsMax:qMax, layers, L, Leff:L, Lcrit:0, capped:false };
+}
 function microSkinFriction(L, dG, skinFac, alphaC, Lcrit){
   const U = Math.PI * dG, sf = (skinFac > 0 ? skinFac : 1);
   // WIRKSAME VERPRESSLÄNGE (Aug 2026): q_s,k ist ein tiefenkonstanter Erfahrungswert (EA-Pfähle/
@@ -200,7 +220,8 @@ function latGroupFactor(sOverD){
 function pfahlbockAnalyse(cfg){
   const n = cfg.piles.length;
   const L = Math.max(0.5, cfg.L||6), e = Math.max(0, cfg.e||0);
-  const dG = Math.min(0.30, Math.max(0.05, cfg.dGrout||0.15));
+  // Breite: Mikropfahl ≤ 0.30 m (Verpresskörper). Der Einzelpfahl darf breiter sein (Rammrohre bis ≈ 0.7 m).
+  const dG = Math.min((cfg.einzel && n===1) ? 1.00 : 0.30, Math.max(0.05, cfg.dGrout||0.15));
   const tdn = cfg.tendon || {As:1970, da:76, fy:520, Ryk:1000};
   const Es = (cfg.E_steel || 210000) * 1000;               // N/mm² → kN/m²
   const As = (tdn.As||0) * 1e-6;                           // m²
@@ -234,13 +255,20 @@ function pfahlbockAnalyse(cfg){
   const zugFac  = Math.min(1, Math.max(0.05, cfg.zugFac ?? 1));
   const alphaC  = +(SETTINGS.pfahlAlphaC ?? 1.0);
   // Wirksame Verpresslänge: Deckel auf die mitwirkende Mantelfläche (Optionen, 0 = aus)
-  const _Lcrit   = Math.max(0, +(SETTINGS.pfahlLcrit ?? 10));
-  const _sk      = microSkinFriction(L, dG, skinFac, alphaC, _Lcrit);
+  const _Lcrit   = Math.max(0, +(SETTINGS.pfahlLcrit ?? 0));    // 0 = keine Begrenzung (Vorgabe seit Okt 2026)
+  // Einzelpfahl als gerammtes Stahlprofil: Mantelreibung aus dem Ruhedruck am Umriss (kein Verpresskörper)
+  const _ramm    = !!cfg.einzel && n===1 && cfg.einbau !== 'verpresst';
+  const _sk      = _ramm ? rammSkinFriction(L, Math.max(0.05, cfg.Uramm || Math.PI*dG))
+                         : microSkinFriction(L, dG, skinFac, alphaC, _Lcrit);
   const Rskin_k  = _sk.Rk * grp.eta;                            // Druck (charakteristisch), η_g-reduziert
   const Rskin_kZ = Rskin_k * zugFac;                            // Zug (Herausziehen)
   const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
   const Rskin_d  = Rskin_k  / gR;                               // Druck-Bemessungswiderstand
   const Rskin_dZ = Rskin_kZ / gR;                               // Zug-Bemessungswiderstand
+  // Spitzenwiderstand (nur Einzelpfahl, nur Druck): R_b,k = q_b,k·A_b. q_b,k = 0 ⇒ nicht angesetzt.
+  const _einz1 = !!cfg.einzel && n===1;
+  const qb = _einz1 ? Math.max(0, +cfg.qb||0) : 0, Ab = _einz1 ? Math.max(0, +cfg.Ab||0) : 0;
+  const Rb_k = qb*Ab, Rb_d = Rb_k/gR;
   // ── Laterale BODEN-Tragfähigkeit (ULS) — Grenzgleichgewicht der p_u-Hüllkurve (Rotations-/Kick-out-
   //    Versagen des kurzen Pfahls). Fehlte bisher (nur lineare Bettung) → sehr kurze Pfähle „bestanden".
   //    p_u(z) schichtweise (Reibung 3·Kp·σ'v·B, bindig 9·c_u·B), Böschung via bettungFac. Gilt für den
@@ -285,7 +313,7 @@ function pfahlbockAnalyse(cfg){
   //    Aufschlüsselung (lineare Superposition). Massgebenden je Pfahl über alle Kombos.
   const ulsCombos = (cfg.ulsCombos && cfg.ulsCombos.length) ? cfg.ulsCombos
                   : (cfg.loadULS ? [{label:'ULS', lf:'ULS', load:cfg.loadULS}] : []);
-  const _comps = ['N','Hx','Hy','Mx','My'];
+  const _comps = ['N','Hx','Hy','Mx','My','Mz'];
   const ulsData = ulsCombos.map(c => {
     const sol = solvePfahlbock(piles, c.load);
     const comps = {};
@@ -300,7 +328,7 @@ function pfahlbockAnalyse(cfg){
     ulsData.forEach((u,ci) => {
       if(!u.F) return;
       const F = u.F[i], FLat = u.FLat[i], Mp = Mmax1 * FLat;
-      const Rsd = F < 0 ? Rskin_dZ : Rskin_d;               // Zug (Herausziehen) vs Druck
+      const Rsd = F < 0 ? Rskin_dZ : Rskin_d + Rb_d;        // Zug (Herausziehen) vs Druck (Mantel + Spitze)
       const eG = Math.abs(F) > 0.01 ? Rsd/Math.abs(F) : Infinity;
       const utilS = Math.abs(F)/Math.max(0.01,Rt_d) + Math.abs(Mp)/Math.max(0.01,M_Rd);
       const eS = utilS > 1e-6 ? 1/utilS : Infinity;
@@ -339,6 +367,79 @@ function pfahlbockAnalyse(cfg){
     const eL = util>1e-9 ? 1/util : Infinity;
     if(eL < etaLat){ etaLat = eL; latGovCombo = ci; latVd = Vd; latMd = Mgl; }
   });
+  // ══ EINZELPFAHL — eigener Biege- und Verformungsansatz (Okt 2026) ═══════════════════════════
+  // Das Gruppenmodell (solvePfahlbock) trägt ein Kopfmoment über eine Drehfeder am Bankett; in die
+  // Biegung des Pfahls ging es NICHT ein. Beim Einzelpfahl ist das Mastmoment aber die massgebende
+  // Beanspruchung: der Stahlnachweis rechnete nur mit dem Moment aus der Querkraft (verifiziert:
+  // HEB 200, M_d = 113 kNm am Kopf ⇒ η_Stahl 13.2 statt ≈ 1.5). Ebenso fehlte der Momentenanteil in
+  // der Kopfverschiebung, und die Drehfeder 2·EI·λ war doppelt so steif wie der Bettungsbalken
+  // (richtig EI·λ). Neu wird der Pfahl als Bettungsbalken mit H UND M am Kopf gerechnet, getrennt
+  // für die Biegung quer (H_x, M_y) und längs (H_y, M_x) mit der jeweils zugehörigen Profilachse.
+  let ein = null;
+  if(np === 1 && cfg.einzel){
+    const Iz = (tdn.Iz != null) ? tdn.Iz : I, Wz = (tdn.Wplz != null) ? tdn.Wplz : Wpl;
+    const sq = cfg.starkQuer !== false;                    // starke Achse trägt die Querbiegung
+    const Iq = sq ? I : Iz, Il = sq ? Iz : I, Wq = sq ? Wpl : Wz, Wl = sq ? Wz : Wpl;
+    const fyk = (tdn.fy||500)*1000;
+    const mk = Ix => { const EIx = Math.max(1, Es*Ix), kurz = Lbend < L - 1e-6;
+      const h = bddBeamPY(EIx, dG, e, L, 1, ksAt), m = bddBeamPY(EIx, dG, e, L, 0, ksAt, {M0:1});
+      return { EI:EIx, h, m, hb: kurz ? bddBeamPY(EIx, dG, e, Lbend, 1, ksAt) : h,
+                             mb: kurz ? bddBeamPY(EIx, dG, e, Lbend, 0, ksAt, {M0:1}) : m }; };
+    const Pq = mk(Iq), Pl = (Math.abs(Il-Iq) < 1e-18) ? Pq : mk(Il);
+    const MRq = Wq*fyk/gS, MRl = Wl*fyk/gS;
+    const TRst = (tdn.Wt > 0) ? tdn.Wt*fyk/Math.sqrt(3)/gS : 0;        // Torsionswiderstand Stahl [kNm]
+    // Überlagerung der beiden Einheitslösungen (linear): Verlauf und Grösstwert des Moments
+    const bieg = (P, H, M) => { if(!P.hb || !P.mb) return {M:0, prof:null};
+      let mx = 0; const prof = P.hb.profile.map((a,i) => { const b2 = P.mb.profile[i] || {y_mm:0,M:0,p:0,V:0};
+        const Mz = H*a.M + M*b2.M; if(Math.abs(Mz) > mx) mx = Math.abs(Mz);
+        return { z:a.z, y_mm:H*a.y_mm + M*b2.y_mm, M:Mz, p:H*a.p + M*b2.p, V:H*a.V + M*b2.V }; });
+      return {M:mx, prof}; };
+    const kopf = (P, H, M) => ({ u: (P.h ? H*P.h.yHead_mm : 0) + (P.m ? M*P.m.yHead_mm : 0),            // [mm]
+                                 t: (P.h ? H*P.h.thetaHead : 0) + (P.m ? M*P.m.thetaHead : 0),          // [rad]
+                                 uH: P.h ? H*P.h.yHead_mm : 0, uM: P.m ? M*P.m.yHead_mm : 0 });
+    let eS = Infinity, gov = null;
+    ulsData.forEach((u,ci) => { const ld = u.load || {};
+      const q = bieg(Pq, ld.Hx||0, ld.My||0), l = bieg(Pl, ld.Hy||0, ld.Mx||0);
+      const us = Math.abs(ld.N||0)/Math.max(0.01,Rt_d) + q.M/Math.max(0.01,MRq) + l.M/Math.max(0.01,MRl);
+      // Torsion: Schub τ = T/W_t gegen τ_Rd = f_yk/(√3·γ_s); Überlagerung mit den Normalspannungen
+      // nach von Mises in der Form (σ/f_yd)² + (τ/τ_Rd)² ≤ 1. Ohne Torsion unverändert.
+      const uT = TRst > 1e-9 ? Math.abs(ld.Mz||0)/TRst : 0;
+      const ut = Math.hypot(us, uT);
+      const e1 = ut > 1e-9 ? 1/ut : Infinity;
+      if(e1 < eS){ eS = e1; const quer = q.M/Math.max(0.01,MRq) >= l.M/Math.max(0.01,MRl);
+        gov = { ci, Mq:q.M, Ml:l.M, quer, prof: quer ? q.prof : l.prof, MR: quer ? MRq : MRl, N:ld.N||0,
+                kq: kopf(Pq, ld.Hx||0, ld.My||0), kl: kopf(Pl, ld.Hy||0, ld.Mx||0), load:ld, us, uT, T:Math.abs(ld.Mz||0) }; } });
+    etaSteel = eS;
+    if(gov){ Mmax = Math.max(gov.Mq, gov.Ml);
+      if(pileRes[0]){ pileRes[0].Mp = +Mmax.toFixed(1); pileRes[0].eSteel = +eS.toFixed(2); } }
+    // GZG: Kopfverschiebung und -verdrehung aus H UND M (charakteristisch), je Richtung
+    const gzg = combos => { const arr = Array.isArray(combos) ? combos : (combos ? [{load:combos}] : []);
+      if(!arr.length) return null;
+      let tQ=0,tL=0,uQ=0,uL=0,w=0, lTQ=null,lTL=null,lUQ=null,lUL=null, gs=null, gT=-1, gLbl=null;
+      arr.forEach(cb => { const ld = cb.load || {}, lb = cb.label || cb.lf || '';
+        const a = kopf(Pq, ld.Hx||0, ld.My||0), b2 = kopf(Pl, ld.Hy||0, ld.Mx||0);
+        if(Math.abs(a.t)  > tQ){ tQ = Math.abs(a.t);  lTQ = lb; }
+        if(Math.abs(b2.t) > tL){ tL = Math.abs(b2.t); lTL = lb; }
+        if(Math.abs(a.u)  > uQ){ uQ = Math.abs(a.u);  lUQ = lb; }
+        if(Math.abs(b2.u) > uL){ uL = Math.abs(b2.u); lUL = lb; }
+        const ws = Math.abs(ld.N||0)/Math.max(1,kAx)*1000; w = Math.max(w, ws);
+        if(Math.abs(a.t) >= gT){ gT = Math.abs(a.t); gLbl = lb;
+          gs = { q:[a.u/1000, b2.u/1000, -ws/1000, b2.t, a.t, 0], F:[ld.N||0], FLat:[Math.hypot(ld.Hx||0, ld.Hy||0)],
+                 uH:a.uH, uM:a.uM }; } });
+      return { tiltQuer:tQ, tiltLaengs:tL, uQuer:uQ, uLaengs:uL, w_mm:w, sol:gs, gov:gLbl,
+               govTiltQuer:lTQ, govTiltLaengs:lTL, govUQuer:lUQ, govULaengs:lUL, nCombos:arr.length }; };
+    // Torsion im Boden: die Mantelreibung trägt das Moment um die Pfahlachse mit dem Hebel r_T.
+    // Dieselbe Mantelreibung trägt auch die Axialkraft ⇒ vektorielle Überlagerung der Ausnutzungen.
+    const TRgeo = Math.max(0, +cfg.rT||0) * Rskin_d;                   // [kNm]
+    let eT = Infinity, tGov = null;
+    ulsData.forEach((u,ci) => { const ld = u.load || {}, T = Math.abs(ld.Mz||0); if(T < 1e-6) return;
+      const Nn = ld.N||0, Rax = Nn < 0 ? Rskin_dZ : Rskin_d + Rb_d;
+      const uN = Math.abs(Nn)/Math.max(0.01, Rax), uTg = TRgeo > 1e-9 ? T/TRgeo : 9e9, ut = Math.hypot(uN, uTg);
+      const e2 = ut > 1e-9 ? 1/ut : Infinity;
+      if(e2 < eT){ eT = e2; tGov = { ci, T, N:Nn, uN, uT:uTg, label:u.label }; } });
+    ein = { TRst, TRgeo, eT, tGov, gzg, gov, EIknick: Math.min(Pq.EI, Pl.EI), MRq, MRl, sq, Iq, Il, ramm:_ramm,
+            lamRot: { quer: Pq.m ? 1/Math.max(1e-12,Pq.m.thetaHead) : 0 } };
+  }
   const uls = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].sol : (ulsData[0] ? ulsData[0].sol : null);
   const govCombo = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].label : (ulsData[0]?ulsData[0].label:'');
   const govLoad = (govComboIdx >= 0 && ulsData[govComboIdx]) ? ulsData[govComboIdx].load : (ulsData[0]?ulsData[0].load:{});
@@ -347,7 +448,7 @@ function pfahlbockAnalyse(cfg){
   // Schicht) → bez. Schlankheit λ̄ = √(N_pl,k/N_cr) → Abminderung χ (Knickkurve c, α=0.49
   // für Stahl-Voll/Hohlstäbe) → Knickwiderstand N_b,Rd = χ·N_pl,k/γ_s. η = N_b,Rd/N_Ed.
   let ksMin = Infinity; for(let i=0;i<=20;i++) ksMin = Math.min(ksMin, ksAt(i/20*L));
-  const N_cr  = 2 * Math.sqrt(Math.max(1e-6, ksMin*dG*EI));  // [kN] elastische Knicklast
+  const N_cr  = 2 * Math.sqrt(Math.max(1e-6, ksMin*dG*(ein ? ein.EIknick : EI)));  // [kN] elastische Knicklast (Einzelpfahl: schwache Achse)
   const N_pl_k = micropileRtk(tdn);                          // char. Streckgrenzkraft (= R_t,k)
   const lamBar = Math.sqrt(Math.max(1e-9, N_pl_k / Math.max(1e-6, N_cr)));   // bez. Schlankheit
   const alphaImp = 0.49;                                     // Imperfektionsbeiwert Knickkurve c
@@ -392,7 +493,8 @@ function pfahlbockAnalyse(cfg){
                    gov:govLbl, govTiltQuer:lblTQ, govTiltLaengs:lblTL, govUQuer:lblUQ, govULaengs:lblUL,
                    nCombos:arr.length } : null;
   };
-  const gFull = gzgEval(cfg.gzgFull || cfg.loadGZG_full), gVar = gzgEval(cfg.gzgVar || cfg.loadGZG_var);
+  const gFull = ein ? ein.gzg(cfg.gzgFull || cfg.loadGZG_full) : gzgEval(cfg.gzgFull || cfg.loadGZG_full);
+  const gVar  = ein ? ein.gzg(cfg.gzgVar  || cfg.loadGZG_var)  : gzgEval(cfg.gzgVar  || cfg.loadGZG_var);
   const aZul = cfg.alphaZul ?? 0.01, aZulV = cfg.alphaZulVar ?? 0.005;
   const uLim = cfg.uLim ?? 20, uLimV = cfg.uLimVar ?? 10;
   const dispCheck = (cfg.dispCheck != null) ? cfg.dispCheck : (n <= 2);
@@ -433,10 +535,27 @@ function pfahlbockAnalyse(cfg){
            // Nur AKTIVE Nachweise bestimmen die massgebende Sicherheit (Optionen je Tragsystem).
            eta_massg:+Math.min(
              nwOn('pfahl','geo')   ? etaGeo   : Infinity,
+             (nwOn('pfahl','geo') && ein && ein.tGov) ? ein.eT : Infinity,
              nwOn('pfahl','stahl') ? etaSteel : Infinity,
              nwOn('pfahl','knick') ? etaKnick : Infinity,
              nwOn('pfahl','gzg')   ? etaGZG   : Infinity,
-             nwOn('pfahl','lat')   ? etaLat   : Infinity).toFixed(2) };
+             nwOn('pfahl','lat')   ? etaLat   : Infinity).toFixed(2),
+           skinModel: _ramm ? 'ramm' : 'verpresst',
+           // Spitzenwiderstand (nur Einzelpfahl, nur Druck)
+           qb:+qb.toFixed(0), Ab:Ab, Rb_k:+Rb_k.toFixed(1), Rb_d:+Rb_d.toFixed(1),
+           // Torsion (nur Einzelpfahl, nur wenn ein Torsionsmoment wirkt)
+           ...(ein && ein.tGov ? { etaTors:+ein.eT.toFixed(2), tors:{ T:+ein.tGov.T.toFixed(2), N:+ein.tGov.N.toFixed(1),
+             TRgeo:+ein.TRgeo.toFixed(2), rT:+(cfg.rT||0).toFixed(3), uN:+ein.tGov.uN.toFixed(3), uT:+ein.tGov.uT.toFixed(3),
+             label:ein.tGov.label, TRst:+ein.TRst.toFixed(2) } } : {}),
+           // Einzelpfahl: Verlauf, Widerstand und Kopfgrössen der massgebenden Kombination
+           ...(ein && ein.gov ? {
+             einzel: { starkQuer:ein.sq, MRq:+ein.MRq.toFixed(1), MRl:+ein.MRl.toFixed(1),
+                       Mq:+ein.gov.Mq.toFixed(1), Ml:+ein.gov.Ml.toFixed(1), quer:ein.gov.quer,
+                       uKopf:+(ein.gov.quer ? ein.gov.kq.u : ein.gov.kl.u).toFixed(1),
+                       us:+ein.gov.us.toFixed(3), uT:+ein.gov.uT.toFixed(3), T:+ein.gov.T.toFixed(2), TRst:+ein.TRst.toFixed(2) },
+             M_Rd:+ein.gov.MR.toFixed(1), pyProfile: ein.gov.prof, FLatMax:1, Mmax1:+Mmax.toFixed(4),
+             headFixReq:false
+           } : {}) };
 }
 
 // Sichtbarkeit f_eff-Eingabe nach Lastverteilungs-Modus
@@ -478,7 +597,7 @@ function nwCardHd(title, etaVal, rightTxt=null, gov=false){
   const tx = rightTxt!=null ? rightTxt : (isFinite(etaVal) ? 'η = '+etaVal.toFixed(2) : 'n.m.');
   const bar = rightTxt==null ? nwUtilBar(etaVal, cl) : '';
   return `<div class="nw"${gov?' style="border-color:var(--acc)"':''}><div class="nw-hd" onclick="this.parentElement.querySelector('.nw-bd').classList.toggle('open')">
-      <span class="nw-ttl">${title}${gov?' <span style="color:var(--acc);font-size:8px;letter-spacing:.05em">MASSGEBEND</span>':''}</span><span class="nw-eta ${cl}">${tx}</span>
+      <span class="nw-ttl">${title}${gov?' <span style="color:var(--acc);font-size:9px;letter-spacing:.05em">MASSGEBEND</span>':''}</span><span class="nw-eta ${cl}">${tx}</span>
     </div>${bar}<div class="nw-bd">`;
 }
 const NW_CARD_END = '</div></div>';

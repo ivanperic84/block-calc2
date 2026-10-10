@@ -6,13 +6,17 @@
 // ════════════════════════════════════════════
 
 // b=Breite, h=Höhe, tw=Stegdicke, tf=Flanschdicke [m]; Iy[m⁴], Wply[m³], A[m²]
+// Iy/Wply = starke Achse, Iz/Wplz = schwache Achse (Okt 2026 ergänzt — der Einzelpfahl wird in
+// beiden Richtungen gebogen; mit der starken Achse für beide wäre die schwache Richtung zu günstig).
 const HEB_PROFILES = {
-  'HEB160': { b:0.160, h:0.160, tw:0.0080, tf:0.013, Iy:2492e-8,  Wply:354e-6,  A:54.3e-4  },
-  'HEB200': { b:0.200, h:0.200, tw:0.0090, tf:0.015, Iy:5696e-8,  Wply:642e-6,  A:78.1e-4  },
-  'HEB220': { b:0.220, h:0.220, tw:0.0095, tf:0.016, Iy:8091e-8,  Wply:827e-6,  A:91.0e-4  },
-  'HEB240': { b:0.240, h:0.240, tw:0.0100, tf:0.017, Iy:11260e-8, Wply:1053e-6, A:106e-4   },
-  'HEB260': { b:0.260, h:0.260, tw:0.0100, tf:0.0175,Iy:14920e-8, Wply:1283e-6, A:118.4e-4 },
-  'HEB300': { b:0.300, h:0.300, tw:0.0110, tf:0.019, Iy:25170e-8, Wply:1869e-6, A:149e-4   },
+  'HEB160': { b:0.160, h:0.160, tw:0.0080, tf:0.013, Iy:2492e-8,  Wply:354e-6,  A:54.3e-4, Iz:889.2e-8, Wplz:170.0e-6 },
+  'HEB180': { b:0.180, h:0.180, tw:0.0085, tf:0.014, Iy:3831e-8,  Wply:481.4e-6, A:65.3e-4, Iz:1363e-8, Wplz:231.0e-6 },
+  'HEB200': { b:0.200, h:0.200, tw:0.0090, tf:0.015, Iy:5696e-8,  Wply:642e-6,  A:78.1e-4, Iz:2003e-8, Wplz:305.8e-6 },
+  'HEB220': { b:0.220, h:0.220, tw:0.0095, tf:0.016, Iy:8091e-8,  Wply:827e-6,  A:91.0e-4, Iz:2843e-8, Wplz:393.9e-6 },
+  'HEB240': { b:0.240, h:0.240, tw:0.0100, tf:0.017, Iy:11260e-8, Wply:1053e-6, A:106e-4, Iz:3923e-8, Wplz:498.4e-6 },
+  'HEB260': { b:0.260, h:0.260, tw:0.0100, tf:0.0175,Iy:14920e-8, Wply:1283e-6, A:118.4e-4, Iz:5135e-8, Wplz:602.2e-6 },
+  'HEB280': { b:0.280, h:0.280, tw:0.0105, tf:0.018, Iy:19270e-8, Wply:1534e-6, A:131.4e-4, Iz:6595e-8, Wplz:717.6e-6 },
+  'HEB300': { b:0.300, h:0.300, tw:0.0110, tf:0.019, Iy:25170e-8, Wply:1869e-6, A:149e-4, Iz:8563e-8, Wplz:870.1e-6 },
 };
 // Krinner V-Serie als Sicherungs-Pfahl (Stahlrohr S355, Wandstärke t=5 mm, di=da−10 mm, gestossen).
 // b=da (laterale Breite für Broms/Bettung), Iy=π/64·(da⁴−di⁴), Wply=(da³−di³)/6, A=π/4·(da²−di²).
@@ -24,8 +28,37 @@ const KRINNER_PILES = {
   'KRV140': { da:0.140, di:0.130, b:0.140, h:0.140, round:true, Iy:4.840e-6, Wply:91.2e-6,  A:21.21e-4 },
   'KRV168': { da:0.168, di:0.158, b:0.168, h:0.168, round:true, Iy:8.512e-6, Wply:133.0e-6, A:25.61e-4 },
 };
-// Sicherungs-Pfahl-Querschnitt: HEB-Profil ODER Krinner-V-Rohr (Fallback HEB200).
-function pfahlSection(typ){ return HEB_PROFILES[typ] || KRINNER_PILES[typ] || HEB_PROFILES['HEB200']; }
+// Rammrohre (Stahlrohr, durchgehend — KEIN Stoss-Gelenk wie beim Krinner-Rohr), nur Einzelpfahl des
+// Pfahlfundaments. Abmessungen da × t nach EN 10219; Querschnittswerte aus der Kreisringformel
+// (exakt): I = π/64·(da⁴−di⁴), W_pl = (da³−di³)/6, A = π/4·(da²−di²).
+function _rohrQuerschnitt(da_mm, t_mm){
+  const da=da_mm/1000, t=t_mm/1000, di=da-2*t;
+  return { da, di, t, b:da, h:da, round:true, durchgehend:true,
+           Iy:Math.PI/64*(Math.pow(da,4)-Math.pow(di,4)), Wply:(Math.pow(da,3)-Math.pow(di,3))/6,
+           A:Math.PI/4*(da*da-di*di) };
+}
+const RAMMROHRE = {
+  'RR324': _rohrQuerschnitt(323.9, 10.0),
+  'RR406': _rohrQuerschnitt(406.4, 10.0),
+  'RR508': _rohrQuerschnitt(508.0, 12.5),
+  'RR610': _rohrQuerschnitt(610.0, 12.5),
+  'RR711': _rohrQuerschnitt(711.0, 12.5),
+};
+// Stahlgüten für Walzprofile und Rammrohre des Einzelpfahls (f_yk in N/mm², Nennwert bis t = 40 mm).
+const STAHLGUETEN = { '235':235, '275':275, '355':355, '460':460 };
+// Pfahl-Querschnitt: HEB-Profil, Krinner-V-Rohr oder Rammrohr (Fallback HEB200).
+function pfahlSection(typ){ return HEB_PROFILES[typ] || KRINNER_PILES[typ] || RAMMROHRE[typ] || HEB_PROFILES['HEB200']; }
+// Torsionswiderstandsmoment W_t [m³] (elastisch, St. Venant):
+//   I-Profil (offen):  I_T = (2·b·t_f³ + (h−2·t_f)·t_w³)/3 — ohne Ausrundungen, also auf der sicheren
+//                      Seite (Tabellenwert HEB 200: 59.3 cm⁴, Formel 49.1 cm⁴);  W_t = I_T / t_f
+//   Rohr (geschlossen): W_t = 2·A_m·t  mit A_m = π·d_m²/4 (Bredt)
+function profilTorsion(ps){
+  if(!ps) return { It:0, Wt:0 };
+  if(ps.round){ const t=(ps.t!=null) ? ps.t : (ps.da-ps.di)/2, dm=ps.da-t, Am=Math.PI*dm*dm/4;
+    return { It:Am*dm*t, Wt:2*Am*t }; }
+  const It=(2*ps.b*Math.pow(ps.tf,3) + (ps.h-2*ps.tf)*Math.pow(ps.tw,3))/3;
+  return { It, Wt:It/ps.tf };
+}
 
 // ════════════════════════════════════════════════════════════════════════
 // MIKROPFAHL-SYSTEME (CH-Raum) — Tragglied-Kennwerte für das Pfahlbock-Modul

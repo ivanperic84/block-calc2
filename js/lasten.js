@@ -258,8 +258,8 @@ function buildLFMatrix(){
 
   const GZ = [...(isBlock ? GZ_BLOCK : GZ_FLACH), ...GZ_CUSTOM];
 
-  const thV = `font-family:var(--f-mono);font-size:8px;letter-spacing:.04em;color:var(--dim);padding:3px 5px;text-align:center;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);height:52px;vertical-align:bottom`;
-  const thL = `font-family:var(--f-mono);font-size:8px;letter-spacing:.04em;color:var(--dim);padding:3px 8px;text-align:left;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;vertical-align:bottom;height:52px`;
+  const thV = `font-family:var(--f-mono);font-size:9px;letter-spacing:.04em;color:var(--dim);padding:3px 5px;text-align:center;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);height:52px;vertical-align:bottom`;
+  const thL = `font-family:var(--f-mono);font-size:9px;letter-spacing:.04em;color:var(--dim);padding:3px 8px;text-align:left;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;vertical-align:bottom;height:52px`;
   const tdS = `padding:4px 5px;text-align:center;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);font-family:var(--f-mono);font-size:9.5px;font-weight:500`;
   const tdN = `padding:4px 8px;text-align:left;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);font-family:var(--f-mono);font-size:9px`;
 
@@ -276,7 +276,7 @@ function buildLFMatrix(){
   // Block: Typ 2 / ST als 8 generierte Kombinationen direkt in der Matrix
   // (EG ∈ {γ_G,inf, γ_G,sup} × Ständig ∈ {inf, sup} × Variabel ∈ {0, γ_Q})
   {
-    html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:7.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)">Typ 2 — ${isBlock ? (lbl.t2_block || 'Steckner GZT — Standsicherheit') : (lbl.t2_flach || 'Grundbruch · Gleiten · Sohlspannung')} · 8 Kombinationen (SIA 260): Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td></tr>`;
+    html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)">Typ 2 — ${isBlock ? (lbl.t2_block || 'Steckner GZT — Standsicherheit') : (lbl.t2_flach || 'Grundbruch · Gleiten · Sohlspannung')} · 8 Kombinationen (SIA 260): Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td></tr>`;
     let _k = 1;
     for(const fE of [gG2i, gG2s]) for(const fG of [gG2i, gG2s]) for(const fQ of [0, gQ2]){
       const bg = _k%2===0 ? `background:var(--s1)` : '';
@@ -300,10 +300,10 @@ function buildLFMatrix(){
     html += `<tr style="${bg}">
       <td style="${tdN}">
         <span style="color:${gz.color};font-weight:500">${gz.label}</span>
-        <span style="color:var(--xdim);font-size:8px;display:block;margin-top:1px">${gz.sub}</span>
-        ${gz.footnote ? `<span style="color:var(--dim);font-size:7.5px;font-style:italic">*${gz.footnote}</span>` : ''}
+        <span style="color:var(--xdim);font-size:9px;display:block;margin-top:1px">${gz.sub}</span>
+        ${gz.footnote ? `<span style="color:var(--dim);font-size:8.5px;font-style:italic">*${gz.footnote}</span>` : ''}
       </td>
-      <td style="${tdS};color:var(--on2)">${gz.gk !== undefined ? gz.gk.toFixed(2) : '<span style="color:var(--xdim);font-size:8px">·</span>'}</td>`;
+      <td style="${tdS};color:var(--on2)">${gz.gk !== undefined ? gz.gk.toFixed(2) : '<span style="color:var(--xdim);font-size:9px">·</span>'}</td>`;
     cols.forEach(c => {
       const val = gz.gamma(c);
       const isN_G_inf = gz.label==='Typ 1' && c[0]==='NG';
@@ -314,10 +314,10 @@ function buildLFMatrix(){
   });
 
   // Trennzeile + LF-Aktivierungsmatrix darunter
-  html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:7.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);border-top:2px solid var(--ol);background:var(--s2)">Lastfall-Aktivierung</td></tr>`;
+  html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);border-top:2px solid var(--ol);background:var(--s2)">Lastfall-Aktivierung</td></tr>`;
 
   const ck = `<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="2,6 5,9 10,3"/></svg>`;
-  const dot = `<span style="color:var(--xdim);font-size:8px">·</span>`;
+  const dot = `<span style="color:var(--xdim);font-size:9px">·</span>`;
   LF.forEach((lf, i) => {
     const bg = i%2===0 ? '' : `background:var(--s1)`;
     const {gG: lgG} = getGF(lf);
@@ -325,7 +325,7 @@ function buildLFMatrix(){
     html += `<tr style="${bg}">
       <td style="${tdN};color:var(--on2)">
         ${lf.name}
-        <span style="color:var(--xdim);font-size:7.5px;margin-left:4px">${typ}</span>
+        <span style="color:var(--xdim);font-size:8.5px;margin-left:4px">${typ}</span>
       </td>
       <td style="${tdS}">${dot}</td>`;
     cols.forEach(c => {

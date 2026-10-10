@@ -13,7 +13,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
   'pfahl_typ','pfahl_anzahl','pfahl_l','pfahl_s','pfahl_alpha','pfahl_e',
   'pfahl_dm','pfahl_dk',
   'pfahl_dex','pfahl_dex_seite','pfahl_abstand','pfahl_hs','pfahl_laf','pfahl_lv_mode','pfahl_zugfest','pfahl_stab_nrd',
-  'pb_mode','pb_prof','pb_n','pb_rot','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
+  'pb_mode','pb_prof','pb_stahl','pb_orient','pb_einbau','pb_qb','pb_spitze','l_TG','l_TW','pb_n','pb_rot','pb_auto','pb_sx','pb_sy','pb_ax','pb_ay','pb_L','pb_e','pb_dG','pb_sys','pb_var','pb_korr',
   'pb_bx','pb_by','pb_bank_d','pb_kx','pb_ky','pb_hk','pb_ex','pb_ey','pb_ue','pb_gR','pb_gS','pb_skinfac','pb_zugfac'];
 
 function collectState(){
@@ -59,6 +59,10 @@ function applyState(st){
   if(st.kopf_in_gk !== undefined){ const cb=document.getElementById('kopf_in_gk'); if(cb) cb.checked = !!st.kopf_in_gk; }
   // Ausrichtung der Pfahlanordnung: Stände ohne das Feld (vor Okt 2026) sind ungedreht
   if(st.pb_rot === undefined) si('pb_rot','0');
+  // Felder vom Okt 2026 (Torsion, Stahlgüte, Spitzenwiderstand): ältere Stände bekommen die Vorgabe,
+  // sonst bliebe der Wert des zuvor geladenen Projekts stehen.
+  [['l_TG','0'],['l_TW','0'],['pb_stahl','355'],['pb_qb','0'],['pb_spitze','stahl'],['pb_orient','quer'],['pb_einbau','ramm']]
+    .forEach(([id,v]) => { if(st[id] === undefined) si(id, v); });
   // Migration Altprojekte: Überdeckungs-Toggle (g_uberd_on) entfernt Jul 2026 → war er aus, ü auf 0 setzen
   if(st.g_uberd_on===false){ const uf=document.getElementById('g_uberd'), ur=document.getElementById('g_uberd_r'); if(uf) uf.value='0'; if(ur) ur.value='0'; }
   // Migration Altprojekte: γ_G/γ_Q lagen vor Jun 2026 in tw_G/tw_Q (Felder entfernt)
@@ -334,11 +338,11 @@ function renderProjList(){
         <table style="border-collapse:separate;border-spacing:0;font-family:var(--f-mono);font-size:9.5px;min-width:480px;width:100%">
           <thead>
             <tr style="background:var(--s2)">
-              <th style="padding:5px 8px;text-align:left;font-weight:500;font-size:8px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Fundamentname</th>
-              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:8px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">KM</th>
-              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:8px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Mast-Nr.</th>
-              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:8px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Datum</th>
-              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:8px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Bemerkung</th>
+              <th style="padding:5px 8px;text-align:left;font-weight:500;font-size:9px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Fundamentname</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:9px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">KM</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:9px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Mast-Nr.</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:9px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Datum</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:500;font-size:9px;letter-spacing:0.07em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);white-space:nowrap">Bemerkung</th>
               <th style="padding:5px 6px;border-bottom:1px solid var(--ol)"></th>
             </tr>
           </thead>

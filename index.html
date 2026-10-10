@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10b">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10c">
 </head>
 <body>
 
@@ -53,10 +53,10 @@
       <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.5 16.5h-11a1 1 0 01-1-1v-11a1 1 0 011-1h8l3 3v9a1 1 0 01-1 1z"/><rect x="7" y="11.5" width="6" height="5"/><rect x="7" y="3.5" width="4.5" height="3"/></svg>
     </button>
     <button class="btn btn-icon" onclick="openBemessung()" id="btn-bemessung" title="Bemessungsdiagramm (Standardlasten)">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5v13h13"/><path d="M5.5 13.5c2.5-1 4-3.5 5-6 .8-2 1.8-3.5 4-4"/><path d="M5.5 15.5c3.5-.6 6.5-2.5 8-5 .9-1.5 1.7-2.6 3-3.2"/></svg>
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5v13h13"/><path d="M5.5 13.5c2.5-1 4-3.5 5-6 .8-2 1.8-3.5 4-4"/><path d="M5.5 15.5c3.5-.6 6.5-2.5 8-5 .9-1.5 1.7-2.6 3-3.2"/></svg>
     </button>
     <button class="btn btn-icon" onclick="calculate()" id="btn-calc" title="Neu berechnen" style="border-color:var(--acc);color:var(--acc)">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15.5 9A5.5 5.5 0 104.8 13.5M15.5 9V5.5M15.5 9H12"/></svg>
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15.5 9A5.5 5.5 0 104.8 13.5M15.5 9V5.5M15.5 9H12"/></svg>
     </button>
   </div>
 </header>
@@ -348,16 +348,25 @@
 
           <div class="sec">Pfahl</div>
           <div class="field"><label>Pfahllänge L <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_L_r" min="0.5" max="20.0" step="0.5" value="10" oninput="slSync('pb_L',this.value);renderPfahlbock()"><input id="pb_L" type="number" value="10.00" step="0.5" oninput="slSync('pb_L',this.value);renderPfahlbock()"/></div></div>
+          <button class="btn btn-tonal btn-full btn-sm" style="margin:2px 0 4px" onclick="pbDimLaenge()" title="Sucht im 0.5-m-Raster die kleinste Pfahllänge, bei der alle aktiven Nachweise erfüllt sind. Querschnitt, Anordnung und Lasten bleiben unverändert.">Pfahllänge bemessen</button>
+          <div id="pb_dim_msg" class="hint" style="margin-top:0;display:none"></div>
           <div class="field" id="pb-row-dG"><label>Verpresskörper-Ø <em>mm</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_dG_r" min="80" max="300" step="10" value="150" oninput="slSync('pb_dG',this.value);renderPfahlbock()"><input id="pb_dG" type="number" value="150" step="10" oninput="slSync('pb_dG',this.value);renderPfahlbock()"/></div></div>
           <div class="field" id="pb-row-ueber" style="display:none"><label>Überstand über GOK <em>m</em></label><div class="sl-wrap"><input type="range" class="sl-rng" id="pb_e_r" min="0" max="3.0" step="0.05" value="0" oninput="slSync('pb_e',this.value);renderPfahlbock()"><input id="pb_e" type="number" value="0" step="0.05" min="0" oninput="slSync('pb_e',this.value);renderPfahlbock()" title="Freie Pfahllänge oberhalb GOK (Überstand). Lasten greifen am Pfahlkopf oben an; über diese Länge wirkt keine Bettung → grösseres Biegemoment."/></div></div>
 
           <div id="pb-grp-prof" style="display:none">
-            <div class="sec">Profil (Sicherungs-Katalog)</div>
+            <div class="sec">Profil</div>
             <div class="field"><label>Pfahlprofil</label><select id="pb_prof" onchange="renderPfahlbock()">
-              <optgroup label="HEB (S355)">
-                <option value="HEB160">HEB 160</option><option value="HEB200" selected>HEB 200</option>
+              <optgroup label="HEB">
+                <option value="HEB160">HEB 160</option><option value="HEB180">HEB 180</option>
+                <option value="HEB200" selected>HEB 200</option>
                 <option value="HEB220">HEB 220</option><option value="HEB240">HEB 240</option>
-                <option value="HEB260">HEB 260</option><option value="HEB300">HEB 300</option>
+                <option value="HEB260">HEB 260</option><option value="HEB280">HEB 280</option>
+                <option value="HEB300">HEB 300</option>
+              </optgroup>
+              <optgroup label="Rammrohr (Stahlrohr, durchgehend)">
+                <option value="RR324">Ø 323.9 × 10.0</option><option value="RR406">Ø 406.4 × 10.0</option>
+                <option value="RR508">Ø 508.0 × 12.5</option><option value="RR610">Ø 610.0 × 12.5</option>
+                <option value="RR711">Ø 711.0 × 12.5</option>
               </optgroup>
               <optgroup label="Krinner V (Stahlrohr S355, t=5 mm)">
                 <option value="KRV76">V 76</option><option value="KRV89">V 89</option>
@@ -365,7 +374,25 @@
                 <option value="KRV168">V 168</option>
               </optgroup>
             </select></div>
+            <div class="field" id="pb-row-stahl"><label>Stahlgüte</label><select id="pb_stahl" onchange="renderPfahlbock()">
+              <option value="235">S235</option><option value="275">S275</option>
+              <option value="355" selected>S355</option><option value="460">S460</option></select></div>
             <div id="pb_prof_info" class="hint" style="margin-top:0"></div>
+            <div class="field" id="pb-row-orient"><label>Ausrichtung des Profils</label><select id="pb_orient" onchange="renderPfahlbock()">
+              <option value="quer" selected>starke Achse trägt quer zum Gleis</option>
+              <option value="laengs">starke Achse trägt längs zum Gleis</option></select></div>
+            <div class="field"><label>Einbauart</label><select id="pb_einbau" onchange="_pbApplyModeUI();renderPfahlbock()">
+              <option value="ramm" selected>gerammt / eingedreht (kein Verpresskörper)</option>
+              <option value="verpresst">in Bohrung verpresst / einbetoniert</option></select></div>
+            <div class="hint" style="margin-top:0">Gerammt: Mantelreibung aus dem Ruhedruck am Profilumriss (K₀·σ′v·tan ⅔φ′). Verpresst: Erfahrungswerte q_s,k am Bohrdurchmesser (Feld «Verpresskörper-Ø»).</div>
+            <div class="sec">Spitzenwiderstand</div>
+            <div class="lf-grid3">
+              <div class="field"><label>q_b,k <em>kPa</em></label><input id="pb_qb" type="number" value="0" step="100" min="0" oninput="renderPfahlbock()" title="Charakteristischer Spitzendruck aus Baugrundgutachten, Sondierung oder Probebelastung. 0 = Spitzenwiderstand wird nicht angesetzt."/></div>
+              <div class="field"><label>Spitzenfläche</label><select id="pb_spitze" onchange="renderPfahlbock()">
+                <option value="stahl" selected>Stahlquerschnitt</option>
+                <option value="voll">umschriebene Fläche</option></select></div>
+            </div>
+            <div class="hint" style="margin-top:0">Wirkt nur auf Druck. <b>0 = nicht angesetzt</b> (Vorgabe). Den Wert liefert das Baugrundgutachten oder die Sondierung; das Programm schlägt keinen vor. «Umschriebene Fläche» setzt Pfropfenbildung bzw. eine geschlossene Spitze voraus.</div>
           </div>
 
           <div id="pb-grp-tendon">
@@ -645,6 +672,9 @@
                 <td><input id="l_HGy" type="number" value="5" step="1" title="H_Gy — ständige Horizontalkraft längs zum Gleis" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_HWy" type="number" value="5" step="1" title="H_Wy — veränderliche Horizontalkraft längs zum Gleis" oninput="updateViewer();scheduleCalc()"/></td></tr>
             <tr><td><span class="lt-n">Moment M</span><span class="lt-u">kNm · kippt längs</span></td>
                 <td><input id="l_MGx" type="number" value="40" step="1" title="M_Gx — ständiges Moment, das den Mast LÄNGS zum Gleis kippt (Drehachse x)" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_MWx" type="number" value="40" step="1" title="M_Wx — veränderliches Moment, das den Mast LÄNGS zum Gleis kippt (Drehachse x)" oninput="updateViewer();scheduleCalc()"/></td></tr>
+            <tr class="lt-grp lt-tors" style="display:none"><td colspan="3">Um die Mastachse <span class="lt-ax">(z)</span></td></tr>
+            <tr class="lt-tors" style="display:none"><td><span class="lt-n">Torsion T</span><span class="lt-u">kNm · nur Pfahlfundament</span></td>
+                <td><input id="l_TG" type="number" value="0" step="0.5" title="T_G — ständiges Torsionsmoment um die Mastachse" oninput="scheduleCalc()"/></td><td><input id="l_TW" type="number" value="0" step="0.5" title="T_W — veränderliches Torsionsmoment um die Mastachse" oninput="scheduleCalc()"/></td></tr>
           </tbody>
         </table>
         <div class="hint" style="margin-top:4px">Kraft und Moment einer Richtung gehören zusammen: «quer» kippt den Mast quer zum Gleis. Die Achsbezeichnung (M_y bei Querlast) steht im Tooltip jedes Feldes.</div>
@@ -977,7 +1007,7 @@
       <div id="viewer-legend-wrap" style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
         <div class="viewer-legend" id="vleg" style="cursor:pointer;user-select:none" onclick="toggleLegend()">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <span style="font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)">Legende</span>
+            <span style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)">Legende</span>
             <svg id="vleg-chev" class="lf-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--dim)"><path d="M4 2l4 4-4 4"/></svg>
           </div>
           <div id="vleg-body" style="display:none">
@@ -1003,7 +1033,7 @@
             <div id="lg-str" style="display:none"></div>
             <div id="lg-vec" style="display:none"></div>
             <div id="lg-pfahl" style="display:none">
-              <div style="margin-top:4px;font-size:8px;color:var(--xdim);letter-spacing:.06em;text-transform:uppercase">Pfahlsicherung</div>
+              <div style="margin-top:4px;font-size:9px;color:var(--xdim);letter-spacing:.06em;text-transform:uppercase">Pfahlsicherung</div>
               <div class="lg-row"><div class="lg-sq" style="background:#8899aa"></div>HEB Pfahl</div>
               <div class="lg-row"><div class="lg-sq" style="background:#bbccdd"></div>Richtstütze</div>
               <div class="lg-row"><div class="lg-sq" style="background:#ffaa44;opacity:0.8"></div>p_u Bettung (Grenzwert)</div>
@@ -1329,7 +1359,7 @@
     <details class="set-group" open>
       <summary>
         <span>Standard-Teilsicherheitsbeiwerte</span>
-        <button onclick="event.stopPropagation();resetSIAPartials()" style="background:none;border:1px solid var(--ol);border-radius:var(--r1);color:var(--dim);font-family:var(--f-mono);font-size:8px;letter-spacing:0.05em;padding:2px 7px;cursor:pointer;text-transform:uppercase" title="SIA 267 Standardwerte wiederherstellen">SIA 267</button>
+        <button onclick="event.stopPropagation();resetSIAPartials()" style="background:none;border:1px solid var(--ol);border-radius:var(--r1);color:var(--dim);font-family:var(--f-mono);font-size:9px;letter-spacing:0.05em;padding:2px 7px;cursor:pointer;text-transform:uppercase" title="SIA 267 Standardwerte wiederherstellen">SIA 267</button>
         <svg class="sg-chev" width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5l5 5-5 5"/></svg>
       </summary>
       <div style="padding:10px 14px">
@@ -1424,8 +1454,8 @@
         <div class="field" style="margin-top:8px">
           <label>L_crit — Wirksame Verpresslänge <em>m</em></label>
           <div style="display:flex;align-items:center;gap:8px">
-            <input id="set-pfahl-lcrit" type="number" value="10" step="0.5" min="0" max="40" style="flex:1"/>
-            <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">0 = kein Deckel</span>
+            <input id="set-pfahl-lcrit" type="number" value="0" step="0.5" min="0" max="40" style="flex:1"/>
+            <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono)">0 = keine Begrenzung (Vorgabe)</span>
           </div>
           <div class="hint">R_s,k wird nur bis <b>L_eff = min(L, L_crit)</b> angesetzt — ohne Deckel wüchse sie unbegrenzt linear mit L. Konstruktive Bemessungsregel, keine Norm · 6–8 m bei bindigem Baugrund üblich · massgebend bleibt die Probebelastung.</div>
         </div>
@@ -1715,44 +1745,44 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10b"></script>
-<script src="js/helfer.js?v=2026-10-10b"></script>
-<script src="js/speicher.js?v=2026-10-10b"></script>
-<script src="js/einstellungen.js?v=2026-10-10b"></script>
-<script src="js/templates.js?v=2026-10-10b"></script>
-<script src="js/viewer.js?v=2026-10-10b"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10b"></script>
-<script src="js/lasten.js?v=2026-10-10b"></script>
-<script src="js/boden.js?v=2026-10-10b"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10b"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10b"></script>
-<script src="js/modell.js?v=2026-10-10b"></script>
-<script src="js/lastniveaus.js?v=2026-10-10b"></script>
-<script src="js/bettung.js?v=2026-10-10b"></script>
-<script src="js/erddruck.js?v=2026-10-10b"></script>
-<script src="js/kataloge.js?v=2026-10-10b"></script>
-<script src="js/bishop.js?v=2026-10-10b"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10b"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10b"></script>
-<script src="js/sicherung.js?v=2026-10-10b"></script>
-<script src="js/rechenkern.js?v=2026-10-10b"></script>
-<script src="js/dimensionierung.js?v=2026-10-10b"></script>
-<script src="js/bemessung.js?v=2026-10-10b"></script>
-<script src="js/fundamentliste.js?v=2026-10-10b"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10b"></script>
-<script src="js/bericht.js?v=2026-10-10b"></script>
-<script src="js/bericht-flach.js?v=2026-10-10b"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10b"></script>
-<script src="js/diagramme.js?v=2026-10-10b"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10b"></script>
-<script src="js/ergebnis.js?v=2026-10-10b"></script>
-<script src="js/layout.js?v=2026-10-10b"></script>
-<script src="js/projekt.js?v=2026-10-10b"></script>
-<script src="js/mobil.js?v=2026-10-10b"></script>
-<script src="js/selbsttest.js?v=2026-10-10b"></script>
-<script src="js/tastatur.js?v=2026-10-10b"></script>
-<script src="js/embed.js?v=2026-10-10b"></script>
-<script src="js/start.js?v=2026-10-10b"></script>
+<script src="js/boot.js?v=2026-10-10c"></script>
+<script src="js/helfer.js?v=2026-10-10c"></script>
+<script src="js/speicher.js?v=2026-10-10c"></script>
+<script src="js/einstellungen.js?v=2026-10-10c"></script>
+<script src="js/templates.js?v=2026-10-10c"></script>
+<script src="js/viewer.js?v=2026-10-10c"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10c"></script>
+<script src="js/lasten.js?v=2026-10-10c"></script>
+<script src="js/boden.js?v=2026-10-10c"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10c"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10c"></script>
+<script src="js/modell.js?v=2026-10-10c"></script>
+<script src="js/lastniveaus.js?v=2026-10-10c"></script>
+<script src="js/bettung.js?v=2026-10-10c"></script>
+<script src="js/erddruck.js?v=2026-10-10c"></script>
+<script src="js/kataloge.js?v=2026-10-10c"></script>
+<script src="js/bishop.js?v=2026-10-10c"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10c"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10c"></script>
+<script src="js/sicherung.js?v=2026-10-10c"></script>
+<script src="js/rechenkern.js?v=2026-10-10c"></script>
+<script src="js/dimensionierung.js?v=2026-10-10c"></script>
+<script src="js/bemessung.js?v=2026-10-10c"></script>
+<script src="js/fundamentliste.js?v=2026-10-10c"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10c"></script>
+<script src="js/bericht.js?v=2026-10-10c"></script>
+<script src="js/bericht-flach.js?v=2026-10-10c"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10c"></script>
+<script src="js/diagramme.js?v=2026-10-10c"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10c"></script>
+<script src="js/ergebnis.js?v=2026-10-10c"></script>
+<script src="js/layout.js?v=2026-10-10c"></script>
+<script src="js/projekt.js?v=2026-10-10c"></script>
+<script src="js/mobil.js?v=2026-10-10c"></script>
+<script src="js/selbsttest.js?v=2026-10-10c"></script>
+<script src="js/tastatur.js?v=2026-10-10c"></script>
+<script src="js/embed.js?v=2026-10-10c"></script>
+<script src="js/start.js?v=2026-10-10c"></script>
 
 </body>
 </html>

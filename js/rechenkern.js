@@ -30,7 +30,7 @@ function _evalPfahl(){
   const num=id=>+gi(id)||0;
   if(typeof renderPfahlbock==='function') renderPfahlbock();
   const r=(RESULT.pfahlbock&&RESULT.pfahlbock.r)||{};
-  const uls=[[r.etaGeo,'Mantelreibung'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
+  const uls=[[r.etaGeo,'Mantelreibung'],[r.etaTors,'Torsion'],[r.etaSteel,'Querschnitt N+M'],[r.etaKnick,'Knicken'],
              [r.etaLat,'Laterale Bodentragfähigkeit']].filter(([v])=>isFinite(v));
   const o={ dims:'—', geom:null, gov:'–', lf:r.govCombo||null,
             etaT: uls.length?Math.min(...uls.map(([v])=>v)):null,
@@ -1010,7 +1010,7 @@ function _doCalculateKern(P){
     if(isBlock){
       if(NW.gzt && doGZT) chk.push(_etaOk(etaGZT));
       if(NW.gzg && doGZG) chk.push(_etaOk(etaGZG));
-    } else {
+    } else if(doGZT){   // Flach kennt keinen GZG — ein reiner GZG-Lastfall führt keinen Nachweis
       if(NW.sohlsp) chk.push(_etaOk(etaSIG));
       if(NW.grundb) chk.push(_etaOk(etaGB));
       if(NW.gleiten)chk.push(_etaOk(etaGL));
