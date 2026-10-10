@@ -381,6 +381,7 @@ function _pbResultHTML(r, piles, n){
       ${r.Rb_k>0 ? row('R_b,k = q_b,k·A_b (Spitze, nur Druck)', r.Rb_k+' kN &nbsp;<span style="color:var(--xdim)">'+r.qb+' kPa · '+(r.Ab*1e4).toFixed(0)+' cm²</span>') + row('R_d Druck = (R_s,k + R_b,k) / γ_R', RdGeo+' kN') : ''}
       ${r.zugFac<0.999?row('R_s,d Zug (×'+r.zugFac.toFixed(2)+', Herausziehen)', r.Rskin_dZ+' kN'):''}
       ${r.skinFac<0.999?row('Abminderung Verrohrung', '×'+r.skinFac.toFixed(2)):''}
+      ${r.zykFac<0.999?row('Abminderung zyklische Beanspruchung (in R_s,k enthalten)', '×'+r.zykFac.toFixed(2)):''}
       ${row('|N|_max (P'+(r.govPile+1)+', '+(govZug?'Zug':'Druck')+')', govF.toFixed(1)+' kN')}
       ${etaRow('η Geotechnik', r.etaGeo, 'η = '+(r.Rb_k>0&&!govZug?'R_d':'R_s,d')+' '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(+RdGeo).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
       ${r.tors ? row('Torsion T_Ed / T_Rd = r_T·R_s,d', r.tors.T+' / '+r.tors.TRgeo+' kNm &nbsp;<span style="color:var(--xdim)">r_T = '+(r.tors.rT*1000).toFixed(0)+' mm</span>')

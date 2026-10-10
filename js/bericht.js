@@ -251,7 +251,8 @@ function _npAnnahmen(sys, ph){
   }
   if(sys==='flach'){
     g('Modell Flachfundament');
-    z('Grundbruchwiderstand', 'EN 1997-1 Anhang D', 'EN 1997-1 Anhang D', 'fest; ohne Tiefenbeiwerte; Geländebeiwerte bei Böschung nach Brinch Hansen');
+    z('Grundbruchwiderstand', 'erweiterte Tragfähigkeitsformel', 'erweiterte Tragfähigkeitsformel', 'fest; Lang/Huder/Amann 9.2 wie in SIA D 0197 Kap. 5.3.4.3; N_γ ≈ 1.8·(N_q−1)·tanφ; mit Tiefenfaktoren');
+    z('Böschung: Abminderung bei endlicher Höhe h_β', 'anteilig h_β/min(B,L)', 'anteilig h_β/min(B,L)', 'Ergänzung des Programms; die Quelle kennt nur die durchlaufende Böschung');
     z('Ersatzfläche bei Ausmitte', "B′ = B − 2·e", "B′ = B − 2·e", 'fest; Meyerhof. |e|/B > 1/3: Näherung, ≥ 1/2: nicht führbar');
     z('Sohlreibung δ_k / φ′_k', num('bg_delta_sohle'), 0.667, 'Eingabe; SIA 267 Ziff. 8.4.1.1: rau 1.0, glatt ½…⅔, δ_k ≤ 35°; δ_d mit γ_φ', 3);
     z('Kohäsion im Gleitwiderstand', gi('bg_c_gleit')==='1' ? 'angesetzt (A′·c′_d)' : 'nicht angesetzt', 'nicht angesetzt', 'SIA 267 Ziff. 8.4.1.2: nur bei dauerhafter Wirkung; Gl. (31) mit wirksamer Fläche A′');
@@ -277,6 +278,7 @@ function _npAnnahmen(sys, ph){
       z('Abminderung Verrohrung / Zug', (num('pb_skinfac')||1).toFixed(2)+' / '+(num('pb_zugfac')||1).toFixed(2), '1.00 / 1.00', 'Eingabe');
       z('Wirksame Verpresslänge L_crit', (+S.pfahlLcrit||0)>0 ? (+S.pfahlLcrit).toFixed(1)+' m' : 'keine Begrenzung', 'keine Begrenzung', 'konstruktive Regel, keine Normformel');
     }
+    z('Mantelreibung: Abminderung zyklisch', num('pb_zykfac')==null ? 1 : num('pb_zykfac'), 1.00, 'Eingabe; SIA 267 Ziff. 8.5.1.3 verlangt die Berücksichtigung, nennt keinen Wert. 1.00 = nicht abgemindert');
     z('Spitzenwiderstand', ein && (num('pb_qb')||0)>0 ? 'q_b,k = '+num('pb_qb').toFixed(0)+' kPa (eingegeben)' : 'nicht angesetzt', 'nicht angesetzt', 'nur Einzelpfahl ab 300 mm Breite (EA-Pfähle), nur Druck');
     z('Seitliche Bettung k_s = α·M_E/((1−ν²)·d)', 'α = '+(+(S.pfahlAlphaLat??0.30)).toFixed(2), 'α = 0.30', 'Vorgabe des Programms; EA-Pfähle k_s ≈ E_s/D wäre rund dreimal steifer');
     if(!ein){
@@ -306,7 +308,7 @@ function _npAnnahmen(sys, ph){
       '«=» in der Spalte Vorgabe heisst: unverändert. '+(nGe ? '<b>'+nGe+' Wert'+(nGe>1?'e':'')+' weich'+(nGe>1?'en':'t')+' von der Vorgabe ab</b> (fett).' : 'Alle Werte entsprechen der Vorgabe.')+'</div>'+
     '<table class="np-tbl"><tr><th>Grösse</th><th class="r">Wert</th><th class="r">Vorgabe</th><th>Quelle / Bemerkung</th></tr>'+rows+'</table>'+
     _npSh2('Nicht Gegenstand dieses Nachweises')+
-    '<div style="font-size:8.5px;color:var(--dim);line-height:1.6">Erdbeben und Anprall · Ermüdung und zyklische Abminderung von Mantelreibung und Bettung · '+
+    '<div style="font-size:8.5px;color:var(--dim);line-height:1.6">Erdbeben und Anprall · Ermüdung'+(sys==='pfahl' ? ' und zyklische Aufweichung der seitlichen Bettung (die Mantelreibung hat einen wählbaren Abminderungsfaktor)' : ' und zyklische Einflüsse auf Widerstand und Verformung')+' · '+
       'Bemessung der Betonbauteile (Bewehrung, Durchstanzen) · Setzungen · hydraulischer Grundbruch · '+
       (sys==='pfahl' ? 'angehängter Bodenkörper bei Zugpfahlgruppen · Rammbarkeit · ' : '')+
       'Anschluss des Mastes an das Fundament. Die Kennwerte des Baugrunds sind Eingaben des Nutzers.</div>'+

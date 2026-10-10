@@ -209,6 +209,7 @@ function buildNachweisDocPfahl(r, piles, n){
         <tr><td>q_s,k Mittel ${r.qsTab?'(Tab./Erfahrung)':'(Erfahrungswert)'}</td><td class="r">${r.qsAvg} kPa</td></tr>
         ${r.qsMax>r.qsMin+0.1?`<tr><td>q_s,k Bereich je Schicht</td><td class="r">${r.qsMin} … ${r.qsMax} kPa</td></tr>`:''}
         ${isFinite(r.grpSd) ? `<tr><td>Gruppenwirkungsgrad η_g (s̄/D = ${r.grpSd})</td><td class="r">× ${N(r.grpEta||1,2)}</td></tr>` : `<tr><td>Gruppenwirkungsgrad η_g</td><td class="r">entfällt (Einzelpfahl)</td></tr>`}
+        ${r.zykFac<0.999?`<tr><td>Abminderung zyklische Beanspruchung (Eingabe; in R_s,k enthalten)</td><td class="r">× ${N(r.zykFac,2)}</td></tr>`:''}
         <tr><td>R_s,d Druck</td><td class="r">${N(r.Rskin_d)} kN</td></tr>
         ${r.Rb_k>0?`<tr><td>Spitzenwiderstand R_b,k = q_b,k · A_b = ${r.qb} kPa · ${(r.Ab*1e4).toFixed(0)} cm² (nur Druck, q_b,k eingegeben)</td><td class="r">${N(r.Rb_k)} kN</td></tr>
         <tr><td>R_d Druck = (R_s,k + R_b,k) / γ_R</td><td class="r">${N(r.Rskin_d+r.Rb_d)} kN</td></tr>`:''}

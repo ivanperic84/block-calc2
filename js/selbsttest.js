@@ -84,7 +84,7 @@ function runSelfTest(){
       // Komb. 8 (alles ungünstig, auch das Eigengewicht mit γ_G,sup). Unabhängig am Vorstand
       // nachgestellt (8 einzeln gerechnete Kombinationen): σ_max 647.6134, η_GB,min 0.910692.
       add('Block σ_max [kPa] (arm-abhängig)', _stRes()[0].smax, 647.6133932635412, 1e-4,'rel');
-      add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 1.06324, 1e-4,'rel');
+      add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 1.01509, 1e-4,'rel');
       add('Block N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 233.65125, 1e-6,'rel'); })();
     // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
     // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
@@ -100,11 +100,12 @@ function runSelfTest(){
       // Golden Okt 2026 (8 Kombinationen statt einer von Hand gewählten; unabhängig nachgestellt):
       // Grundbruch massgebend Komb. 8 (η 1.7975 → 1.6459, das Eigengewicht trägt jetzt γ_G,sup),
       // Gleiten massgebend Komb. 4 (η 6.3752 → 6.8035, N und H aus DERSELBEN Kombination).
-      // Golden Okt 2026 (Grundbruch nach EN 1997-1 Anhang D im Normformat N_d ≤ σ_f,d·A′, Nutzerentscheid
-      // nach Audit A1/B1–B3): η 1.6459 → 2.0873, σ_f,d 268.54 → 266.25 kPa. Unabhängig nachgerechnet:
-      // φ_d 25.693°, e 0.2585, B′ 2.0829, N_q 11.4734, N_γ 10.0780, s_q 1.3473, s_γ 0.7597, m 1.5552,
-      // i_q 0.9558, i_γ 0.9284 ⇒ σ_f,d 266.2471 kPa, R_d 1441.90 kN, η = 1441.90/690.795 = 2.087308.
-      add('Flach Grundbruch η', r.etaGB, 2.087308,  1e-5,'rel');
+      // Golden Okt 2026, dritte Fassung (Nutzerentscheid «Grundbruch nach SIA»): erweiterte Tragfähigkeitsformel
+      // nach Lang/Huder/Amann 9.2 wie in SIA D 0197 Kap. 5.3.4.3 (N_γ = 1.8·(N_q−1)·tanφ, s_γ = 1 − 0.4·b̄/l̄,
+      // Tiefenfaktoren, i_q = (1 − ½T/N)⁵, i_γ = (1 − 0.7T/N)⁵). Unabhängig nachgerechnet: φ_d 25.693°, b̄ 2.0829,
+      // N_q 11.4734, N_γ 9.0702, s_q 1.3854, s_γ 0.6795, d_q 1.0587, i_q 0.9304, i_γ 0.9036 ⇒ σ_f,d 241.2728 kPa,
+      // R_d 1306.65 kN, η = 1.891516 (EN 1997-1 Anh. D: 2.087308; ursprünglich gegen σ_max: 1.645932).
+      add('Flach Grundbruch η', r.etaGB, 1.891516,  1e-5,'rel');
       // Golden Okt 2026: γ_G,inf = 1.00 für Gleiten/Grundbruch von Fundationen (SIA 267 Ziff. 8.5.2.4, am Normtext
       // nachgelesen) statt des allgemeinen Werts aus lw_G_inf (0.80): Komb. 4 mit N_d = 1.00·461.7 + 1.35·50 =
       // 529.2 kN ⇒ η = 529.2·tan(0.667·25.6934°)/19.8 = 8.241527 (vorher 6.803465).
@@ -118,11 +119,16 @@ function runSelfTest(){
         add('Flach Gleiten: Kohäsion gewählt ⇒ A′·c′_d (Gl. 31)', v.glD.cR, (15/1.5)*v.Be*v.Le, 1e-9,'rel');
         const o=_doCalculate({...b, SCHICHTEN:S, _pure:true}).results[0].t2.gl;
         add('Flach Gleiten: c′ > 0 ohne Wahl bleibt ohne Kohäsion', o.glD.cR, 0, 0,'abs'); }
-      add('Flach σ_f,d [kPa]',  r.Rd,    266.24709, 1e-5,'rel');
-      add('Flach R_d = σ_f,d·A′ [kN]', r.t2&&r.t2.gb.gbD.RdKN, 1441.9019, 1e-5,'rel');
-      // grundbruchEC7 direkt: φ 30°, c 0, q 10, γ 18, B = L = 2 ⇒ N_q 18.4011, N_γ 20.0931, s_q 1.5, s_γ 0.7
-      add('EC7 D.4: σ_f (φ 30°, quadratisch, lotrecht)', grundbruchEC7({phi:Math.PI/6,c:0,q:10,gam:18,B:2,L:2,N:1000}).sigf, 10*18.4011*1.5+0.5*18*2*20.0931*0.7, 1e-4,'rel');
-      add('EC7 D.3: σ_f undräniert (c_u 50, q 10, quadratisch)', grundbruchEC7({phi:0,c:50,q:10,B:2,L:2,N:1000}).sigf, (Math.PI+2)*50*1.2+10, 1e-9,'rel');
+      add('Flach σ_f,d [kPa]',  r.Rd,    241.27279, 1e-5,'rel');
+      add('Flach R_d = σ_f,d·A′ [kN]', r.t2&&r.t2.gb.gbD.RdKN, 1306.6498, 1e-5,'rel');
+      // grundbruchSIA gegen die Tabellen des Buchs: Tab. 9.2.8 (φ 30°: N_c 30.1, N_q 18.4, N_γ 18.1),
+      // Tab. 9.2.14 (t/b = 1, φ 30°: d_c 1.32, d_q 1.23), Tab. 9.2.16 (δ_R = 10°: i_q 0.63, i_γ 0.52)
+      { const g=grundbruchSIA({phi:Math.PI/6,c:0,q:10,gam:18,B:2,L:2,t:2,N:1000,T:1000*Math.tan(10*Math.PI/180)});
+        add('Buch Tab. 9.2.8: N_γ(30°) ≈ 18.1', g.Ng, 18.1, 0.05,'abs');
+        add('Buch Tab. 9.2.14: d_q(t/b = 1, 30°) ≈ 1.23', g.dq, 1.23, 0.006,'abs');
+        add('Buch Tab. 9.2.16: i_q(10°) ≈ 0.63 · i_γ ≈ 0.52', Math.abs(g.iq-0.63)<0.006 && Math.abs(g.ig-0.52)<0.006 ? 1:0, 1, 0,'abs');
+        add('SIA D 0197 Tab. 5.3-6: N_γ(φ_d 25.7°) = 9.07', grundbruchSIA({phi:Math.atan(Math.tan(Math.PI/6)/1.2),c:0,q:0,gam:20,B:1,L:1e6,N:1}).Ng, 9.07, 0.006,'abs'); }
+      add('Undräniert (9.2.17): σ_f = 5.1·s_u·(1 + 0.2·b/l) + q', grundbruchSIA({phi:0,c:50,q:10,B:2,L:2,N:1000}).sigf, 5.1*50*1.2+10, 1e-9,'rel');
       add('Flach Grundbruch: massgebende Kombination', r.t2&&r.t2.gb.komb, 8, 0,'abs');
       add('Flach Gleiten: massgebende Kombination',    r.t2&&r.t2.gl.komb, 4, 0,'abs');
       add('Flach N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 690.795, 1e-6,'rel');
@@ -154,6 +160,12 @@ function runSelfTest(){
       add('Pfahl η_Stahl (N+M)',         r.etaSteel, 2.09, 0.015,'abs');
       add('Pfahl η_Knick (SIA 263)',     r.etaKnick, 2.42, 0.015,'abs');
       add('Pfahl η_GZG',                 r.etaGZG,   7.41, 0.015,'abs');
+      // Zyklische Abminderung der Mantelreibung: Faktor 0.80 ⇒ R_s,d = 0.80·336.6 = 269.3 kN; 1.0 ⇒ unverändert
+      si('pb_zykfac','0.8'); renderPfahlbock();
+      add('Pfahl zyklisch 0.80: R_skin,d', (RESULT.pfahlbock.r||{}).Rskin_d, 0.8*336.6, 0.15,'abs');
+      add('Pfahl zyklisch 0.80: η_Geo', (RESULT.pfahlbock.r||{}).etaGeo, 0.8*3.27, 0.02,'abs');
+      si('pb_zykfac','1.0'); renderPfahlbock();
+      add('Pfahl zyklisch 1.00: R_skin,d unverändert', (RESULT.pfahlbock.r||{}).Rskin_d, 336.6, 0.015,'abs');
       add('Pfahl R_s,d [kN]',            r.Rskin_d,  336.6, 0.5,'abs'); })();
     // ── T6b Lastbeiwerte wirken auch beim Pfahlfundament (Okt 2026: es las bis dahin die im
     // LF-Objekt eingefrorenen 1.35/1.50 statt der Felder). Mit γ = 1.00: N_d = N_G + G_eig

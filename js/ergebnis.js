@@ -173,8 +173,8 @@ function renderResults(res,worst,g){
     ];
 
     const grundbFormula = g.isBlock
-      ? "σ_f,d (EN 1997-1 Anh. D) + T_mantel/A  gegen σ_max"
-      : "σ_f,d = c'_d·Nc·sc·ic + q·Nq·sq·iq + 0.5·γ·B'·Nγ·sγ·iγ   ·   η = σ_f,d·A' / N_d";
+      ? "σ_f,d (erweiterte Tragfähigkeitsformel) + T_mantel/A  gegen σ_max"
+      : "σ_f,d = c'_d·Nc·sc·dc·ic + q·Nq·sq·dq·iq + 0.5·γ·b̄·Nγ·sγ·iγ   ·   η = σ_f,d·b̄·l̄ / N_d";
     const grundbRows = [
       ['Kombination',t2KombText(rG)],
       ['N_d / H_d',rG.Nd.toFixed(1)+' / '+rG.Hd.toFixed(1)+' kN'],
@@ -182,7 +182,8 @@ function renderResults(res,worst,g){
       ['σ_f,d (auf A′)', rG.effAusserhalb ? 'n. führbar' : rG.Rd.toFixed(1)+' kPa'],   // Karte nur beim Flach
       ...(!g.isBlock && rG.gbD && !rG.effAusserhalb ? [['R_d = σ_f,d·A′', rG.gbD.RdKN.toFixed(0)+' kN'],
         ['N_γ / s_q / s_γ', rG.gbD.Ng.toFixed(1)+' / '+rG.gbD.sq.toFixed(2)+' / '+rG.gbD.sg.toFixed(2)],
-        ['i_q / i_γ (m = '+rG.gbD.m.toFixed(2)+')', rG.gbD.iq.toFixed(3)+' / '+rG.gbD.ig.toFixed(3)]] : []),
+        ['d_c / d_q (t/b̄ = '+(rG.gbD.t/rG.gbD.Bp).toFixed(2)+')', rG.gbD.dc.toFixed(3)+' / '+rG.gbD.dq.toFixed(3)],
+        ['i_q / i_γ', rG.gbD.iq.toFixed(3)+' / '+rG.gbD.ig.toFixed(3)]] : []),
       ...(g.isBlock?[['T_mantel/A',(rG.Tf_total/g.B/g.L).toFixed(1)+' kPa'],
                      ['Kp',rG.Kp.toFixed(2)],
                      ['δ_d',(rG.delta_d*180/Math.PI).toFixed(1)+'°']]:[] ),
@@ -216,7 +217,7 @@ function renderResults(res,worst,g){
            : (rG.effUeberDrittel
                ? wBox('warn','Grosse Ausmitte — Meyerhof-Ersatzfläche als Näherung',
                    `|e_x|/B = ${rG.eRx} bzw. |e_y|/L = ${rG.eRy} &gt; 1/3. Ausserhalb der üblichen
-                    Anwendungsgrenze (EC7/DIN 4017) ist die Ersatzflächen-Näherung nur noch bedingt
+                    Anwendungsgrenze (zweite Kernweite) ist die Ersatzflächen-Näherung nur noch bedingt
                     zutreffend — R_d ist hier mit Vorbehalt zu lesen; der Kippnachweis ist massgebend.`)
                : ''),
          svg:(()=>{ try{ return buildGrundbDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),

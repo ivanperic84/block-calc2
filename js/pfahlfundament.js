@@ -306,7 +306,7 @@ function renderPfahlbock(opt){
     ulsCombos, gzgFull:gzgFullC, gzgVar:gzgVarC,
     gammaR:+gi('pb_gR')||1.4, gammaS:+gi('pb_gS')||1.15,
     alphaZul:_tanZul(true), alphaZulVar:_tanZul(false),   // SBB 1:100 / 1:200 aus den Optionen
-    skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1 });
+    skinFac:+gi('pb_skinfac')||1, zugFac:+gi('pb_zugfac')||1, zykFac:+gi('pb_zykfac')||1 });
   if(_nur) return r;
   // Böschungs-Status fürs Panel + Greifer
   r.slopeActive=_slopeActive; r.slopeBeta=_slBeta; r.slopeFac=_bettungFac;

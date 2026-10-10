@@ -260,7 +260,11 @@ function pfahlbockAnalyse(cfg){
   const _ramm    = !!cfg.einzel && n===1 && cfg.einbau !== 'verpresst';
   const _sk      = _ramm ? rammSkinFriction(L, Math.max(0.05, cfg.Uramm || Math.PI*dG))
                          : microSkinFriction(L, dG, skinFac, alphaC, _Lcrit);
-  const Rskin_k  = _sk.Rk * grp.eta;                            // Druck (charakteristisch), η_g-reduziert
+  // Zyklische Beanspruchung (Wind, Fahrdraht): wählbare Abminderung der Mantelreibung, Vorgabe 1.0.
+  // SIA 267 nennt den Grenzzustand (Typ 4, Ziff. 8.5.1.3) ohne Rechenwert — der Faktor ist eine Eingabe
+  // des Nutzers (Gutachten / Probebelastung mit Schwellbelastung). Wirkt auf Druck und Zug, nicht auf die Spitze.
+  const zykFac  = Math.min(1, Math.max(0.05, cfg.zykFac ?? 1));
+  const Rskin_k  = _sk.Rk * grp.eta * zykFac;                   // Druck (charakteristisch), η_g- und zyklisch reduziert
   const Rskin_kZ = Rskin_k * zugFac;                            // Zug (Herausziehen)
   const gR = Math.max(1, cfg.gammaR ?? 1.40), gS = Math.max(1, cfg.gammaS ?? 1.15);
   const Rskin_d  = Rskin_k  / gR;                               // Druck-Bemessungswiderstand
@@ -507,7 +511,7 @@ function pfahlbockAnalyse(cfg){
   const etaGZG = etas.length ? Math.min(...etas) : Infinity;
   return { kAx, kLat, EI, di:+di.toFixed(4), Rskin_k:+Rskin_k.toFixed(1), Rskin_d:+Rskin_d.toFixed(1),
            Rskin_kZ:+Rskin_kZ.toFixed(1), Rskin_dZ:+Rskin_dZ.toFixed(1),
-           skinFac:+skinFac.toFixed(2), zugFac:+zugFac.toFixed(2), alphaC:+alphaC.toFixed(2),
+           skinFac:+skinFac.toFixed(2), zugFac:+zugFac.toFixed(2), zykFac:+zykFac.toFixed(2), alphaC:+alphaC.toFixed(2),
            qsAvg:+_sk.qsAvg.toFixed(1), qsMin:+_sk.qsMin.toFixed(1), qsMax:+_sk.qsMax.toFixed(1),
            qsTab: SCHICHTEN.some(s=>s.qs!=null && +s.qs>0),
            // Wirksame Verpresslänge (konstruktiver Deckel, Optionen)
@@ -515,7 +519,7 @@ function pfahlbockAnalyse(cfg){
            // Widerstand je Schicht über die Tiefe (char η_g-reduziert · Bemessung Druck/Zug) — Diagramm + Drill-down
            skinLayers: _sk.layers.map(l=>({ name:l.name, preset:l.preset, z0:+l.z0.toFixed(2), z1:+l.z1.toFixed(2),
              dz:+l.dz.toFixed(2), qs:Math.round(l.qs),
-             dRk:+(l.dRk*grp.eta).toFixed(1), dRd:+(l.dRk*grp.eta/gR).toFixed(1), dRdZ:+(l.dRk*grp.eta*zugFac/gR).toFixed(1) })),
+             dRk:+(l.dRk*grp.eta*zykFac).toFixed(1), dRd:+(l.dRk*grp.eta*zykFac/gR).toFixed(1), dRdZ:+(l.dRk*grp.eta*zykFac*zugFac/gR).toFixed(1) })),
            grpEta:grp.eta, grpSMean:grp.sMean, grpSd:grp.sd, grpSCap:grp.sCap, grpSToe:grp.sToe,
            latGrpFac:+latGrpFac.toFixed(3), latGrpOn,
            Rt_d:+Rt_d.toFixed(1), M_Rd:+M_Rd.toFixed(1), Mmax:+Mmax.toFixed(1),

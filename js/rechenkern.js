@@ -55,35 +55,45 @@ function _evalPfahl(){
   }
   return o;
 }
-// ── Grundbruchwiderstand nach EN 1997-1 Anhang D.4 (dränierte Verhältnisse) ─────────────────────
-//   σ_f = c′·N_c·s_c·i_c·g_c + q′·N_q·s_q·i_q·g_q + 0.5·γ′·B′·N_γ·s_γ·i_γ·g_γ      [kPa auf A′ = B′·L′]
-//   N_q = e^(π·tanφ)·tan²(45° + φ/2) · N_c = (N_q − 1)·cotφ · N_γ = 2·(N_q − 1)·tanφ
-//   s_q = 1 + (B′/L′)·sinφ · s_γ = 1 − 0.3·(B′/L′) · s_c = (s_q·N_q − 1)/(N_q − 1)
-//   i_q = [1 − H/(N + A′·c′·cotφ)]^m · i_γ = [...]^(m+1) · i_c = i_q − (1 − i_q)/(N_c·tanφ)
-//   m = m_L·cos²θ + m_B·sin²θ,  m_B = (2 + B′/L′)/(1 + B′/L′),  m_L = (2 + L′/B′)/(1 + L′/B′),
-//   θ = Winkel von H zur Richtung L′.   KEINE Tiefenbeiwerte (der Anhang kennt keine).
-// φ = 0 (undräniert, D.3): σ_f = (π + 2)·c·s_c·i_c + q mit s_c = 1 + 0.2·B′/L′, i_c = ½·(1 + √(1 − H/(A′·c))).
-// Die Geländebeiwerte g_c, g_q, g_γ (Böschung) stehen NICHT im Anhang D; sie stammen wie bisher aus
-// Brinch Hansen und kommen als fertige Faktoren herein (1 = waagrechtes Gelände).
-// B = kleinere, L = grössere wirksame Seite; HB/HL = Horizontalkraft in Richtung B′ bzw. L′.
-function grundbruchEC7(p){
+// ── Grundbruchwiderstand: erweiterte Tragfähigkeitsformel ────────────────────────────────────────
+// Die SIA 267 gibt keine Formel vor (Vorwort: Berechnungsmethoden sind nicht Gegenstand der Norm).
+// Die SIA-Dokumentation D 0197 «Geotechnik — Bemessungsbeispiele zur Norm SIA 267» (Kap. 5.3.4.3)
+// führt den Nachweis E_N,d ≤ R_N,d = σ_f·b̄ mit der erweiterten Tragfähigkeitsformel nach
+// Lang / Huder / Amann (/ Puzrin), «Bodenmechanik und Grundbau», Abschnitt 9.2.5–9.2.17. Diese
+// Formel ist hier umgesetzt (beide Quellen liegen in Grundlagen/):
+//   σ_f = c·N_c·s_c·d_c·i_c·g_c + (γ·t + q)·N_q·s_q·d_q·i_q·g_q + ½·γ·b̄·N_γ·s_γ·d_γ·i_γ·g_γ
+//   9.2.6   N_q = e^(π·tanφ)·tan²(45° + φ/2) · N_c = (N_q − 1)/tanφ · N_γ ≈ 1.8·(N_q − 1)·tanφ
+//   9.2.11  b̄ = b − 2·e_b, l̄ = l − 2·e_l; alle Faktoren mit b̄ statt b;  P_f = σ_f·b̄·l̄
+//   9.2.12  s_c = 1 + (b̄/l̄)·N_q/N_c · s_q = 1 + (b̄/l̄)·tanφ · s_γ = 1 − 0.4·b̄/l̄
+//   9.2.13  d_c = 1 + 0.007·arctan(t/b̄) · d_q = 1 + 0.035·tanφ·(1 − sinφ)²·arctan(t/b̄) · d_γ = 1
+//           (arctan in Grad)
+//   9.2.14  i_q = [1 − ½·T/(N + b̄·l̄·c/tanφ)]⁵ · i_γ = [1 − 0.7·T/(N + b̄·l̄·c/tanφ)]⁵ (Sohle
+//           waagrecht, α = 0) · i_c = i_q − (1 − i_q)/(N_q − 1)
+//   9.2.15  g_c = 1 − β°/147° · g_q = g_γ = (1 − ½·tanβ)⁵      (kommen als fertige Faktoren herein)
+//   9.2.17  φ = 0:  σ_f = 5.1·s_u·(1 + s̄_c + d̄_c − ī_c − ḡ_c) + (γ·t + q)  mit  s̄_c = 0.2·b̄/l̄,
+//           d̄_c = 0.4·t/b̄ (t < b̄) bzw. 0.007·arctan(t/b̄), ī_c = 0.5 − ½·√(1 − T/(s_u·b̄·l̄)), ḡ_c = β°/147°
+// Mit Bemessungswerten φ_d, c_d gerechnet (D 0197). B = b̄ (kleinere), L = l̄ (grössere) wirksame
+// Seite; T = Horizontalkraft, N = Normalkraft, t = Einbindetiefe, q = wirksamer Überlagerungsdruck
+// auf Sohlhöhe (γ·t + Auflast). Fundamentneigung b′ entfällt (Sohle waagrecht).
+function grundbruchSIA(p){
   const phi=Math.max(0,p.phi||0), c=Math.max(0,p.c||0), B=Math.max(1e-6,p.B), L=Math.max(B,p.L||B), A=B*L, r=B/L;
-  const H=Math.hypot(p.HB||0, p.HL||0), N=Math.max(1e-6, p.N||0);
+  const T=Math.abs(p.T||0), N=Math.max(1e-6, p.N||0), t=Math.max(0,p.t||0);
   const gc=p.gc??1, gq=p.gq??1, gg=p.gg??1;
+  const at=Math.atan(t/B)*180/Math.PI;                       // arctan(t/b̄) in Grad
   if(phi <= 0.001){
-    const sc=1+0.2*r, ic=c>1e-9 ? 0.5*(1+Math.sqrt(Math.max(0, 1-H/(A*c)))) : 0;
-    return { Nq:1, Nc:Math.PI+2, Ng:0, sq:1, sc, sg:1, iq:1, ic, ig:1, m:0, al: c>1e-9 ? H/(A*c) : 0,
-             sigf:(Math.PI+2)*c*sc*ic*gc + (p.q||0)*gq };
+    const scB=0.2*r, dcB = t < B ? 0.4*t/B : 0.007*at;
+    const icB = c>1e-9 ? 0.5-0.5*Math.sqrt(Math.max(0, 1-T/(c*A))) : 0.5, gcB=1-gc;
+    return { Nq:1, Nc:5.1, Ng:0, sq:1, sc:1+scB, sg:1, dq:1, dc:1+dcB, dg:1, iq:1, ic:1-icB, ig:1, al: c>1e-9 ? T/(c*A) : 0,
+             undraen:true, sigf: 5.1*c*(1+scB+dcB-icB-gcB) + (p.q||0) };
   }
-  const tp=Math.tan(phi);
-  const Nq=Math.exp(Math.PI*tp)*Math.tan(Math.PI/4+phi/2)**2, Nc=(Nq-1)/tp, Ng=2*(Nq-1)*tp;
-  const sq=1+r*Math.sin(phi), sg=1-0.3*r, sc=(sq*Nq-1)/(Nq-1);
-  const mB=(2+r)/(1+r), mL=(2+1/r)/(1+1/r);
-  const m = H>1e-9 ? (mL*(p.HL||0)**2 + mB*(p.HB||0)**2)/(H*H) : mB;
-  const al=H/(N + A*c/tp), base=Math.max(0, 1-al);
-  const iq=Math.pow(base,m), ig=Math.pow(base,m+1), ic=iq-(1-iq)/(Nc*tp);
-  return { Nq, Nc, Ng, sq, sc, sg, iq, ic:Math.max(0,ic), ig, m, al,
-           sigf: c*Nc*sc*Math.max(0,ic)*gc + (p.q||0)*Nq*sq*iq*gq + 0.5*(p.gam||0)*B*Ng*sg*ig*gg };
+  const tp=Math.tan(phi), sp=Math.sin(phi);
+  const Nq=Math.exp(Math.PI*tp)*Math.tan(Math.PI/4+phi/2)**2, Nc=(Nq-1)/tp, Ng=1.8*(Nq-1)*tp;
+  const sq=1+r*tp, sc=1+r*Nq/Nc, sg=1-0.4*r;
+  const dc=1+0.007*at, dq=1+0.035*tp*(1-sp)**2*at, dg=1;
+  const al=T/(N + A*c/tp);
+  const iq=Math.pow(Math.max(0,1-0.5*al),5), ig=Math.pow(Math.max(0,1-0.7*al),5), ic=Math.max(0, iq-(1-iq)/(Nq-1));
+  return { Nq, Nc, Ng, sq, sc, sg, dq, dc, dg, iq, ic, ig, al, undraen:false,
+           sigf: c*Nc*sc*dc*ic*gc + (p.q||0)*Nq*sq*dq*iq*gq + 0.5*(p.gam||0)*B*Ng*sg*dg*ig*gg };
 }
 // ── Flachfundament: Gebrauchstauglichkeit (SIA 267 Ziff. 8.5.4) ─────────────────────────────────
 // 1) Ziff. 8.5.4.7: «Ohne besonderen Nachweis soll in der Regel im Grenzzustand Gebrauchstauglichkeit
@@ -269,10 +279,9 @@ function _doCalculateKern(P){
   const beta=beta_deg*Math.PI/180;
   let gb_c=1, gb_q=1, gb_g=1;
   if(btyp!=='none' && Math.abs(beta_deg)>0.1){
-    gb_q=Math.max(0,(1-Math.tan(Math.abs(beta)))**2); gb_g=gb_q;
-    const Nq_t=Math.exp(Math.PI*Math.tan(phi_d))*Math.tan(Math.PI/4+phi_d/2)**2;
-    const Nc_t=phi_d>0.001?(Nq_t-1)/Math.tan(phi_d):5.14;
-    gb_c=phi_d>0.001?gb_q-(1-gb_q)/(Nc_t*Math.tan(phi_d)):Math.max(0,1-2*Math.abs(beta)/(Math.PI+2));
+    // Geländeneigungsfaktoren nach Lang/Huder/Amann 9.2.15: g_c = 1 − β°/147°, g_q = g_γ = (1 − ½·tanβ)⁵
+    gb_q=Math.pow(Math.max(0, 1-0.5*Math.tan(Math.abs(beta))), 5); gb_g=gb_q;
+    gb_c=Math.max(0, 1-Math.abs(beta_deg)/147);
     // Höhenwirkung (Jul 2026): endliche Böschung (h_β>0) mindert die Grundbruch-Abminderung nur über den
     // Anteil h_β/B_char der Bruchkörpertiefe (B_char = min(B,L)) → weniger Reduktion; durchlaufend (h_β=0)
     // = volle Reduktion (rückwärtskompatibel). Gilt für Block- und Flach-Grundbruch (gemeinsame gb_*).
@@ -453,12 +462,10 @@ function _doCalculateKern(P){
       const _fSub  = Math.min(1, Math.max(0, (t + _dBr - _zgw)/_dBr)); // Anteil unter GW
       const gs_b_e = gs_b*(1-_fSub) + gamEff(soil)*_fSub;
 
-      // ── 2. GRUNDBRUCH — EN 1997-1 Anhang D (dräniert), Normformat N_d ≤ R_d = σ_f,d·A′
-      // (Okt 2026 umgestellt: vorher N_γ nach Vesić, eigene Neigungsbeiwerte, Hansen-Tiefenbeiwerte
-      //  und Vergleich mit der Kantenpressung σ_max — siehe grundbruchEC7.)
-      const _gbHB = (Be <= Le) ? Hxd : Hyd, _gbHL = (Be <= Le) ? Hyd : Hxd;   // H-Anteile in Richtung B′ / L′
+      // ── 2. GRUNDBRUCH — erweiterte Tragfähigkeitsformel (Lang/Huder/Amann 9.2, SIA D 0197), Format
+      // E_N,d ≤ R_N,d = σ_f,d·b̄·l̄. Block: ohne Tiefenfaktoren, weil dort die Mantelreibung separat zählt.
       const A_eff = Be*Le;
-      const GB = grundbruchEC7({ phi:phi_d, c:c_d, q:q0, gam:gs_b_e, B:B_eff, L:L_eff, HB:_gbHB, HL:_gbHL, N:Nd,
+      const GB = grundbruchSIA({ phi:phi_d, c:c_d, q:q0, gam:gs_b_e, B:B_eff, L:L_eff, T:Hd, N:Nd, t: isBlock ? 0 : t,
                                  gc:gb_c, gq:gb_q, gg:gb_g });
       const Nq=GB.Nq, Nc=GB.Nc, Ng=GB.Ng, ic=GB.ic, iq=GB.iq, ig=GB.ig, al=GB.al;
       let Rd, etaGB;
@@ -473,7 +480,7 @@ function _doCalculateKern(P){
         Rd = GB.sigf;
         etaGB = Rd*A_eff / Math.max(0.001, Nd);
       }
-      const gbD = { Aeff:A_eff, sEff:Nd/Math.max(1e-9,A_eff), RdKN:GB.sigf*A_eff, m:GB.m, sq:GB.sq, sc:GB.sc, sg:GB.sg,
+      const gbD = { Aeff:A_eff, sEff:Nd/Math.max(1e-9,A_eff), RdKN:GB.sigf*A_eff, sq:GB.sq, sc:GB.sc, sg:GB.sg, dq:GB.dq, dc:GB.dc, undraen:GB.undraen, t: isBlock ? 0 : t,
                     iq:GB.iq, ic:GB.ic, ig:GB.ig, Nq:GB.Nq, Nc:GB.Nc, Ng:GB.Ng, gam:gs_b_e, Bp:B_eff, Lp:L_eff };
       // Resultierende ausserhalb der Sohlfläche ⇒ keine effektive Fläche ⇒ Nachweis NICHT führbar.
       // Kein Zahlenwert ausweisen (der geklemmte R_d wäre frei erfunden) → η = 0 (nicht erfüllt).

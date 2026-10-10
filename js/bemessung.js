@@ -396,7 +396,7 @@ function printBemessung(){
       svg{ width:100%; max-width:960px; }
       @media print { body{ margin:10mm; } }
     </style></head><body>
-    <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (SIA 267 / EN 1997-1)'}</span>
+    <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (SIA 267)'}</span>
       <span style="font-size:11px">${esc(SETTINGS.firma||'BlockCalc')}</span></div>
     <div class="meta">Projekt: ${esc(st.p_name||'–')} · Fundament: ${esc(st.p_fundname||'–')} · Nr. ${esc(st.p_nr||'–')} ·
       Bearbeiter: ${esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')} · ${now}</div>

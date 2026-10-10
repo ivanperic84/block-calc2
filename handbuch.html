@@ -1065,7 +1065,7 @@ nav a { position:relative; }
   <div class="np-sh" id="s35">3.5 · Ergänzende Nachweise (Flachfundament)</div>
 
   <div class="np-p">
-    Für das Flachfundament werden die Nachweise nach SIA 267 geführt, der Grundbruchwiderstand nach EN 1997-1 Anhang D. Beim Blockfundament
+    Für das Flachfundament werden die Nachweise nach SIA 267 geführt, der Grundbruchwiderstand mit der erweiterten Tragfähigkeitsformel (Lang/Huder/Amann, wie in der SIA-Dokumentation D 0197). Beim Blockfundament
     werden sie <strong>informativ</strong> mitgerechnet, sind dort aber <strong>nicht massgebend</strong> —
     der eingespannte Block wird über Steckner Gl. 66 nachgewiesen (Begründung in Abschnitt 3.6).
   </div>
@@ -1073,7 +1073,7 @@ nav a { position:relative; }
   <table class="np-tbl">
     <thead><tr><th>Nachweis</th><th>Kriterium</th><th>Methode</th></tr></thead>
     <tbody>
-      <tr><td>Grundbruch</td><td>η = σ_f,d·A&#39; / N_d ≥ 1</td><td>EN 1997-1 Anhang D mit Ersatzfläche (Abschnitt 3.6)</td></tr>
+      <tr><td>Grundbruch</td><td>η = σ_f,d·A&#39; / N_d ≥ 1</td><td>erweiterte Tragfähigkeitsformel mit Ersatzfläche (Abschnitt 3.6)</td></tr>
       <tr><td>Gleiten</td><td>η = R_gl / H_d ≥ 1 &nbsp;mit&nbsp; R_gl = N_d·tan δ_Sohle + c'_d·A, N_d und H_d aus derselben Kombination (massgebend: kleinstes η der 8)</td><td>SIA 267 §4.4</td></tr>
       <tr><td>Ausmitte / Kippen</td><td>η = (1/9) / [(e_x/B)² + (e_y/L)²] ≥ 1</td><td>2. Kernweite, zweiachsig</td></tr>
       <tr><td>Sohlspannung</td><td>η = q_u / σ_max ≥ 1</td><td>SIA 267, informativ</td></tr>
@@ -1188,28 +1188,29 @@ nav a { position:relative; }
     Beachten Sie, wo der Bruchkörper endet: <strong>auf Sohlniveau</strong>, nicht an der
     Geländeoberkante. Das Erdreich über der Sohle wird im Modell nicht als Scherwiderstand
     angesetzt, sondern nur durch die Auflast q₀ ersetzt — eine bewusst konservative Vereinfachung,
-    denn in Wirklichkeit muss die Bruchfläche auch dieses Erdreich durchtrennen. <em>Tiefenbeiwerte</em>,
-    die das näherungsweise nachholen würden, setzt das Programm seit Oktober 2026 nicht mehr an: der
-    Anhang D der EN 1997-1 kennt sie nicht, und sie setzen eine Scherfestigkeit der Überschüttung voraus,
-    die bei einer Hinterfüllung nicht gesichert ist.
+    denn in Wirklichkeit muss die Bruchfläche auch dieses Erdreich durchtrennen. Die <em>Tiefenfaktoren</em> d_c und d_q
+    holen das näherungsweise nach; sie sind der Grund, weshalb ein tiefer eingebundenes Fundament mehr trägt
+    als eines, das nur aufliegt.
   </div>
 
-  <div class="np-sh2">Bemessungswiderstand (EN 1997-1 Anhang D)</div>
+  <div class="np-sh2">Bemessungswiderstand (erweiterte Tragfähigkeitsformel)</div>
   <div class="np-calc">
-    <div class="np-cf">σ_f,d = c&#39;_d·N_c·s_c·i_c·g_c  +  q₀·N_q·s_q·i_q·g_q  +  0.5·γ&#39;₂·B&#39;·N_γ·s_γ·i_γ·g_γ   [kPa auf A&#39;]</div>
+    <div class="np-cf">σ_f,d = c&#39;_d·N_c·s_c·d_c·i_c·g_c  +  q₀·N_q·s_q·d_q·i_q·g_q  +  ½·γ&#39;₂·b̄·N_γ·s_γ·i_γ·g_γ   [kPa auf b̄·l̄]</div>
     <div class="np-cf">N_q = e^(π·tan φ&#39;_d) · tan²(45° + φ&#39;_d/2)</div>
-    <div class="np-cf">N_c = (N_q − 1) / tan φ&#39;_d &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;N_γ = 2·(N_q − 1)·tan φ&#39;_d</div>
-    <div class="np-cf">s_q = 1 + (B&#39;/L&#39;)·sin φ&#39;_d &nbsp;&nbsp; s_γ = 1 − 0.3·B&#39;/L&#39; &nbsp;&nbsp; s_c = (s_q·N_q − 1)/(N_q − 1)</div>
-    <div class="np-cf">i_q = [1 − H_d/(N_d + A&#39;·c&#39;_d·cot φ&#39;_d)]^m &nbsp;&nbsp; i_γ = [...]^(m+1) &nbsp;&nbsp; m aus B&#39;/L&#39; und der Richtung von H</div>
-    <div class="np-cf">R_d = σ_f,d · A&#39; &nbsp;&nbsp;→&nbsp;&nbsp; η_GB = R_d / N_d ≥ 1.0</div>
+    <div class="np-cf">N_c = (N_q − 1) / tan φ&#39;_d &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;N_γ ≈ 1.8·(N_q − 1)·tan φ&#39;_d</div>
+    <div class="np-cf">s_c = 1 + (b̄/l̄)·N_q/N_c &nbsp;&nbsp; s_q = 1 + (b̄/l̄)·tan φ&#39;_d &nbsp;&nbsp; s_γ = 1 − 0.4·b̄/l̄</div>
+    <div class="np-cf">d_c = 1 + 0.007·arctan(t/b̄) &nbsp;&nbsp; d_q = 1 + 0.035·tan φ&#39;_d·(1 − sin φ&#39;_d)²·arctan(t/b̄) &nbsp;&nbsp; (arctan in Grad)</div>
+    <div class="np-cf">i_q = [1 − ½·H_d/(N_d + b̄·l̄·c&#39;_d/tan φ&#39;_d)]⁵ &nbsp;&nbsp; i_γ = [1 − 0.7·H_d/(…)]⁵ &nbsp;&nbsp; i_c = i_q − (1 − i_q)/(N_q − 1)</div>
+    <div class="np-cf">g_c = 1 − β°/147° &nbsp;&nbsp; g_q = g_γ = (1 − ½·tan β)⁵</div>
+    <div class="np-cf">R_d = σ_f,d · b̄ · l̄ &nbsp;&nbsp;→&nbsp;&nbsp; η_GB = R_d / N_d ≥ 1.0</div>
   </div>
 
   <table class="np-tbl">
     <thead><tr><th>Beiwert</th><th>berücksichtigt</th><th>Bemerkung</th></tr></thead>
     <tbody>
       <tr><td class="sym">s_c, s_q, s_γ</td><td>Form</td><td>über B&#39;/L&#39; ≤ 1 — der Bruchkörper eines schmalen Streifens ist ungünstiger als der eines Quadrats</td></tr>
-      <tr><td class="sym">i_c, i_q, i_γ</td><td>Lastneigung</td><td>aus H_d/(N_d + A&#39;·c&#39;_d·cot φ&#39;_d) mit dem Exponenten m; eine geneigte Resultierende bricht früher aus</td></tr>
-      <tr><td class="sym">d_c, d_q</td><td>Einbindetiefe</td><td><b>nicht angesetzt</b> — der Anhang D kennt keine Tiefenbeiwerte; die Einbindung wirkt nur über die Auflast q₀</td></tr>
+      <tr><td class="sym">i_c, i_q, i_γ</td><td>Lastneigung</td><td>aus H_d/(N_d + b̄·l̄·c&#39;_d/tan φ&#39;_d); eine geneigte Resultierende bricht früher aus</td></tr>
+      <tr><td class="sym">d_c, d_q</td><td>Einbindetiefe</td><td>aus t/b̄; bei aufliegenden Stahlplatten ist t ≈ 0 und damit d = 1. Beim Blockfundament nicht angesetzt (dort zählt die Mantelreibung)</td></tr>
       <tr><td class="sym">g_c, g_q, g_γ</td><td>Geländeneigung</td><td>mindert den Widerstand bei Böschung; die Böschungshöhe h_β schwächt die Abminderung anteilig ab</td></tr>
     </tbody>
   </table>
@@ -1319,7 +1320,7 @@ nav a { position:relative; }
     <thead><tr><th>Ausmitte</th><th>Verhalten der App</th><th>Hintergrund</th></tr></thead>
     <tbody>
       <tr><td>|e|/B ≤ 1/3</td><td>Nachweis wird normal geführt</td><td>Anwendungsbereich der Ersatzflächen-Näherung</td></tr>
-      <tr><td>1/3 &lt; |e|/B &lt; 1/2</td><td>Wert bleibt, gelbe Näherungswarnung</td><td>ausserhalb des Bereichs, für den EC7 / DIN 4017 die Ersatzfläche vorsehen</td></tr>
+      <tr><td>1/3 &lt; |e|/B &lt; 1/2</td><td>Wert bleibt, gelbe Näherungswarnung</td><td>ausserhalb des Bereichs, für den die Ersatzfläche vorsehen</td></tr>
       <tr><td>|e|/B ≥ 1/2</td><td>R_d = 0, η = 0, rote Warnung „nicht führbar"</td><td>die Resultierende liegt ausserhalb der Sohlfläche — es gibt keine Ersatzfläche mehr</td></tr>
     </tbody>
   </table>
@@ -1379,7 +1380,7 @@ nav a { position:relative; }
       <tr><td>GZT</td><td>Standsicherheit Gl.66</td><td>M_u / M_d</td><td>≥ 1.0</td></tr>
       <tr><td>GZG</td><td>Schiefstellung Mastfuss</td><td>α_zul / α</td><td>≥ 1.0</td></tr>
       <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Flachfundament — beim Block informativ (dort gegen σ_max)</td></tr>
-      <tr><td>GZT</td><td>Grundbruch (EN 1997-1 Anh. D)</td><td>σ_f,d·A&#39; / N_d</td><td>≥ 1.0</td></tr>
+      <tr><td>GZT</td><td>Grundbruch (erweiterte Tragfähigkeitsformel)</td><td>σ_f,d·A&#39; / N_d</td><td>≥ 1.0</td></tr>
       <tr><td>GZG</td><td>Kernweite (SIA 267 Ziff. 8.5.4.7)</td><td>(1/6) / (|e_x|/B + |e_y|/L)</td><td>≥ 1.0</td></tr>
       <tr><td>GZG</td><td>Verkippung (starres Fundament, Halbraum)</td><td>tan α_zul / tan α</td><td>≥ 1.0</td></tr>
       <tr><td>GZT</td><td>Gleiten</td><td>R_gl / H_d</td><td>≥ 1.0</td></tr>
@@ -2355,7 +2356,7 @@ nav a { position:relative; }
 </div><!-- /hb-layout -->
 
 <!-- GZT-Diagramm: dieselbe Datei wie in der App (keine zweite Kopie mehr) -->
-<script src="js/diagramm-gzt.js?v=2026-10-10d"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10e"></script>
 <script>
 
 let _lastResults=null, _lastG=null;
