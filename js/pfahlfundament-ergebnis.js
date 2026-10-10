@@ -92,9 +92,9 @@ function buildPbKnickDiagram(r, n, wide){
   const eC=_pbE(r.etaKnick);
   let grid='';
   for(let l=0;l<=lamMax+0.01;l+=0.5){ const gx=X(l); grid+=`<line x1="${gx.toFixed(1)}" y1="${padT}" x2="${gx.toFixed(1)}" y2="${y0}" stroke="var(--ol)" stroke-width="0.4" stroke-dasharray="1,2"/>
-    <text x="${gx.toFixed(1)}" y="${y0+10}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--xdim)">${l.toFixed(1)}</text>`; }
+    <text x="${gx.toFixed(1)}" y="${y0+10}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--xdim)">${l.toFixed(1)}</text>`; }
   for(const c of [0.5,1.0]){ const gy=Y(c); grid+=`<line x1="${x0}" y1="${gy.toFixed(1)}" x2="${VB-padR}" y2="${gy.toFixed(1)}" stroke="var(--ol)" stroke-width="0.4" stroke-dasharray="1,2"/>
-    <text x="${x0-3}" y="${(gy+2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--xdim)">${c.toFixed(1)}</text>`; }
+    <text x="${x0-3}" y="${(gy+2).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--xdim)">${c.toFixed(1)}</text>`; }
   const px=X(lam), py=Y(chi);
   // Katalog-Stäbe als Punkte auf der Kurve (gewählter ausgeschlossen — separater Hauptpunkt)
   let dots='';
@@ -114,10 +114,10 @@ function buildPbKnickDiagram(r, n, wide){
    <line x1="${x0}" y1="${py.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="${eC}" stroke-width="0.7" stroke-dasharray="2,2"/>
    <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.2" fill="${eC}"/>
    <text x="${(px+5).toFixed(1)}" y="${(py-4).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="${eC}">λ̄=${lam.toFixed(2)} · χ=${chi.toFixed(2)}</text>
-   <text x="${VB-padR}" y="${(padT+8).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--xdim)">Euler 1/λ̄²</text>
-   ${nAll>1?`<g><circle cx="${(x0+8).toFixed(1)}" cy="${(y0-13).toFixed(1)}" r="1.9" fill="var(--dim)" fill-opacity="0.7"/><text x="${(x0+13).toFixed(1)}" y="${(y0-10.5).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--xdim)">${nAll} Tragglieder im Katalog · ● gewählt</text></g>`:''}
-   <text x="${(x0+6).toFixed(1)}" y="${(padT-2+ph*0.5).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--dim)" transform="rotate(-90 ${(x0-18).toFixed(1)} ${(padT+ph*0.5).toFixed(1)})">χ</text>
-   <text x="${(VB-padR-2).toFixed(1)}" y="${(y0-3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">λ̄</text>
+   <text x="${VB-padR}" y="${(padT+8).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--xdim)">Euler 1/λ̄²</text>
+   ${nAll>1?`<g><circle cx="${(x0+8).toFixed(1)}" cy="${(y0-13).toFixed(1)}" r="1.9" fill="var(--dim)" fill-opacity="0.7"/><text x="${(x0+13).toFixed(1)}" y="${(y0-10.5).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="var(--xdim)">${nAll} Tragglieder im Katalog · ● gewählt</text></g>`:''}
+   <text x="${(x0+6).toFixed(1)}" y="${(padT-2+ph*0.5).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="var(--dim)" transform="rotate(-90 ${(x0-18).toFixed(1)} ${(padT+ph*0.5).toFixed(1)})">χ</text>
+   <text x="${(VB-padR-2).toFixed(1)}" y="${(y0-3).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--dim)">λ̄</text>
    </svg>`;
 }
 
@@ -143,7 +143,7 @@ function buildPbSchnittSVG(r, n, wide){
   let ticks=''; const stp=L<=2?0.5:1;
   for(let z=0;z<=L+0.01;z+=stp){ const ty=depY(z);
     ticks+=`<line x1="${PADL-1}" y1="${ty.toFixed(1)}" x2="${PADL+3}" y2="${ty.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7"/>
-      <text x="${PADL-3}" y="${(ty+3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--xdim)" text-anchor="end">${z.toFixed(z%1?1:0)}</text>`; }
+      <text x="${PADL-3}" y="${(ty+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="var(--xdim)" text-anchor="end">${z.toFixed(z%1?1:0)}</text>`; }
   const aM=axc(2), mLim=S(Mrd,MScale), mLimOK=Mrd>0 && mLim<cw*0.46;
   return `<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
@@ -153,7 +153,7 @@ function buildPbSchnittSVG(r, n, wide){
    ${[1,2].map(i=>`<line x1="${(PADL+cw*i).toFixed(1)}" y1="${PADT-6}" x2="${(PADL+cw*i).toFixed(1)}" y2="${PADT+ph+3}" stroke="var(--ol)" stroke-width="0.7" stroke-dasharray="3,2"/>`).join('')}
    ${[0,1,2].map(i=>`<line x1="${axc(i).toFixed(1)}" y1="${PADT}" x2="${axc(i).toFixed(1)}" y2="${PADT+ph}" stroke="var(--dim)" stroke-width="0.6" stroke-dasharray="2,2"/>`).join('')}
    <line x1="${PADL}" y1="${gokY.toFixed(1)}" x2="${VB-PADR}" y2="${gokY.toFixed(1)}" stroke="var(--dim)" stroke-width="0.8"/>
-   <text x="${VB-PADR}" y="${(gokY-2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">GOK</text>
+   <text x="${VB-PADR}" y="${(gokY-2).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--dim)">GOK</text>
    <text x="${axc(0).toFixed(1)}" y="${PADT-7}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="var(--acc)">y [mm]</text>
    <text x="${axc(1).toFixed(1)}" y="${PADT-7}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="#4db8c9">V [kN]</text>
    <text x="${axc(2).toFixed(1)}" y="${PADT-7}" font-family="var(--f-mono)" font-size="7.5" text-anchor="middle" fill="${eC}">M [kNm]</text>
@@ -164,12 +164,12 @@ function buildPbSchnittSVG(r, n, wide){
    <circle cx="${(axc(1)+S(vGov.v,VMx)).toFixed(1)}" cy="${depY(vGov.z).toFixed(1)}" r="2.4" fill="#4db8c9"/>
    ${mLimOK?`<line x1="${(aM+mLim).toFixed(1)}" y1="${PADT}" x2="${(aM+mLim).toFixed(1)}" y2="${PADT+ph}" stroke="${eC}" stroke-width="0.8" stroke-dasharray="3,2"/>
    <line x1="${(aM-mLim).toFixed(1)}" y1="${PADT}" x2="${(aM-mLim).toFixed(1)}" y2="${PADT+ph}" stroke="${eC}" stroke-width="0.8" stroke-dasharray="3,2"/>
-   <text x="${(aM+mLim).toFixed(1)}" y="${(PADT+ph+9).toFixed(1)}" font-family="var(--f-mono)" font-size="6" text-anchor="middle" fill="${eC}">M_Rd</text>`:''}
+   <text x="${(aM+mLim).toFixed(1)}" y="${(PADT+ph+9).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${eC}">M_Rd</text>`:''}
    ${curve(pM,axc(2),MScale,eC,true)}
    <circle cx="${(aM+S(Mgov.v,MScale)).toFixed(1)}" cy="${depY(Mgov.z).toFixed(1)}" r="2.6" fill="${eC}"/>
-   <text x="${axc(0).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--acc)">y_max ${Math.abs(yGov.v).toFixed(1)}</text>
-   <text x="${axc(1).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="#4db8c9">V_max ${Math.abs(vGov.v).toFixed(1)}</text>
-   <text x="${axc(2).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${eC}">M_max ${Math.abs(Mgov.v).toFixed(1)}</text>
+   <text x="${axc(0).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--acc)">y_max ${Math.abs(yGov.v).toFixed(1)}</text>
+   <text x="${axc(1).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="#4db8c9">V_max ${Math.abs(vGov.v).toFixed(1)}</text>
+   <text x="${axc(2).toFixed(1)}" y="${(PADT+ph+17).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${eC}">M_max ${Math.abs(Mgov.v).toFixed(1)}</text>
    </svg>`;
 }
 
@@ -204,7 +204,7 @@ function buildPbSystemSVG(r, piles, n, wide){
   let ticks=''; const stp=L<=2?0.5:1;                     // Tiefenachse
   for(let z=0;z<=L+0.01;z+=stp){ const ty=Y(z);
     ticks+=`<line x1="${(PADL-3).toFixed(1)}" y1="${ty.toFixed(1)}" x2="${PADL}" y2="${ty.toFixed(1)}" stroke="var(--dim)" stroke-width="0.7"/>
-      <text x="${(PADL-5).toFixed(1)}" y="${(ty+2.4).toFixed(1)}" font-family="var(--f-mono)" font-size="6" text-anchor="end" fill="var(--xdim)">${z.toFixed(z%1?1:0)}</text>`; }
+      <text x="${(PADL-5).toFixed(1)}" y="${(ty+2.4).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--xdim)">${z.toFixed(z%1?1:0)}</text>`; }
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
    <rect width="${VB}" height="${HB}" fill="var(--s2)"/>
    <text x="${VB/2}" y="12" font-family="var(--f-mono)" font-size="8" letter-spacing=".05em" text-anchor="middle" fill="var(--dim)">SYSTEMVERFORMUNG QUER</text>
@@ -212,14 +212,14 @@ function buildPbSystemSVG(r, piles, n, wide){
    <rect x="${PADL}" y="${(PADT-3).toFixed(1)}" width="${plotW.toFixed(1)}" height="${(HB-PADB-PADT+3).toFixed(1)}" fill="none" stroke="var(--ol)" stroke-width="0.6"/>
    <rect x="${PADL}" y="${gy.toFixed(1)}" width="${plotW.toFixed(1)}" height="${(HB-PADB-gy).toFixed(1)}" fill="var(--dim)" fill-opacity="0.05"/>
    <line x1="${PADL}" y1="${gy.toFixed(1)}" x2="${(PADL+plotW).toFixed(1)}" y2="${gy.toFixed(1)}" stroke="var(--dim)" stroke-width="0.8" stroke-dasharray="4,3"/>
-   <text x="${(PADL+plotW-2).toFixed(1)}" y="${(gy-2).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="end" fill="var(--dim)">GOK</text>
+   <text x="${(PADL+plotW-2).toFixed(1)}" y="${(gy-2).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="var(--dim)">GOK</text>
    <line x1="${PADL}" y1="${PADT.toFixed(1)}" x2="${PADL}" y2="${(HB-PADB).toFixed(1)}" stroke="var(--ol2)" stroke-width="0.8"/>
    <text x="9" y="${(PADT+plotH/2).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--dim)" transform="rotate(-90 9 ${(PADT+plotH/2).toFixed(1)})">Tiefe [m]</text>
    ${ticks}`;
   // ── Unverformtes Referenzsystem (gestrichelt, grau)
   s+=`<line x1="${X(xmin).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(xmax).toFixed(1)}" y2="${capY0.toFixed(1)}" stroke="var(--xdim)" stroke-width="1.3" stroke-dasharray="3,2" opacity="0.55"/>`;
   cols.forEach(c=>{ s+=`<line x1="${X(c.x).toFixed(1)}" y1="${capY0.toFixed(1)}" x2="${X(c.footx).toFixed(1)}" y2="${Y(L).toFixed(1)}" stroke="var(--xdim)" stroke-width="0.9" stroke-dasharray="3,2" opacity="0.5"/>`; });
-  s+=`<text x="${(X(xmin)).toFixed(1)}" y="${(capY0-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6" fill="var(--xdim)">unverformt</text>`;
+  s+=`<text x="${(X(xmin)).toFixed(1)}" y="${(capY0-4).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="var(--xdim)">unverformt</text>`;
   // ── Verformtes System: Bankett rotiert (Verdrehung) + horizontal verschoben (Sway),
   //    Pfähle als laterale Auslenkung zwischen verschobenem Kopf und ~festem Fuss.
   //    Verformungsfigur aus DEMSELBEN freien-Kopf-p-y-Profil wie Berechnung/Schnittgrössen
@@ -234,7 +234,7 @@ function buildPbSystemSVG(r, piles, n, wide){
   // Verdrehungswinkel θ am Bankettzentrum (Bogen zwischen unverformt-horizontal und rotiert)
   const rA=Math.min(20, (xmax-xmin)*sc*0.34+8);
   s+=`<path d="M ${(cxp+rA+driftPx).toFixed(1)} ${cyp.toFixed(1)} A ${rA} ${rA} 0 0 ${visT>=0?1:0} ${(cxp+rA*Math.cos(visT)+driftPx).toFixed(1)} ${(cyp+rA*Math.sin(visT)).toFixed(1)}" fill="none" stroke="var(--on2)" stroke-width="0.8"/>
-      <text x="${(cxp+rA+driftPx+3).toFixed(1)}" y="${(cyp+ (visT>=0?7:-3)).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" fill="var(--on2)">θ</text>`;
+      <text x="${(cxp+rA+driftPx+3).toFixed(1)}" y="${(cyp+ (visT>=0?7:-3)).toFixed(1)}" font-family="var(--f-mono)" font-size="7" fill="var(--on2)">θ</text>`;
   s+=`<line x1="${(bx1+driftPx).toFixed(1)}" y1="${by1.toFixed(1)}" x2="${(bx2+driftPx).toFixed(1)}" y2="${by2.toFixed(1)}" stroke="var(--on)" stroke-width="3" stroke-linecap="round"/>`;
   cols.forEach(c=>{ const [hx,hy]=rot(X(c.x),capY0), fx=X(c.footx), fy=Y(L), headX=hx+driftPx;
     if(sway){
@@ -262,9 +262,9 @@ function buildPbSystemSVG(r, piles, n, wide){
     const rEnd=Math.max(ox,xH,xR)+5;   // rechter Rand der Kette (nach Zentrierung)
     s+=`<line x1="${ox.toFixed(1)}" y1="${(yD-5).toFixed(1)}" x2="${ox.toFixed(1)}" y2="${(yD+5).toFixed(1)}" stroke="var(--xdim)" stroke-width="0.7"/>`;
     s+=seg(ox,xH,'var(--acc)') + seg(xH,xR,MCOL);
-    s+=`<text x="${((ox+xH)/2).toFixed(1)}" y="${(yD-4).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="var(--acc)">aus H ${Math.abs(uH).toFixed(1)}</text>`;
-    s+=`<text x="${((xH+xR)/2).toFixed(1)}" y="${(yD-11.5).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="middle" fill="${MCOL}">aus M ${Math.abs(uM).toFixed(1)}</text>`;
-    s+=`<text x="${rEnd.toFixed(1)}" y="${(yD+3).toFixed(1)}" font-family="var(--f-mono)" font-size="6.5" text-anchor="start" fill="var(--on)">Σ=${uR>=0?'':'−'}${Math.abs(uR).toFixed(1)} mm</text>`;
+    s+=`<text x="${((ox+xH)/2).toFixed(1)}" y="${(yD-4).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="var(--acc)">aus H ${Math.abs(uH).toFixed(1)}</text>`;
+    s+=`<text x="${((xH+xR)/2).toFixed(1)}" y="${(yD-11.5).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${MCOL}">aus M ${Math.abs(uM).toFixed(1)}</text>`;
+    s+=`<text x="${rEnd.toFixed(1)}" y="${(yD+3).toFixed(1)}" font-family="var(--f-mono)" font-size="7" text-anchor="start" fill="var(--on)">Σ=${uR>=0?'':'−'}${Math.abs(uR).toFixed(1)} mm</text>`;
   }
   return s+`</svg>`;
 }
@@ -283,6 +283,9 @@ function _pbResultHTML(r, piles, n){
   const cardHd=nwCardHd, CARD_END=NW_CARD_END;   // gemeinsame Nachweis-Karte
   // ── Diagramm-Daten registrieren (Expand via toggleGZTExpand, gleicher Mechanismus wie Block)
   window['_pbdiag_axial']  ={R:r,n:n,fn:'buildPbAxialDiagram'};
+  window['_pbdiag_auf']    ={R:r,n:n,fn:'buildPbAufbruchDiagram'};
+  window['_pbdiag_lat']    ={R:r,n:n,fn:'buildPbLateralDiagram'};
+  window['_pbdiag_einzel'] ={R:r,n:n,fn:'buildPbEinzelDiagram'};
   window['_pbdiag_schnitt']={R:r,n:n,fn:'buildPbSchnittSVG'};
   window['_pbdiag_steel']  ={R:r,n:n,fn:'buildPbSteelDiagram'};
   window['_pbdiag_knick']  ={R:r,n:n,fn:'buildPbKnickDiagram'};
@@ -389,7 +392,7 @@ function _pbResultHTML(r, piles, n){
       ${etaRow('η Geotechnik', r.etaGeo, 'η = '+(r.Rb_k>0&&!govZug?'R_d':'R_s,d')+' '+(govZug?'(Zug)':'(Druck)')+' / |N|_max<br>= '+(+RdGeo).toFixed(0)+' / '+govF.toFixed(0)+' = '+(isFinite(r.etaGeo)?r.etaGeo.toFixed(2):'∞')+'<br>massgebend Pfahl P'+(r.govPile+1))}
       ${r.auf ? row('Aufbruch: Zugkraft Z_d ('+r.auf.nZ+' Zugpf'+(r.auf.nZ>1?'ähle':'ahl')+')', r.auf.Z+' kN')
         + row('angehängter Bodenkörper G_E,k', r.auf.GEk+' kN &nbsp;<span style="color:var(--xdim)">'+r.auf.la+' × '+r.auf.lb+' × '+r.auf.hE+' m · η_Z 0.80 · γ′ '+r.auf.gam+'</span>')
-        + etaRow('η Aufbruchsicherheit (SIA 267 Ziff. 9.5.3.3)', r.etaAuf, 'η = 0.90·G_E,k / Z_d = 0.90·'+r.auf.GEk+' / '+r.auf.Z+' = '+r.etaAuf.toFixed(2)+'<br>G_E,k = n_Z·[l_a·l_b·(L − ⅓·√(l_a²+l_b²)·cot φ′)]·η_Z·γ′<br>'+(r.auf.label||'')) : ''}
+        + etaRow('η Aufbruchsicherheit (SIA 267 Ziff. 9.5.3.3)', r.etaAuf, 'η = 0.90·G_E,k / Z_d = 0.90·'+r.auf.GEk+' / '+r.auf.Z+' = '+r.etaAuf.toFixed(2)+'<br>G_E,k = n_Z·[l_a·l_b·(L − ⅓·√(l_a²+l_b²)·cot φ′)]·η_Z·γ′<br>'+(r.auf.label||'')) + diagWrap('_pbdiag_auf', buildPbAufbruchDiagram(r,n,_gztExpanded)) : ''}
       ${r.tors ? row('Torsion T_Ed / T_Rd = r_T·R_s,d', r.tors.T+' / '+r.tors.TRgeo+' kNm &nbsp;<span style="color:var(--xdim)">r_T = '+(r.tors.rT*1000).toFixed(0)+' mm</span>')
         + etaRow('η Torsion (Mantelreibung, mit N überlagert)', r.etaTors, 'η = 1 / √((|N|/R_d)² + (T/T_Rd)²)<br>= 1 / √('+r.tors.uN.toFixed(2)+'² + '+r.tors.uT.toFixed(2)+'²) = '+(isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞')+'<br>'+(r.tors.label||'')) : ''}
       <div style="font-size:9px;color:var(--xdim);margin-top:2px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig, Kohäsion nicht angesetzt'+(r.Rb_k>0?', Spitzenwiderstand aus eingegebenem q_b,k)':', <b>Spitzenwiderstand nicht angesetzt</b>)') : 'q_s,k Erfahrungswert je Schicht (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant — Vordimensionierung)'} · ${_aTxt} (SIA 267 Ziff. 9.5.2.2) · η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D, geneigte Pfähle spreizen auf → η_g≈1) · ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k (nur Druck)' : '<b>Spitzendruck NICHT angesetzt</b>'+(r.einzel?'':' (Mikropfahl d_G ≤ 300 mm — reine Mantelreibung als Tragwiderstand)')} · wirksame Verpresslänge L_eff = ${(r.skinLeff||0).toFixed(2)} m${r.skinCapped?' (auf L_crit = '+(r.skinLcrit||0).toFixed(2)+' m gedeckelt)':(r.skinLcrit?' (unter L_crit = '+(r.skinLcrit||0).toFixed(2)+' m)':' (kein Deckel)')}</div>
@@ -430,6 +433,7 @@ function _pbResultHTML(r, piles, n){
       ${row('M_u,d = η_a·M_u,k / γ_M,a quer', r.Mcap_d+' kNm')}
       ${row('Einwirkung V_d / M_gl,d', r.latVd+' kN / '+r.latMd+' kNm')}
       ${etaRow('η lateral', r.etaLat, 'η = 1 / (V_d/V_u,d + M_gl,d/M_u,d)<br>= 1 / ('+r.latVd+'/'+r.Vcap_d+' + '+r.latMd+'/'+r.Mcap_d+') = '+(isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'))}
+      ${diagWrap('_pbdiag_lat', buildPbLateralDiagram(r,n,_gztExpanded))}
       <div style="font-size:9px;color:var(--xdim);margin-top:2px">Rotations-/Kick-out-Versagen des Pfahls im Boden (plastische p_u-Hüllkurve, Böschung via Bettungsfaktor). ${_pbEinzel()?'Einzelpfahl: der Kopf trägt die volle Mast-Horizontallast <b>und</b> das Mast-Moment (M_gl = M_Kopf + V·freie Länge).':'Gruppe: massgebender Pfahl über die laterale Kopfkraft (Kopfmoment ≈ 0, im axialen Kräftepaar erfasst).'} · η_a = ${(r.etaA||0.7).toFixed(2)} · γ_M,a quer = ${(r.gMQ||1.4).toFixed(2)} (SIA 267 Ziff. 9.5.2.3).</div>
     ${CARD_END}
 
@@ -443,6 +447,7 @@ function _pbResultHTML(r, piles, n){
       ${etaRow('η Querschnitt (N+M)', r.etaSteel, steelDetail)}
       ${diagWrap('_pbdiag_schnitt', buildPbSchnittSVG(r,n,_gztExpanded))}
       ${diagWrap('_pbdiag_steel', buildPbSteelDiagram(r,n,_gztExpanded))}
+      ${r.einzel ? diagWrap('_pbdiag_einzel', buildPbEinzelDiagram(r,n,_gztExpanded)) : ''}
       <!-- Knicken SIA 263 -->
       <div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 4px;padding-top:7px;border-top:1px solid var(--ol)">Knicken (SIA 263, elast. Bettung)</div>
       <div class="nw-formula">N_cr = 2·√(k_bed·EI) · λ̄ = √(N_pl,k/N_cr) · N_b,Rd = η_i·χ·N_pl,k/γ_s · η = N_b,Rd/N_Ed</div>
@@ -503,7 +508,7 @@ function _pbResultHTML(r, piles, n){
       ${(gv&&n<=2)?row('Horiz.versch. quer (ver)', gv.uQuer.toFixed(1)+' mm ≤ 10'):''}
       ${n>2?'<div style="font-size:9px;color:var(--xdim);padding:2px 0">Verschiebungslimit ±20/±10 mm gilt für 1-/2-Pfahlfundamente</div>':''}
       ${etaRow('η GZG', r.etaGZG, 'η = min(Grenzwert / Wert) über alle Kriterien<br>'+(g?'θ_st+ver: 0.010 / '+Math.max(g.tiltQuer,g.tiltLaengs).toFixed(4)+' = '+(0.010/Math.max(1e-9,Math.max(g.tiltQuer,g.tiltLaengs))).toFixed(2):'')+(gv?'<br>θ_quer,ver: 0.005 / '+gv.tiltQuer.toFixed(4)+' = '+(0.005/Math.max(1e-9,gv.tiltQuer)).toFixed(2):'')+'<br>Minimum ist massgebend')}
-      ${diagWrap('_pbdiag_system', buildPbSystemSVG(r,piles,n,_gztExpanded))}
+      ${r.einzel ? '' : diagWrap('_pbdiag_system', buildPbSystemSVG(r,piles,n,_gztExpanded))}
     ${CARD_END}
 
     ${cardHd((_pbEinzel()?'Setzung Pfahlkopf':'Setzung Bankett')+' (informativ — kein Grenzwert)', null, r.settle_mm+' mm')}

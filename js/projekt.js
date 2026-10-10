@@ -19,6 +19,7 @@ const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datu
 function collectState(){
   const st={};FDS.forEach(f=>{const el=document.getElementById(f);if(el)st[f]=el.value;});
   st.kopf_in_gk = document.getElementById('kopf_in_gk')?.checked ?? true;
+  st.l_koppel = document.getElementById('l_koppel')?.checked ?? false;
   st.hkopf_conv = 2;   // H_Kopf = Gesamthöhe OK Block → OK Kopf (siehe Migration in applyState)
   // Geometrie-Slots pro Modell (Block/Flach entkoppelt) — aktiven Slot mit den aktuellen Feldern sichern
   { const g=Object.assign({}, _geom); g[_geomOwner]=_readGeom();
@@ -57,6 +58,8 @@ function applyState(st){
     }catch(e){} }
   }
   if(st.kopf_in_gk !== undefined){ const cb=document.getElementById('kopf_in_gk'); if(cb) cb.checked = !!st.kopf_in_gk; }
+  // Kopplung längs = quer: Stände ohne das Feld (vor Okt 2026) koppeln, wenn die Werte ohnehin gleich sind
+  { const cb=document.getElementById('l_koppel'); if(cb){ cb.checked = st.l_koppel !== undefined ? !!st.l_koppel : _lastKoppelGleich(); lastKoppelAbgleich(); } }
   // Ausrichtung der Pfahlanordnung: Stände ohne das Feld (vor Okt 2026) sind ungedreht
   if(st.pb_rot === undefined) si('pb_rot','0');
   // Felder vom Okt 2026 (Torsion, Stahlgüte, Spitzenwiderstand): ältere Stände bekommen die Vorgabe,

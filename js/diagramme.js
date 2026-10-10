@@ -4,7 +4,7 @@
 // ══════════════════════════════════════════════════════════
 // ── Shared helpers für Sohl- und Kipp-Diagramm ──────────────────────────
 function _sohlColors(smax, qu){
-  const c_ok='#6fcf8e', c_warn='#c9a84c', c_fail='#cf7070';
+  const c_ok='var(--ok)', c_warn='var(--warn)', c_fail='var(--fail)';
   return { c_ok, c_warn, c_fail,
     c_sig: smax>qu ? c_fail : (smax>qu*0.8 ? c_warn : c_ok),
     c_fund:'#7b9ccc', c_dim:'var(--dim)', c_on2:'var(--on2)', c_ol:'var(--ol)' };
@@ -90,11 +90,11 @@ function buildPfahlSchnittSVG(params, wide=false){
   const gok_y = depPy(0);
 
   const _lt   = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
-  const c_s2  = _lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
-  const c_dim = _lt?'#70727e':'#787a84', c_xdim=_lt?'#9a9caa':'#4e5058';
-  const c_on2 = _lt?'#3a3c48':'#b8bac4';
-  const c_acc = '#7c8de0', c_ep='#ffaa44', c_ok='#6fcf8e';
-  const c_fail= '#cf7070', c_warn='#c9a84c', c_pu_v='#4db8c9';
+  const c_s2='var(--s2)', c_ol='var(--ol)';
+  const c_dim='var(--dim)', c_xdim='var(--xdim)';
+  const c_on2='var(--on2)';
+  const c_acc='var(--acc)', c_ep='#ffaa44', c_ok='var(--ok)';
+  const c_fail='var(--fail)', c_warn='var(--warn)', c_pu_v='#4db8c9';
   const etaCls = e => e>=1.0?c_ok:c_fail;
 
   // Skalierung: Wert → Pixel-Abstand von Nullachse
@@ -125,7 +125,7 @@ function buildPfahlSchnittSVG(params, wide=false){
     const ty = depPy(z);
     depScale += `<line x1="${PAD_L-1}" y1="${ty}" x2="${PAD_L+3}" y2="${ty}"
       stroke="${c_dim}" stroke-width="0.8"/>
-    <text x="${PAD_L-3}" y="${ty+3}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${PAD_L-3}" y="${ty+3}" font-family="var(--f-mono)" font-size="7"
       fill="${c_xdim}" text-anchor="end">${z.toFixed(z%1?1:0)}</text>`;
   }
 
@@ -134,9 +134,9 @@ function buildPfahlSchnittSVG(params, wide=false){
   <rect width="${VB}" height="${H_VB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
 
   <!-- Titel -->
-  <text x="${VB/2}" y="14" font-family="'DM Mono',monospace" font-size="8" letter-spacing=".07em"
+  <text x="${VB/2}" y="14" font-family="var(--f-mono)" font-size="8" letter-spacing=".07em"
     text-anchor="middle" fill="${c_dim}">${usePy ? 'p-y SCHNITTGRÖSSEN — FE-BETTUNG'+(params.multiLayer?' (mehrschichtig)':'') : 'WINKLER SCHNITTGRÖSSEN — STARRER PFAHL'}</text>
-  <text x="${VB/2}" y="25" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${VB/2}" y="25" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${c_dim}">H_1=${H_1.toFixed(1)}kN · k_s=${(k_s/1000).toFixed(0)} MN/m³ · γ_R=${gamma_R.toFixed(2)} · λL=${aL.toFixed(1)} (${pfahlTypLabel})</text>
 
   <!-- Boden-Hintergrund -->
@@ -148,13 +148,13 @@ function buildPfahlSchnittSVG(params, wide=false){
     stroke="${c_ol}" stroke-width="0.8" stroke-dasharray="3,2"/>`).join('')}
 
   <!-- Panel-Titel -->
-  <text x="${axis_x[iY]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${axis_x[iY]}" y="${PAD_T-8}" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${c_acc}">y(z) [mm]</text>
-  <text x="${axis_x[iP]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${axis_x[iP]}" y="${PAD_T-8}" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${c_ep}">p(z) [kN/m]</text>
-  ${usePy ? `<text x="${axis_x[iV]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  ${usePy ? `<text x="${axis_x[iV]}" y="${PAD_T-8}" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${c_pu_v}">V(z) [kN]</text>` : ''}
-  <text x="${axis_x[iM]}" y="${PAD_T-8}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${axis_x[iM]}" y="${PAD_T-8}" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${etaCls(etaStahl??1)}">M(z) [kNm]</text>
 
   <!-- Null-Achsen -->
@@ -164,7 +164,7 @@ function buildPfahlSchnittSVG(params, wide=false){
   <!-- GOK-Linie über alle Panels -->
   <line x1="${PAD_L}" y1="${gok_y}" x2="${PAD_L+pw}" y2="${gok_y}"
     stroke="${c_on2}" stroke-width="0.9" stroke-dasharray="4,2"/>
-  <text x="${PAD_L+2}" y="${gok_y-3}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${PAD_L+2}" y="${gok_y-3}" font-family="var(--f-mono)" font-size="7"
     fill="${c_on2}">GOK</text>
 
   <!-- Grundwasserlinie -->
@@ -172,36 +172,36 @@ function buildPfahlSchnittSVG(params, wide=false){
     const gy = depPy(zgw);
     return `<line x1="${PAD_L}" y1="${gy}" x2="${PAD_L+pw}" y2="${gy}"
       stroke="#5599cc" stroke-width="1.1" stroke-dasharray="6,2" opacity="0.85"/>
-    <text x="${PAD_L+2}" y="${gy-3}" font-family="'DM Mono',monospace" font-size="7"
+    <text x="${PAD_L+2}" y="${gy-3}" font-family="var(--f-mono)" font-size="7"
       fill="#5599cc">GW z=${zgw.toFixed(1)}m</text>
-    <text x="${PAD_L+pw-2}" y="${gy+9}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${PAD_L+pw-2}" y="${gy+9}" font-family="var(--f-mono)" font-size="7"
       fill="#5599cc" text-anchor="end">γ'=${g2} kN/m³</text>`;
   })() : ''}
 
   <!-- Bodenmodell-Hinweise -->
-  ${useClay ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="'DM Mono',monospace" font-size="6.5"
+  ${useClay ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_warn}">bindig (c_u, undrainiert)</text>` : ''}
-  ${hasC ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="'DM Mono',monospace" font-size="6.5"
+  ${hasC ? `<text x="${axis_x[1]}" y="${PAD_T+8}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_warn}">c′ vernachlässigt (konservativ)</text>` : ''}
 
   <!-- Nulllinie (Rotationszentrum) -->
   ${z_r > 0 && z_r < L_emb ? `
   <line x1="${PAD_L}" y1="${nl_y}" x2="${PAD_L+pw}" y2="${nl_y}"
     stroke="${c_ok}" stroke-width="1" stroke-dasharray="3,2" opacity="0.8"/>
-  <text x="${PAD_L+2}" y="${nl_y-3}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${PAD_L+2}" y="${nl_y-3}" font-family="var(--f-mono)" font-size="7"
     fill="${c_ok}">NL  z=${Math.min(z_r,L_emb).toFixed(2)}m</text>` : ''}
 
   <!-- M_max Linie -->
   ${Math.abs(M_gov) > 0.01 ? `
   <line x1="${axis_x[iM]-col_w*0.5}" y1="${Mmax_y}" x2="${PAD_L+pw}" y2="${Mmax_y}"
     stroke="${etaCls(etaStahl??1)}" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
-  <text x="${axis_x[iM]-col_w*0.5+2}" y="${Mmax_y-3}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iM]-col_w*0.5+2}" y="${Mmax_y-3}" font-family="var(--f-mono)" font-size="7"
     fill="${etaCls(etaStahl??1)}">M_max=${Math.abs(M_gov).toFixed(1)}kNm</text>` : ''}
 
   <!-- M_pl Grenzlinien -->
   <line x1="${axis_x[iM]+Mpl_px}" y1="${PAD_T}" x2="${axis_x[iM]+Mpl_px}" y2="${PAD_T+ph}"
     stroke="${c_fail}" stroke-width="1" stroke-dasharray="4,2" opacity="0.7"/>
-  <text x="${axis_x[iM]+Mpl_px+2}" y="${PAD_T+10}" font-family="'DM Mono',monospace" font-size="6.5"
+  <text x="${axis_x[iM]+Mpl_px+2}" y="${PAD_T+10}" font-family="var(--f-mono)" font-size="7"
     fill="${c_fail}">M_pl=${(Mpl).toFixed(0)}</text>
 
   <!-- p_u(z) Grenzwert der Bettungsreaktion — gestrichelte Polylinie im p-Panel -->
@@ -234,13 +234,13 @@ function buildPfahlSchnittSVG(params, wide=false){
     <!-- p_u-Linie gestrichelt (Polylinie) -->
     <polyline points="${puLine}" fill="none"
       stroke="${c_ok}" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.85"/>
-    <text x="${(last?last.px_pu:axis_x[iP])+3}" y="${depPy(L_emb)-3}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${(last?last.px_pu:axis_x[iP])+3}" y="${depPy(L_emb)-3}" font-family="var(--f-mono)" font-size="7"
       fill="${c_ok}" opacity="0.9">p_u</text>`;
   })()}
 
   <!-- Querkraft V(z) (nur p-y): aus der Bettung; V=0 markiert M_max -->
   ${usePy ? curve(pts_V, sc_V, axis_x[iV], c_pu_v, true) : ''}
-  ${usePy ? `<text x="${axis_x[iV]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  ${usePy ? `<text x="${axis_x[iV]}" y="${H_VB-PAD_B+16}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_pu_v}">V_Kopf=${(pts_V[0]?Math.abs(pts_V[0].v):0).toFixed(0)} kN</text>` : ''}
 
   <!-- Kurven -->
@@ -250,22 +250,22 @@ function buildPfahlSchnittSVG(params, wide=false){
 
   <!-- Tiefenskala -->
   ${depScale}
-  <text x="${PAD_L-3}" y="${PAD_T-4}" font-family="'DM Mono',monospace" font-size="6.5"
+  <text x="${PAD_L-3}" y="${PAD_T-4}" font-family="var(--f-mono)" font-size="7"
     fill="${c_xdim}" text-anchor="end">m</text>
 
   <!-- Skalenwerte unten -->
-  <text x="${axis_x[iY]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iY]}" y="${H_VB-PAD_B+16}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_acc}">±${y_max.toFixed(1)} mm</text>
-  <text x="${axis_x[iP]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iP]}" y="${H_VB-PAD_B+16}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_ep}">p=${Math.max(...pts_p.map(p=>Math.abs(p.v))).toFixed(0)} / p_u=${p_u_max.toFixed(0)} kN/m</text>
-  <text x="${axis_x[iM]}" y="${H_VB-PAD_B+16}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${axis_x[iM]}" y="${H_VB-PAD_B+16}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${etaCls(etaStahl??1)}">M_max=${Math.abs(M_gov).toFixed(1)} kNm</text>
 
   <!-- Modell-Hinweis -->
   ${usePy
-    ? `<text x="${VB/2}" y="${H_VB-6}" font-family="'DM Mono',monospace" font-size="6.5"
+    ? `<text x="${VB/2}" y="${H_VB-6}" font-family="var(--f-mono)" font-size="7"
         text-anchor="middle" fill="${c_xdim}">p-y-Bettungsbalken${params.pyNonlin?', elasto-plastisch (p≤p_u)':', linear'}${params.pyYielded?' · Boden teilw. plastisch':''} · λL=${aL.toFixed(1)} (${pfahlTypLabel})</text>`
-    : (aL > 2.0 ? `<text x="${VB/2}" y="${H_VB-6}" font-family="'DM Mono',monospace" font-size="6.5"
+    : (aL > 2.0 ? `<text x="${VB/2}" y="${H_VB-6}" font-family="var(--f-mono)" font-size="7"
         text-anchor="middle" fill="${c_warn}">Näherung starrer Pfahl — λL=${aL.toFixed(1)} > 2.0, flexibles Verhalten möglich</text>` : '')}
 </svg>`;
 }
@@ -278,9 +278,9 @@ function buildPfahlSchnittSVG(params, wide=false){
 function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullout){
   const a   = alpha_deg * Math.PI/180;                 // signiert
   const _lt = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
-  const c_s2=_lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
-  const c_dim=_lt?'#70727e':'#787a84', c_xdim=_lt?'#9a9caa':'#4e5058';
-  const c_acc='#7c8de0', c_warn='#c9a84c', c_pu='#4db8c9';
+  const c_s2='var(--s2)', c_ol='var(--ol)';
+  const c_dim='var(--dim)', c_xdim='var(--xdim)';
+  const c_acc='var(--acc)', c_warn='var(--warn)', c_pu='#4db8c9';
   const dirC = strutZug ? c_warn : c_acc;
   const VB=270, HB=126;
   const px=176, py=64;                                 // Pfahlkopf-Knoten
@@ -297,27 +297,27 @@ function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullou
   const lowBlock = a < -0.005;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${HB}" width="100%" style="max-width:300px;display:block">
   <rect width="${VB}" height="${HB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
-  <text x="8" y="13" font-family="'DM Mono',monospace" font-size="7.5" letter-spacing=".05em" fill="${c_dim}">KRAFTZERLEGUNG STÜTZE → PFAHLKOPF</text>
-  <text x="${VB-7}" y="13" font-family="'DM Mono',monospace" font-size="7.5" font-weight="500" fill="${dirC}" text-anchor="end">STÜTZE ${strutZug?'ZUG':'DRUCK'}</text>
+  <text x="8" y="13" font-family="var(--f-mono)" font-size="7.5" letter-spacing=".05em" fill="${c_dim}">KRAFTZERLEGUNG STÜTZE → PFAHLKOPF</text>
+  <text x="${VB-7}" y="13" font-family="var(--f-mono)" font-size="7.5" font-weight="500" fill="${dirC}" text-anchor="end">STÜTZE ${strutZug?'ZUG':'DRUCK'}</text>
   <!-- Block-Anschluss -->
   <rect x="${bx-13}" y="${by-7}" width="13" height="14" rx="1" fill="${c_acc}" fill-opacity="0.5" stroke="${c_acc}" stroke-width="0.8"/>
-  <text x="${bx-6}" y="${by + (lowBlock?20:-10)}" font-family="'DM Mono',monospace" font-size="6" fill="${c_dim}" text-anchor="middle">Anschluss</text>
+  <text x="${bx-6}" y="${by + (lowBlock?20:-10)}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="middle">Anschluss</text>
   <!-- Pfahl (vertikal) -->
   <rect x="${px-3}" y="${py-10}" width="6" height="52" rx="1" fill="${c_acc}" fill-opacity="0.5" stroke="${c_acc}" stroke-width="0.8"/>
-  <text x="${px-6}" y="${py+40}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="end">Pfahl (vert.)</text>
+  <text x="${px-6}" y="${py+40}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="end">Pfahl (vert.)</text>
   <!-- Horizontale Referenz (gestrichelt) am Kopf -->
   <line x1="${px-34}" y1="${py}" x2="${px}" y2="${py}" stroke="${c_dim}" stroke-width="0.5" stroke-dasharray="2,2"/>
   <!-- Stütze F_s entlang Achse -->
   <line x1="${bx}" y1="${by}" x2="${px}" y2="${py}" stroke="${dirC}" stroke-width="2.4" stroke-linecap="round"/>
-  <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="'DM Mono',monospace" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)} kN</text>
-  <text x="${px-36}" y="${py + (lowBlock?9:-3)}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
+  <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="var(--f-mono)" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)} kN</text>
+  <text x="${px-36}" y="${py + (lowBlock?9:-3)}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
   <!-- H_eff horizontal (Broms-Lateral) -->
   ${arr(px, py, hx2, py, c_pu)}
-  <text x="${hx2}" y="${py - 5}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'start':'end'}">H=${H_pf.toFixed(1)} kN</text>
+  <text x="${hx2}" y="${py - 5}" font-family="var(--f-mono)" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'start':'end'}">H=${H_pf.toFixed(1)} kN</text>
   <!-- V vertikal (axial) -->
   ${arr(px, py, px, vy2, c_pu)}
-  <text x="${px+5}" y="${vy2 + (sgnV>0?9:-3)}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">V=${V_pf.toFixed(1)} kN (${pullout?'Herausziehen':'Druck'})</text>
-  <text x="${VB-7}" y="${HB-6}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_xdim}" text-anchor="end">F_s=H/cos α · V=H·|tan α|</text>
+  <text x="${px+5}" y="${vy2 + (sgnV>0?9:-3)}" font-family="var(--f-mono)" font-size="7" fill="${c_pu}">V=${V_pf.toFixed(1)} kN (${pullout?'Herausziehen':'Druck'})</text>
+  <text x="${VB-7}" y="${HB-6}" font-family="var(--f-mono)" font-size="7" fill="${c_xdim}" text-anchor="end">F_s=H/cos α · V=H·|tan α|</text>
 </svg>`;
 }
 
@@ -327,8 +327,8 @@ function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullou
 // Ausnutzung p/p_u im Pfahl; Reserve = Abstand zur Grenze.
 function buildPyKennlinieSVG(mobRatio, yielded){
   const _lt = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
-  const c_s2=_lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740', c_dim=_lt?'#70727e':'#787a84',
-        c_xdim=_lt?'#9a9caa':'#4e5058', c_acc='#7c8de0', c_ok='#6fcf8e', c_pu='#4db8c9', c_warn='#c9a84c';
+  const c_s2='var(--s2)', c_ol='var(--ol)', c_dim='var(--dim)',
+        c_xdim='var(--xdim)', c_acc='var(--acc)', c_ok='var(--ok)', c_pu='#4db8c9', c_warn='var(--warn)';
   const VB=300, HB=148, PADL=20, PADB=26, PADT=22, PADR=58;
   const x0=PADL, y0=HB-PADB, pw=VB-PADL-PADR, ph=HB-PADT-PADB;
   const yYx = x0 + pw*0.46;                 // Fliessknick (Verschiebung y bei p=p_u)
@@ -340,28 +340,28 @@ function buildPyKennlinieSVG(mobRatio, yielded){
   const wc = onPlateau ? c_warn : c_ok;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB} ${HB}" width="100%" style="max-width:320px;display:block">
   <rect width="${VB}" height="${HB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
-  <text x="${VB/2}" y="13" font-family="'DM Mono',monospace" font-size="7.5" letter-spacing=".06em" text-anchor="middle" fill="${c_dim}">p-y-KENNLINIE  ·  p = min(k_s·B·y , p_u)</text>
+  <text x="${VB/2}" y="13" font-family="var(--f-mono)" font-size="7.5" letter-spacing=".06em" text-anchor="middle" fill="${c_dim}">p-y-KENNLINIE  ·  p = min(k_s·B·y , p_u)</text>
   <!-- Achsen -->
   <line x1="${x0}" y1="${PADT-4}" x2="${x0}" y2="${y0}" stroke="${c_dim}" stroke-width="0.8"/>
   <line x1="${x0}" y1="${y0}" x2="${x0+pw+6}" y2="${y0}" stroke="${c_dim}" stroke-width="0.8"/>
-  <text x="${x0-3}" y="${PADT+2}" font-family="'DM Mono',monospace" font-size="7" text-anchor="end" fill="${c_dim}">p</text>
-  <text x="${x0+pw+6}" y="${y0+10}" font-family="'DM Mono',monospace" font-size="7" text-anchor="end" fill="${c_dim}">y</text>
+  <text x="${x0-3}" y="${PADT+2}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="${c_dim}">p</text>
+  <text x="${x0+pw+6}" y="${y0+10}" font-family="var(--f-mono)" font-size="7" text-anchor="end" fill="${c_dim}">y</text>
   <!-- p_u-Niveau gestrichelt -->
   <line x1="${x0}" y1="${puY}" x2="${x0+pw}" y2="${puY}" stroke="${c_pu}" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="${x0+pw+4}" y="${puY+3}" font-family="'DM Mono',monospace" font-size="7" fill="${c_pu}">p_u</text>
-  <text x="${x0+pw+4}" y="${puY+13}" font-family="'DM Mono',monospace" font-size="6" fill="${c_xdim}">Boden-</text>
-  <text x="${x0+pw+4}" y="${puY+21}" font-family="'DM Mono',monospace" font-size="6" fill="${c_xdim}">fliessen</text>
+  <text x="${x0+pw+4}" y="${puY+3}" font-family="var(--f-mono)" font-size="7" fill="${c_pu}">p_u</text>
+  <text x="${x0+pw+4}" y="${puY+13}" font-family="var(--f-mono)" font-size="7" fill="${c_xdim}">Boden-</text>
+  <text x="${x0+pw+4}" y="${puY+21}" font-family="var(--f-mono)" font-size="7" fill="${c_xdim}">fliessen</text>
   <!-- Reserve-Band (Arbeitspunkt → p_u) -->
   ${!onPlateau ? `<line x1="${wx}" y1="${wy}" x2="${wx}" y2="${puY}" stroke="${c_ok}" stroke-width="0.7" stroke-dasharray="2,2" opacity="0.8"/>
-  <text x="${wx+3}" y="${(wy+puY)/2+2}" font-family="'DM Mono',monospace" font-size="6" fill="${c_ok}">Reserve</text>`:''}
+  <text x="${wx+3}" y="${(wy+puY)/2+2}" font-family="var(--f-mono)" font-size="7" fill="${c_ok}">Reserve</text>`:''}
   <!-- Kennlinie: elastisch + Plateau -->
   <path d="M ${x0},${y0} L ${yYx},${puY} L ${x0+pw},${puY}" fill="none" stroke="${c_acc}" stroke-width="1.8"/>
   <!-- Steigung-Label -->
-  <text x="${x0+(yYx-x0)*0.5-2}" y="${y0-(y0-puY)*0.5-3}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_acc}" transform="rotate(-32 ${x0+(yYx-x0)*0.5} ${y0-(y0-puY)*0.5})">k_s·B (elastisch)</text>
-  <text x="${(yYx+x0+pw)/2}" y="${puY-4}" font-family="'DM Mono',monospace" font-size="6.5" text-anchor="middle" fill="${c_warn}">plastisch (p = p_u)</text>
+  <text x="${x0+(yYx-x0)*0.5-2}" y="${y0-(y0-puY)*0.5-3}" font-family="var(--f-mono)" font-size="7" fill="${c_acc}" transform="rotate(-32 ${x0+(yYx-x0)*0.5} ${y0-(y0-puY)*0.5})">k_s·B (elastisch)</text>
+  <text x="${(yYx+x0+pw)/2}" y="${puY-4}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${c_warn}">plastisch (p = p_u)</text>
   <!-- Arbeitspunkt -->
   <circle cx="${wx}" cy="${wy}" r="3" fill="${wc}" stroke="${c_s2}" stroke-width="0.8"/>
-  <text x="${wx}" y="${y0+10}" font-family="'DM Mono',monospace" font-size="6.5" text-anchor="middle" fill="${wc}">Arbeitspkt. ${(mob*100).toFixed(0)}%</text>
+  <text x="${wx}" y="${y0+10}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${wc}">Arbeitspkt. ${(mob*100).toFixed(0)}%</text>
   </svg>`;
 }
 
@@ -457,9 +457,9 @@ function buildPfahlSystemSVG(params, wide=false){
       stroke="#cf7070" stroke-width="1.2"/>
     <line x1="${blk_l}" y1="${gok_y}" x2="${blk_l}" y2="${ey}"
       stroke="#cf7070" stroke-width="0.9" stroke-dasharray="3,2"/>
-    <text x="${PAD_L+1}" y="${ey+9}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${PAD_L+1}" y="${ey+9}" font-family="var(--f-mono)" font-size="7"
       fill="#cf7070">d_ex=${d_ex.toFixed(1)}m</text>
-    <text x="${PAD_L+1}" y="${ey+17}" font-family="'DM Mono',monospace" font-size="6"
+    <text x="${PAD_L+1}" y="${ey+17}" font-family="var(--f-mono)" font-size="7"
       fill="#cf7070">${ex_seite==='feld'?'Feldseite':'Gleisseite'}</text>`;
   })() : '';
 
@@ -469,15 +469,15 @@ function buildPfahlSystemSVG(params, wide=false){
   for(let z=0; z<=L_emb+0.01; z+=step){
     const ty = depY(z);
     depTicks += `<line x1="${PAD_L-1}" y1="${ty}" x2="${PAD_L+3}" y2="${ty}" stroke="#787a84" stroke-width="0.8"/>
-    <text x="${PAD_L-3}" y="${ty+3}" font-family="'DM Mono',monospace" font-size="6.5" fill="#4e5058" text-anchor="end">${z.toFixed(z%1?1:0)}</text>`;
+    <text x="${PAD_L-3}" y="${ty+3}" font-family="var(--f-mono)" font-size="7" fill="#4e5058" text-anchor="end">${z.toFixed(z%1?1:0)}</text>`;
   }
 
   const _lt = (typeof SETTINGS!=='undefined') && SETTINGS.theme==='light';
-  const c_s2 = _lt?'#ffffff':'#15161a', c_ol=_lt?'#d0d0da':'#353740';
-  const c_dim= _lt?'#70727e':'#787a84', c_xdim=_lt?'#9a9caa':'#4e5058';
-  const c_on2= _lt?'#3a3c48':'#b8bac4';
-  const c_acc='#7c8de0', c_ep='#ffaa44', c_pu='#4db8c9';
-  const c_ok='#6fcf8e', c_fail='#cf7070', c_warn='#c9a84c';
+  const c_s2='var(--s2)', c_ol='var(--ol)';
+  const c_dim='var(--dim)', c_xdim='var(--xdim)';
+  const c_on2='var(--on2)';
+  const c_acc='var(--acc)', c_ep='#ffaa44', c_pu='#4db8c9';
+  const c_ok='var(--ok)', c_fail='var(--fail)', c_warn='var(--warn)';
   const etaCls = v => v>=1.0?c_ok:c_fail;
   const fOvCol = r_overlap>0.15?c_warn:r_overlap>0.02?c_ep:c_ok;
 
@@ -486,7 +486,7 @@ function buildPfahlSystemSVG(params, wide=false){
     const tx = isFinite(val)?`η = ${val.toFixed(2)}`:'n.m.';
     return `<rect x="${x}" y="${y}" width="${w}" height="17" rx="3"
       fill="${cl}" fill-opacity="0.15" stroke="${cl}" stroke-width="0.8"/>
-    <text x="${x+w/2}" y="${y+11.5}" font-family="'DM Mono',monospace" font-size="8"
+    <text x="${x+w/2}" y="${y+11.5}" font-family="var(--f-mono)" font-size="8"
       fill="${cl}" text-anchor="middle">${lbl} ${tx}</text>`;
   };
 
@@ -506,9 +506,9 @@ function buildPfahlSystemSVG(params, wide=false){
     width="100%" style="max-width:${wide?500:380}px;display:block">
   <rect width="${VB}" height="${H_VB}" rx="4" fill="${c_s2}" stroke="${c_ol}" stroke-width="0.8"/>
 
-  <text x="${VB/2}" y="15" font-family="'DM Mono',monospace" font-size="8" letter-spacing=".07em"
+  <text x="${VB/2}" y="15" font-family="var(--f-mono)" font-size="8" letter-spacing=".07em"
     text-anchor="middle" fill="${c_dim}">SYSTEMSCHNITT — BLOCK / PFAHL</text>
-  <text x="${VB/2}" y="27" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${VB/2}" y="27" font-family="var(--f-mono)" font-size="7.5"
     text-anchor="middle" fill="${c_dim}">${n}× ${typ} · L=${L_emb.toFixed(1)}m · H_tot=${H_pfahl_total.toFixed(1)}kN · η_H=${eta_H.toFixed(2)}</text>
 
   <!-- Boden -->
@@ -520,7 +520,7 @@ function buildPfahlSystemSVG(params, wide=false){
     fill="${c_ep}" fill-opacity="0.18" stroke="${c_ep}" stroke-width="1.2" stroke-dasharray="5,3"/>
   <line x1="${blk_r}" y1="${blk_by}" x2="${wd_tip_x}" y2="${gok_y}"
     stroke="${c_ep}" stroke-width="1.8"/>
-  <text x="${blk_r+7}" y="${blk_by-6}" font-family="'DM Mono',monospace"
+  <text x="${blk_r+7}" y="${blk_by-6}" font-family="var(--f-mono)"
     font-size="7.5" fill="${c_ep}">${alphaWedge}°</text>
 
   <!-- Überlappung -->
@@ -536,35 +536,35 @@ function buildPfahlSystemSVG(params, wide=false){
     stroke="${c_pu}" stroke-width="1"/>` : ''}
   <polygon points="${epPts}" fill="${exA?'none':c_pu}" fill-opacity="0.10"
     stroke="${exA?c_warn:c_pu}" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="${zugS?pp_x0:ep_xmax}" y="${pl_by+9}" font-family="'DM Mono',monospace"
+  <text x="${zugS?pp_x0:ep_xmax}" y="${pl_by+9}" font-family="var(--f-mono)"
     font-size="7" fill="${c_pu}" opacity="0.8" text-anchor="end">p_u,max=${p_max.toFixed(0)} kN/m</text>
-  <text x="${pp_x(p_max*0.6)}" y="${gok_y+12}" font-family="'DM Mono',monospace"
+  <text x="${pp_x(p_max*0.6)}" y="${gok_y+12}" font-family="var(--f-mono)"
     font-size="7" fill="${c_pu}" text-anchor="${zugS?'end':'start'}">p_u (Grenzwert Bettung)${zugS?' · Zugfall':''}</text>
   <!-- Aushub-Begrenzung (Zugfall): z_clear-Marke + Verlust-Label -->
   ${exA ? (() => {
     const zc_y = depY(Math.min(zClear, L_emb));
     const lx = pile_r + 5;
     return `<line x1="${zugS?pile_l:pile_r}" y1="${zc_y}" x2="${lx}" y2="${zc_y}" stroke="${c_warn}" stroke-width="0.5" stroke-dasharray="1,1" opacity="0.6"/>
-    <text x="${lx}" y="${zc_y-2}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${lx}" y="${zc_y-2}" font-family="var(--f-mono)" font-size="7"
       fill="${c_warn}" text-anchor="start">z_clear=${zClear.toFixed(1)}m</text>
-    <text x="${lx}" y="${zc_y+8}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${lx}" y="${zc_y+8}" font-family="var(--f-mono)" font-size="7"
       fill="${c_warn}" text-anchor="start">Bruchkörper→Aushub: H_u −${(exClipRed*100).toFixed(0)}%</text>` ;
   })() : ''}
   <!-- Richtungsannotation Zug/Druck am Pfahlkopf -->
-  <text x="${pile_cx}" y="${pl_ty-4}" font-family="'DM Mono',monospace" font-size="6.5"
+  <text x="${pile_cx}" y="${pl_ty-4}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${zugS?c_warn:c_acc}">${zugS?'ZUG → Keil zum Aushub':'DRUCK → Keil vom Block weg'}</text>
 
   <!-- Block -->
   <rect x="${blk_l}" y="${blk_ty}" width="${blk_r-blk_l}" height="${blk_by-blk_ty}"
     fill="${c_acc}" fill-opacity="0.80" stroke="${c_acc}" stroke-width="1.2" rx="1"/>
-  <text x="${(blk_l+blk_r)/2}" y="${(blk_ty+blk_by)/2+4}" font-family="'DM Mono',monospace"
+  <text x="${(blk_l+blk_r)/2}" y="${(blk_ty+blk_by)/2+4}" font-family="var(--f-mono)"
     font-size="7" fill="white" text-anchor="middle">Block</text>
 
   <!-- Überdeckung ü -->
   ${G_ue > 0.05 ? `<rect x="${blk_l}" y="${gok_y}" width="${blk_r-blk_l}" height="${blk_ty-gok_y}"
     fill="${c_dim}" fill-opacity="0.20" stroke="${c_dim}" stroke-width="0.5" stroke-dasharray="2,2"/>
   <text x="${(blk_l+blk_r)/2}" y="${gok_y+(blk_ty-gok_y)/2+3}"
-    font-family="'DM Mono',monospace" font-size="6" fill="${c_dim}" text-anchor="middle">ü=${G_ue.toFixed(2)}m</text>` : ''}
+    font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="middle">ü=${G_ue.toFixed(2)}m</text>` : ''}
 
   <!-- Pfahl -->
   <rect x="${pile_l}" y="${pl_ty}" width="${pile_r-pile_l}" height="${pl_by-pl_ty}"
@@ -573,7 +573,7 @@ function buildPfahlSystemSVG(params, wide=false){
   <!-- GOK -->
   <line x1="${PAD_L-5}" y1="${gok_y}" x2="${VB-PAD_R+3}" y2="${gok_y}"
     stroke="${c_on2}" stroke-width="0.9" stroke-dasharray="4,2"/>
-  <text x="${PAD_L-7}" y="${gok_y-3}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${PAD_L-7}" y="${gok_y-3}" font-family="var(--f-mono)" font-size="7"
     fill="${c_on2}" text-anchor="end">GOK</text>
 
   <!-- Grundwasserlinie -->
@@ -581,9 +581,9 @@ function buildPfahlSystemSVG(params, wide=false){
     const gy = depY(zgwS);
     return `<line x1="${PAD_L-5}" y1="${gy}" x2="${VB-PAD_R+3}" y2="${gy}"
       stroke="#5599cc" stroke-width="1.1" stroke-dasharray="5,2" opacity="0.9"/>
-    <text x="${PAD_L-7}" y="${gy+3}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${PAD_L-7}" y="${gy+3}" font-family="var(--f-mono)" font-size="7"
       fill="#5599cc" text-anchor="end">GW</text>
-    <text x="${ep_xmax-2}" y="${gy-3}" font-family="'DM Mono',monospace" font-size="6.5"
+    <text x="${ep_xmax-2}" y="${gy-3}" font-family="var(--f-mono)" font-size="7"
       fill="#5599cc" text-anchor="end">γ'=${g2sys}</text>`;
   })() : ''}
 
@@ -596,13 +596,13 @@ function buildPfahlSystemSVG(params, wide=false){
     stroke="${c_warn}" stroke-width="1.5"/>
   <polygon points="${blk_r+6},${h_arr_y} ${blk_r+13},${h_arr_y-4} ${blk_r+13},${h_arr_y+4}"
     fill="${c_warn}"/>
-  <text x="${PAD_L+4}" y="${h_arr_y-4}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${PAD_L+4}" y="${h_arr_y-4}" font-family="var(--f-mono)" font-size="7.5"
     fill="${c_warn}">H=${H_pfahl_total.toFixed(1)}kN — ZUG</text>` : `
   <line x1="${PAD_L+2}" y1="${h_arr_y}" x2="${pile_l-2}" y2="${h_arr_y}"
     stroke="${c_acc}" stroke-width="1.5"/>
   <polygon points="${pile_l-2},${h_arr_y} ${pile_l-9},${h_arr_y-4} ${pile_l-9},${h_arr_y+4}"
     fill="${c_acc}"/>
-  <text x="${PAD_L+4}" y="${h_arr_y-4}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${PAD_L+4}" y="${h_arr_y-4}" font-family="var(--f-mono)" font-size="7.5"
     fill="${c_acc}">H=${H_pfahl_total.toFixed(1)}kN</text>`}
 
   <!-- H_u,1 Netto-Lateraltragfähigkeit (Resultante der p_u-Grenzhüllkurve, Schwerpunkt
@@ -616,7 +616,7 @@ function buildPfahlSystemSVG(params, wide=false){
       return `<line x1="${arr_x1}" y1="${arr_y}" x2="${arr_x2}" y2="${arr_y}"
         stroke="${c_pu}" stroke-width="1.4"/>
       <polygon points="${pile_l-2},${arr_y} ${pile_l-9},${arr_y-4} ${pile_l-9},${arr_y+4}" fill="${c_pu}"/>
-      <text x="${pile_r+6}" y="${arr_y+12}" font-family="'DM Mono',monospace" font-size="7"
+      <text x="${pile_r+6}" y="${arr_y+12}" font-family="var(--f-mono)" font-size="7"
         fill="${c_pu}">H_u,1=${Hu_1.toFixed(1)}kN (γ_R=${gamma_R.toFixed(2)})</text>`;
     }
     const arr_x1 = Math.min(ep_xmax - 4, pp_x(puF(z_res)) + 38);
@@ -624,13 +624,13 @@ function buildPfahlSystemSVG(params, wide=false){
     return `<line x1="${arr_x1}" y1="${arr_y}" x2="${arr_x2}" y2="${arr_y}"
       stroke="${c_pu}" stroke-width="1.4"/>
     <polygon points="${arr_x2},${arr_y} ${arr_x2+6},${arr_y-4} ${arr_x2+6},${arr_y+4}" fill="${c_pu}"/>
-    <text x="${arr_x2+8}" y="${arr_y+12}" font-family="'DM Mono',monospace" font-size="7"
+    <text x="${arr_x2+8}" y="${arr_y+12}" font-family="var(--f-mono)" font-size="7"
       fill="${c_pu}">H_u,1=${Hu_1.toFixed(1)}kN (γ_R=${gamma_R.toFixed(2)})</text>`;
   })()}
 
   <!-- Tiefenskala -->
   ${depTicks}
-  <text x="${PAD_L-3}" y="${PAD_T-5}" font-family="'DM Mono',monospace" font-size="6.5"
+  <text x="${PAD_L-3}" y="${PAD_T-5}" font-family="var(--f-mono)" font-size="7"
     fill="${c_xdim}" text-anchor="end">m</text>
 
   <!-- Dimension d -->
@@ -638,44 +638,44 @@ function buildPfahlSystemSVG(params, wide=false){
     stroke="${c_on2}" stroke-width="0.8"/>
   <line x1="${blk_r}"  y1="${gok_y-19}" x2="${blk_r}"  y2="${gok_y-11}" stroke="${c_on2}" stroke-width="0.8"/>
   <line x1="${pile_cx}" y1="${gok_y-19}" x2="${pile_cx}" y2="${gok_y-11}" stroke="${c_on2}" stroke-width="0.8"/>
-  <text x="${(blk_r+pile_cx)/2}" y="${gok_y-17}" font-family="'DM Mono',monospace" font-size="7.5"
+  <text x="${(blk_r+pile_cx)/2}" y="${gok_y-17}" font-family="var(--f-mono)" font-size="7.5"
     fill="${c_on2}" text-anchor="middle">d=${d_abst.toFixed(1)}m</text>
 
   <!-- d_krit -->
   <line x1="${blk_r}" y1="${H_VB-PAD_B+18}" x2="${Math.min(ep_xmax, blk_r + d_krit_ov*geo_sc)}" y2="${H_VB-PAD_B+18}"
     stroke="${c_ep}" stroke-width="0.9" stroke-dasharray="4,2"/>
   <text x="${blk_r + Math.min(ep_xmax-blk_r, d_krit_ov*geo_sc)/2}" y="${H_VB-PAD_B+14}"
-    font-family="'DM Mono',monospace" font-size="7" fill="${c_ep}" text-anchor="middle">d_krit=${d_krit_ov.toFixed(1)}m</text>
+    font-family="var(--f-mono)" font-size="7" fill="${c_ep}" text-anchor="middle">d_krit=${d_krit_ov.toFixed(1)}m</text>
 
   <!-- t / L Bemaßungen -->
   <line x1="${blk_l-10}" y1="${gok_y}" x2="${blk_l-10}" y2="${blk_by}"
     stroke="${c_on2}" stroke-width="0.8"/>
   <line x1="${blk_l-14}" y1="${gok_y}" x2="${blk_l-6}" y2="${gok_y}" stroke="${c_on2}" stroke-width="0.8"/>
   <line x1="${blk_l-14}" y1="${blk_by}" x2="${blk_l-6}" y2="${blk_by}" stroke="${c_on2}" stroke-width="0.8"/>
-  <text x="${blk_l-14}" y="${(gok_y+blk_by)/2+3}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${blk_l-14}" y="${(gok_y+blk_by)/2+3}" font-family="var(--f-mono)" font-size="7"
     fill="${c_on2}" text-anchor="end">t=${t_bl.toFixed(1)}m</text>
 
   <!-- Wirkungsschatten Box -->
   <rect x="${VB-PAD_R-90}" y="${PAD_T+4}" width="86" height="30" rx="3"
     fill="${r_overlap>0.02?'rgba(201,168,76,0.10)':'rgba(111,207,142,0.10)'}"
     stroke="${fOvCol}" stroke-width="0.8"/>
-  <text x="${VB-PAD_R-47}" y="${PAD_T+16}" font-family="'DM Mono',monospace" font-size="9"
+  <text x="${VB-PAD_R-47}" y="${PAD_T+16}" font-family="var(--f-mono)" font-size="9"
     text-anchor="middle" font-weight="500" fill="${fOvCol}">f_sch = ${(f_shadow ?? f_overlap).toFixed(2)}</text>
-  <text x="${VB-PAD_R-47}" y="${PAD_T+27}" font-family="'DM Mono',monospace" font-size="7"
+  <text x="${VB-PAD_R-47}" y="${PAD_T+27}" font-family="var(--f-mono)" font-size="7"
     text-anchor="middle" fill="${c_dim}">${(z_ov??0)<0.02?'Pfahl ausserhalb Keil':'Schatten bis z='+(z_ov??0).toFixed(1)+'m'}</text>
 
   <!-- Legende -->
   <rect x="${PAD_L}"     y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_ep}" fill-opacity="0.4" stroke="${c_ep}" stroke-width="0.7"/>
-  <text x="${PAD_L+10}"  y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">Rankine (Block)</text>
+  <text x="${PAD_L+10}"  y="${H_VB-PAD_B+41}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}">Rankine (Block)</text>
   <rect x="${PAD_L+82}"  y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_pu}" fill-opacity="0.20" stroke="${c_pu}" stroke-width="0.7" stroke-dasharray="2,1"/>
-  <text x="${PAD_L+92}"  y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">p_u (Grenzwert)</text>
+  <text x="${PAD_L+92}"  y="${H_VB-PAD_B+41}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}">p_u (Grenzwert)</text>
   ${exA ? `<rect x="${PAD_L+178}" y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_pu}" fill-opacity="0.16" stroke="${c_pu}" stroke-width="0.7"/>
-  <text x="${PAD_L+188}" y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">p_u reduz. (Aushub)</text>` : ''}
+  <text x="${PAD_L+188}" y="${H_VB-PAD_B+41}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}">p_u reduz. (Aushub)</text>` : ''}
   ${showOv ? `<rect x="${PAD_L+248}" y="${H_VB-PAD_B+34}" width="7" height="7" fill="${c_fail}" fill-opacity="0.4" stroke="${c_fail}" stroke-width="0.7"/>
-  <text x="${PAD_L+258}" y="${H_VB-PAD_B+41}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_fail}">Überlappung</text>` : ''}
+  <text x="${PAD_L+258}" y="${H_VB-PAD_B+41}" font-family="var(--f-mono)" font-size="7" fill="${c_fail}">Überlappung</text>` : ''}
 
   <!-- Werte -->
-  <text x="${PAD_L}" y="${H_VB-7}" font-family="'DM Mono',monospace" font-size="6.5" fill="${c_dim}">
+  <text x="${PAD_L}" y="${H_VB-7}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}">
     H_u,k=${Hu_1k?.toFixed(1)??'—'}kN · H_u,d=${Hu_1.toFixed(1)}kN · δ=${isFinite(delta_gruppe_mm)?delta_gruppe_mm.toFixed(1)+'mm':'≫ Grenzlast'} · ${isFinite(neig_mm_m)?neig_mm_m.toFixed(1)+'mm/m':'—'} · α_lat=${alpha_lat.toFixed(2)}
   </text>
 </svg>`;
@@ -718,6 +718,7 @@ function buildSohlDiagram(r, g, wide=false){
   const H_vb = Math.round(content_h);
   const gnd_y = 48;  // Sohllinie (UK Platte)
   const fund_y = gnd_y;
+  const fund_h = 6;   // Höhe des Schraffurbands der klaffenden Fuge (fehlte: das Diagramm warf bei klaffender Fuge und erschien nicht)
   const e_px = (e_dom/B_dom)*sc_w;
   const scX_c = v => PAD+sc_w/2+(v/B_dom)*sc_w;
   const arr_x = PAD+sc_w/2+e_px;
@@ -1072,3 +1073,167 @@ function buildGrundbDiagram(r, g, wide=false){
 </svg>`;
 }
 
+// ══════════════════════════════════════════════════════════
+// GEMEINSAMER DIAGRAMM-BAUSTEIN (Okt 2026)
+// Eine Quelle für Rahmen, Titel, Schriftgrössen und Farben. Farben NUR über Theme-Tokens (hell/dunkel
+// folgen automatisch), Schrift nie unter 7 px (bezogen auf die viewBox-Breite 272 schmal / 480 breit),
+// jede Zahl mit Einheit. Neue Diagramme bauen darauf; bestehende werden schrittweise umgestellt.
+// ══════════════════════════════════════════════════════════
+const DG = { f:'var(--f-mono)', tit:8.5, txt:7.5, kl:7,
+  bg:'var(--s2)', fl:'var(--s3)', ax:'var(--ol2)', gr:'var(--ol)', dim:'var(--dim)', xdim:'var(--xdim)', on:'var(--on2)',
+  acc:'var(--acc)', ok:'var(--ok)', fail:'var(--fail)', warn:'var(--warn)', teal:'#4db8c9' };
+function dgOpen(VB, HB, titel, sub){
+  return `<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
+   <rect width="${VB}" height="${HB}" fill="${DG.bg}"/>
+   <text x="6" y="13" font-family="${DG.f}" font-size="${DG.tit}" letter-spacing=".05em" fill="${DG.dim}">${titel}</text>`
+   + (sub ? `<text x="6" y="24" font-family="${DG.f}" font-size="${DG.kl}" fill="${DG.xdim}">${sub}</text>` : '');
+}
+function dgT(x, y, txt, o){ o=o||{};
+  return `<text x="${(+x).toFixed(1)}" y="${(+y).toFixed(1)}" font-family="${DG.f}" font-size="${o.z||DG.txt}"`
+    + (o.a?` text-anchor="${o.a}"`:'') + (o.w?` font-weight="${o.w}"`:'') + ` fill="${o.c||DG.dim}">${txt}</text>`; }
+function dgL(x1, y1, x2, y2, o){ o=o||{};
+  return `<line x1="${(+x1).toFixed(1)}" y1="${(+y1).toFixed(1)}" x2="${(+x2).toFixed(1)}" y2="${(+y2).toFixed(1)}" stroke="${o.c||DG.ax}" stroke-width="${o.w||1}"`
+    + (o.d?` stroke-dasharray="${o.d}"`:'') + `/>`; }
+function dgPfeil(x1, y1, x2, y2, c, w){
+  const dx=x2-x1, dy=y2-y1, l=Math.hypot(dx,dy)||1, ux=dx/l, uy=dy/l, ah=Math.min(6, l*0.6);
+  return dgL(x1, y1, x2-ux*ah, y2-uy*ah, {c, w:w||1.8})
+    + `<polygon points="${x2.toFixed(1)},${y2.toFixed(1)} ${(x2-ux*ah-uy*3).toFixed(1)},${(y2-uy*ah+ux*3).toFixed(1)} ${(x2-ux*ah+uy*3).toFixed(1)},${(y2-uy*ah-ux*3).toFixed(1)}" fill="${c}"/>`; }
+const dgEta = e => (typeof etaCol==='function') ? etaCol(e) : (e>=0.995 ? DG.ok : DG.fail);
+const dgZ = (v,d) => isFinite(v) ? (+v).toFixed(d==null?1:d) : '∞';
+
+// ── Gleiten (Flachfundament): Kräfteplan an der Sohle — H_d gegen R = N_d·tan δ_d + A′·c′_d (SIA 267 Gl. 31)
+function buildGleitDiagram(r, g, wide){
+  const v = t2View(r,'gl'), D = v.glD; if(!D) return '';
+  const N = v.Nd_gl ?? v.Nd, H = v.Hd, R = v.Rgl, eta = v.etaGL;
+  const quer = Math.abs(v.Hxd) >= Math.abs(v.Hyd);
+  const VB = wide?480:272, HB = wide?196:158, cx = VB/2, yS = wide?112:92, bw = VB*0.46, bh = 20;
+  const Lmax = VB*0.30, sc = Lmax/Math.max(H, R, 1e-6), lH = Math.max(8, H*sc), lR = Math.max(8, R*sc);
+  const cR = dgEta(eta);
+  let s = dgOpen(VB, HB, 'GLEITEN — KRÄFTE AN DER SOHLE', (quer?'quer':'längs')+' zum Gleis · Komb. '+(v.komb||'–'));
+  s += dgL(8, yS, VB-8, yS, {c:DG.gr, d:'4,3'});
+  s += `<rect x="${(cx-bw/2).toFixed(1)}" y="${yS-bh}" width="${bw.toFixed(1)}" height="${bh}" fill="${DG.fl}" stroke="${DG.ax}" stroke-width="1"/>`;
+  s += dgPfeil(cx, yS-bh-34, cx, yS-bh-2, DG.on) + dgT(cx+5, yS-bh-22, 'N_d = '+dgZ(N)+' kN', {c:DG.on});
+  s += dgPfeil(cx-bw/2-lH-4, yS-bh/2, cx-bw/2-4, yS-bh/2, DG.warn) + dgT(cx-bw/2-6, yS-bh/2-6, 'H_d = '+dgZ(H)+' kN', {c:DG.warn, a:'end'});
+  s += dgPfeil(cx+lR/2, yS+9, cx-lR/2, yS+9, cR) + dgT(cx, yS+22, 'R = '+dgZ(R)+' kN', {c:cR, a:'middle'});
+  const yT = yS+38;
+  s += dgT(8, yT, 'R = N_d·tan δ_d'+(D.cAn?' + A′·c′_d':'')+' = '+dgZ(N)+'·tan '+dgZ(D.dD*180/Math.PI)+'°'+(D.cAn?' + '+dgZ(D.cR)+' kN':''));
+  s += dgT(8, yT+11, 'δ_k = '+dgZ(D.dK*180/Math.PI)+'° → δ_d = '+dgZ(D.dD*180/Math.PI)+'°'+(D.cAn?'':' · Kohäsion nicht angesetzt'), {c:DG.xdim, z:DG.kl});
+  s += dgT(VB-8, yT, 'η = R / H_d = '+dgZ(eta,2), {c:cR, a:'end', w:600});
+  return s+'</svg>';
+}
+
+// ── Gebrauchstauglichkeit Flachfundament: einfache Kernweite (Grundriss) + Verkippung (Schnitt, überhöht)
+function buildFlachGzgDiagram(r, g, wide){
+  const z = r.gzgF; if(!z) return '';
+  const VB = wide?480:272, HB = wide?210:180, top = 32, ph = HB-top-(wide?34:46);
+  const wL = VB*0.46, sc = Math.min((wL-24)/g.B, ph/g.L), bw = g.B*sc, bl = g.L*sc, cx = 12+ (wL-12)/2, cy = top+ph/2;
+  const cK = dgEta(z.etaKern), cT = dgEta(z.etaTilt);
+  let s = dgOpen(VB, HB, 'GEBRAUCHSTAUGLICHKEIT — KERNWEITE UND VERKIPPUNG', 'charakteristische Lasten · SIA 267 Ziff. 8.5.4');
+  // Grundriss mit einfacher Kernweite (Raute mit den Halbachsen B/6 und L/6)
+  s += `<rect x="${(cx-bw/2).toFixed(1)}" y="${(cy-bl/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bl.toFixed(1)}" fill="${DG.fl}" stroke="${DG.ax}" stroke-width="1"/>`;
+  s += `<polygon points="${(cx-bw/6).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy-bl/6).toFixed(1)} ${(cx+bw/6).toFixed(1)},${cy.toFixed(1)} ${cx.toFixed(1)},${(cy+bl/6).toFixed(1)}" fill="${cK}" fill-opacity="0.14" stroke="${cK}" stroke-width="1"/>`;
+  s += dgL(cx-bw/2, cy, cx+bw/2, cy, {c:DG.gr, d:'2,2', w:0.6}) + dgL(cx, cy-bl/2, cx, cy+bl/2, {c:DG.gr, d:'2,2', w:0.6});
+  const px = cx + Math.max(-0.5, Math.min(0.5, z.ex/g.B))*bw, py = cy - Math.max(-0.5, Math.min(0.5, z.ey/g.L))*bl;
+  s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3" fill="${cK}"/>`;
+  s += dgT(cx, cy+bl/2+11, 'B = '+dgZ(g.B,2)+' m (quer)', {a:'middle', z:DG.kl, c:DG.xdim});
+  const tK = '|e_x|/B + |e_y|/L = '+dgZ(z.kern,3)+(z.kern<=1/6+1e-9?' ≤':' >')+' 0.167 · η = '+dgZ(z.etaKern,2);
+  const tV = 'Verkippung: η = '+dgZ(z.etaTilt,2)+' · M_k = '+dgZ(Math.abs(z.quer?z.May:z.Max))+' kNm';
+  s += wide ? dgT(cx, HB-8, tK, {a:'middle', c:cK}) : dgT(8, HB-19, tK, {c:cK});
+  // Verkippung: Fundament um den überhöhten Winkel gedreht, zulässige Lage gestrichelt
+  const x0 = wL+10, wR = VB-x0-10, mx = x0+wR/2, my = top+ph*0.55, hw = wR*0.36;
+  const vis = Math.max(2, Math.min(14, 14*z.tan/Math.max(z.tanZul,1e-9)))*Math.PI/180, zul = 14*Math.PI/180;
+  const rot = (a,c,w,d) => dgL(mx-hw*Math.cos(a), my+hw*Math.sin(a), mx+hw*Math.cos(a), my-hw*Math.sin(a), {c, w, d});
+  s += dgL(x0, my, x0+wR, my, {c:DG.gr, d:'4,3'}) + rot(zul, DG.xdim, 1, '3,2') + rot(vis, cT, 3);
+  s += dgT(mx+hw*Math.cos(zul)+2, my-hw*Math.sin(zul)-3, 'zul.', {z:DG.kl, c:DG.xdim, a:'end'});
+  const _1 = t => t>1e-9 ? '1:'+Math.round(1/t) : '–';
+  s += dgT(mx, top+6, 'Verkippung '+(z.quer?'quer':'längs')+' (überhöht)', {a:'middle', z:DG.kl, c:DG.xdim});
+  s += dgT(mx, my+26, 'tan α = '+_1(z.tan)+' ≤ '+_1(z.tanZul), {a:'middle', c:cT});
+  s += wide ? dgT(mx, HB-8, tV, {a:'middle', c:cT}) : dgT(8, HB-8, tV, {c:cT});
+  return s+'</svg>';
+}
+
+// ── Aufbruchsicherheit der Zugpfähle (Pfahlgruppe): angehängter Bodenkörper je Zugpfahl gegen Z_d
+function buildPbAufbruchDiagram(r, n, wide){
+  const a = r && r.auf; if(!a) return '';
+  const L = r.L||6, VB = wide?480:272, HB = wide?246:206, top = 56, ph = HB-top-40;
+  const sc = Math.min(ph/L, (VB*0.5)/Math.max(0.5, +a.la)), cx = VB*0.36, bw = a.la*sc, hE = Math.min(L, +a.hE)*sc, cE = dgEta(r.etaAuf);
+  let s = dgOpen(VB, HB, 'AUFBRUCHSICHERHEIT DER ZUGPFÄHLE', a.nZ+' Zugpf'+(a.nZ>1?'ähle':'ahl')+' · SIA 267 Ziff. 9.5.3.3');
+  s += dgL(8, top, VB-8, top, {c:DG.gr, d:'4,3'}) + dgT(VB-8, top-3, 'UK Bankett', {a:'end', z:DG.kl, c:DG.xdim});
+  // Bodenkörper: Prisma l_a × l_b, unten mit der Spitze (Höhe ⅓·√(l_a²+l_b²)·cot φ′ abgezogen)
+  s += `<polygon points="${(cx-bw/2).toFixed(1)},${top} ${(cx+bw/2).toFixed(1)},${top} ${(cx+bw/2).toFixed(1)},${(top+hE).toFixed(1)} ${cx.toFixed(1)},${(top+L*sc).toFixed(1)} ${(cx-bw/2).toFixed(1)},${(top+hE).toFixed(1)}" fill="${cE}" fill-opacity="0.12" stroke="${cE}" stroke-width="1"/>`;
+  s += dgL(cx, top, cx, top+L*sc, {c:DG.teal, w:2.2});
+  s += dgPfeil(cx, top-2, cx, top-24, DG.warn) + dgT(cx+5, top-14, 'Z_d = '+a.Z+' kN', {c:DG.warn});
+  s += dgPfeil(cx+bw*0.28, top+hE*0.35, cx+bw*0.28, top+hE*0.35+22, cE) ;
+  const xr = Math.max(cx+bw/2+8, VB*0.60);
+  s += dgT(xr, top+16, 'G_E,k = '+a.GEk+' kN', {c:cE}) + dgT(xr, top+27, 'je Pfahl '+a.la+' × '+a.lb+' × '+a.hE+' m', {z:DG.kl, c:DG.xdim});
+  s += dgT(xr, top+38, 'η_Z 0.80 · γ′ = '+a.gam+' kN/m³', {z:DG.kl, c:DG.xdim}) + dgT(xr, top+49, 'L = '+dgZ(L,2)+' m', {z:DG.kl, c:DG.xdim});
+  s += dgT(cx, top+L*sc+11, 'l_a = '+a.la+' m', {a:'middle', z:DG.kl, c:DG.xdim});
+  s += dgT(8, HB-8, 'η = 0.90·G_E,k / Z_d = '+dgZ(r.etaAuf,2), {c:cE, w:600});
+  return s+'</svg>';
+}
+
+// ── Schiefstellung Blockfundament (GZG): gedrehter Block, Bettungsdreieck an der Stirn (0 → C₁), Sohlbettung C₂
+function buildBlockGzgDiagram(r, g, wide){
+  if(r.etaGZG == null || !isFinite(r.alpha_GZG_calc)) return '';
+  const VB = wide?480:272, HB = wide?236:204, top = 34, cE = dgEta(r.etaGZG);
+  const t = g.Hb, ue = g.ue||0, D = Math.max(0.1, t-ue), sc = Math.min((HB-top-62)/t, (VB*0.30)/g.B);
+  const cx = VB*0.34, bw = g.B*sc, yG = top+8, yO = yG+ue*sc, yS = yG+t*sc;
+  const C1 = +gi('bg_c1')||0, tz = r.tanZul_GZG || 0, ta = r.alpha_GZG_calc||0;
+  const vis = Math.max(1.5, Math.min(9, 9*ta/Math.max(tz,1e-9)))*Math.PI/180;
+  let s = dgOpen(VB, HB, 'GEBRAUCHSTAUGLICHKEIT — SCHIEFSTELLUNG', 'charakteristische Lasten · Steckner Gl. 11–21');
+  s += dgL(8, yG, VB*0.66, yG, {c:DG.gr, d:'4,3'}) + dgT(8, yG-3, 'GOK', {z:DG.kl, c:DG.xdim});
+  // Block unverformt (gestrichelt) und um den überhöhten Winkel gedreht (Drehpunkt in halber Blockhöhe)
+  s += `<rect x="${(cx-bw/2).toFixed(1)}" y="${yO.toFixed(1)}" width="${bw.toFixed(1)}" height="${(yS-yO).toFixed(1)}" fill="none" stroke="${DG.xdim}" stroke-width="0.8" stroke-dasharray="3,2"/>`;
+  s += `<rect x="${(cx-bw/2).toFixed(1)}" y="${yO.toFixed(1)}" width="${bw.toFixed(1)}" height="${(yS-yO).toFixed(1)}" fill="${DG.fl}" stroke="${DG.ax}" stroke-width="1" transform="rotate(${(vis*180/Math.PI).toFixed(2)} ${cx.toFixed(1)} ${((yO+yS)/2).toFixed(1)})"/>`;
+  // Stirnbettung: Dreieck 0 (OK Block) → C₁ (Sohle)
+  const xb = cx+bw/2+6, wB = VB*0.13;
+  s += `<polygon points="${xb.toFixed(1)},${yO.toFixed(1)} ${xb.toFixed(1)},${yS.toFixed(1)} ${(xb+wB).toFixed(1)},${yS.toFixed(1)}" fill="${DG.acc}" fill-opacity="0.16" stroke="${DG.acc}" stroke-width="1"/>`;
+  s += dgT(xb+wB+3, yS-2, 'C₁ = '+dgZ(C1)+' MN/m³', {c:DG.acc}) + dgT(xb+3, yO+8, '0', {z:DG.kl, c:DG.acc});
+  s += dgL(cx-bw/2, yS+5, cx+bw/2, yS+5, {c:DG.acc, w:2}) + dgT(cx, yS+15, 'C₂ = C₁ (Sohle)', {a:'middle', z:DG.kl, c:DG.acc});
+  s += dgT(cx-bw/2-4, (yO+yS)/2, 'D = '+dgZ(D,2)+' m', {a:'end', z:DG.kl, c:DG.xdim});
+  const _1 = v => v>1e-9 ? '1:'+Math.round(1/v) : '–', xr = VB*0.66, y0 = top+20;
+  s += dgT(xr, y0, 'tan α = '+_1(ta), {c:cE}) + dgT(xr, y0+11, 'zul. '+_1(tz), {z:DG.kl, c:DG.xdim});
+  s += dgT(xr, y0+28, 'M_ok = '+dgZ(r.M_ok_char_GZG)+' kNm') + dgT(xr, y0+39, 'M_α(zul) = '+dgZ(r.Malpha_GZG_val)+' kNm');
+  s += dgT(xr, y0+50, 'M_u,char = '+dgZ(r.Mu_char_GZG)+' kNm', {z:DG.kl, c:DG.xdim});
+  s += dgT(8, HB-8, 'η = M_α / M_ok = '+dgZ(r.etaGZG,2)+(r.Mu_char_GZG>0 && Math.abs(r.Malpha_GZG_val-r.Mu_char_GZG)<0.05 ? ' · begrenzt durch M_u,char' : ''), {c:cE, w:600});
+  return s+'</svg>';
+}
+
+// ── Seitliche Bettung und Grenzwiderstand des Pfahls über die Tiefe (SIA 267 Gl. 53 mit oberflächennaher Abminderung)
+function buildPbLateralDiagram(r, n, wide){
+  const P = r && r.latProfil; if(!P || !P.length) return '';
+  const L = r.L||6, VB = wide?480:272, HB = wide?230:196, top = 40, ph = HB-top-36, cE = dgEta(r.etaLat);
+  const Y = z => top + z/Math.max(0.01,L)*ph, kMax = Math.max(...P.map(p=>p.kv), 1), pMax = Math.max(...P.map(p=>p.pu), 1);
+  const x1 = 30, w1 = VB*0.36, x2 = x1+w1+34, w2 = VB-x2-12;
+  const poly = (f,x0,w,m,c,d) => `<polyline points="${P.map(p=>(x0+f(p)/m*w).toFixed(1)+','+Y(p.z).toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-width="1.8"${d?' stroke-dasharray="4,2"':''}/>`;
+  let s = dgOpen(VB, HB, 'SEITLICHE BETTUNG UND GRENZWIDERSTAND', 'k_s = E_s/D (SIA 267 Gl. 53) · oberflächennah abgemindert');
+  for(const [x0,w,tit,c] of [[x1,w1,'k_s [MN/m³]',DG.acc],[x2,w2,'p_u [kN/m]',DG.teal]]){
+    s += `<rect x="${x0}" y="${top}" width="${w.toFixed(1)}" height="${ph.toFixed(1)}" fill="${DG.fl}" fill-opacity="0.5"/>`
+       + dgL(x0, top, x0, top+ph, {c:DG.ax}) + dgL(x0, top, x0+w, top, {c:DG.gr, d:'3,2'}) + dgT(x0+w/2, top-5, tit, {a:'middle', c}); }
+  s += dgT(x1-4, top+3, '0', {a:'end', z:DG.kl}) + dgT(x1-4, top+ph+2, dgZ(L,1), {a:'end', z:DG.kl});
+  s += dgT(9, top+ph/2, 'Tiefe [m]', {a:'middle', z:DG.kl}).replace('<text ', `<text transform="rotate(-90 9 ${(top+ph/2).toFixed(1)})" `);
+  s += poly(p=>p.kv/1000, x1, w1, kMax/1000, DG.xdim, true) + poly(p=>p.ks/1000, x1, w1, kMax/1000, DG.acc);
+  s += poly(p=>p.pu, x2, w2, pMax, DG.teal);
+  s += dgT(x1+w1, top+ph+10, dgZ(kMax/1000,0), {a:'end', z:DG.kl, c:DG.acc}) + dgT(x2+w2, top+ph+10, dgZ(pMax,0), {a:'end', z:DG.kl, c:DG.teal});
+  s += dgT(8, HB-8, 'η lateral = '+dgZ(r.etaLat,2)+' · V_d '+r.latVd+' / V_u,d '+r.Vcap_d+' kN', {c:cE});
+  return s+'</svg>';
+}
+
+// ── Einzelpfahl: Ausnutzung des Stahlquerschnitts (N + M quer + M längs, Torsion) als Balken
+function buildPbEinzelDiagram(r, n, wide){
+  const e = r && r.einzel; if(!e) return '';
+  const VB = wide?480:272, HB = wide?150:138, x0 = 62, w = VB-x0-44, cE = dgEta(r.etaSteel);
+  const uq = Math.abs(e.Mq)/Math.max(0.01,e.MRq), ul = Math.abs(e.Ml)/Math.max(0.01,e.MRl), uN = Math.max(0, e.us-uq-ul), uT = e.uT||0;
+  const ges = Math.hypot(e.us, uT), m = Math.max(1.05, ges*1.05), X = u => x0+u/m*w;
+  let s = dgOpen(VB, HB, 'AUSNUTZUNG DES STAHLQUERSCHNITTS', 'Einzelpfahl · massgebende Kombination');
+  const bar = (y, teile, lbl, wert) => { let x = 0, h = dgT(x0-4, y+8, lbl, {a:'end'});
+    teile.forEach(([u,c,o]) => { h += `<rect x="${X(x).toFixed(1)}" y="${y}" width="${Math.max(0,X(x+u)-X(x)).toFixed(1)}" height="11" fill="${c}" fill-opacity="${o}"/>`; x += u; });
+    return h + dgT(X(x)+3, y+8, dgZ(wert,2), {z:DG.kl}); };
+  s += bar(38, [[uN,DG.on,0.75],[uq,DG.acc,0.85],[ul,DG.teal,0.85]], 'N + M', e.us);
+  s += bar(56, [[uT,DG.warn,0.85]], 'Torsion', uT);
+  s += bar(74, [[ges,cE,0.85]], 'gesamt', ges);
+  s += dgL(X(1), 32, X(1), 90, {c:DG.fail, d:'4,2', w:1.2}) + dgT(X(1), 100, '1.0', {a:'middle', z:DG.kl, c:DG.fail});
+  s += dgT(x0, 112, 'N '+dgZ(uN,2), {z:DG.kl, c:DG.on}) + dgT(x0+50, 112, 'M quer '+dgZ(uq,2), {z:DG.kl, c:DG.acc}) + dgT(x0+118, 112, 'M längs '+dgZ(ul,2), {z:DG.kl, c:DG.teal});
+  s += dgT(8, HB-8, 'gesamt = √((N+M)² + Torsion²) = '+dgZ(ges,2)+' → η = '+dgZ(r.etaSteel,2), {c:cE, w:600});
+  return s+'</svg>';
+}

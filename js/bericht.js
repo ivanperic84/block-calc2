@@ -786,6 +786,7 @@ function buildNachweisDoc(results,G){
              '<td class="'+(etaErf(r.etaGZG)?'ok':'fail')+'">'+(etaErf(r.etaGZG)?'✓ Erfüllt':'✗ Nicht erfüllt')+'</td></tr>'+
       '</table>'+
       _npEta(r.etaGZG,false)+
+      (function(){ try{ var sv=buildBlockGzgDiagram(r,G,true); return sv ? '<div class="np-fig" style="max-width:440px;margin:10px auto 0">'+sv+'<div style="font-size:8px;color:var(--dim);margin-top:3px">Abb. — Schiefstellung (überhöht) mit Bettungsdreieck an der Stirnfläche und Sohlbettung</div></div>' : ''; }catch(e){ return ''; } })()+
     '</div>';
   }).join('');
 

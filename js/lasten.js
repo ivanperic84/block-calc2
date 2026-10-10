@@ -31,6 +31,35 @@ let LF = [
   },
 ];
 
+// ── Kopplung der Längslasten an die Querlasten (Okt 2026, Nutzerwunsch) ─────────────────────────────
+// Die Standardlasten sind in beiden Richtungen meist gleich: bei eingeschalteter Kopplung (#l_koppel)
+// übernehmen H_y/M_x laufend die Werte von H_x/M_y, die Längs-Zeilen sind ausgeblendet. Die Feld-IDs und
+// der gespeicherte Zustand bleiben unverändert (alle 8 Werte werden gespeichert) — der Rechenkern merkt
+// nichts davon. Nie verdeckt abweichende Werte führen: weichen die Paare ab, schaltet sich die Kopplung aus.
+const _LAST_KOPPEL = [['l_HGx','l_HGy'],['l_HWx','l_HWy'],['l_MGy','l_MGx'],['l_MWy','l_MWx']];
+function _lastKoppelGleich(){ return _LAST_KOPPEL.every(([q,l]) => Math.abs((+gi(q)||0) - (+gi(l)||0)) < 1e-9); }
+function _lastKoppelUI(){
+  const an = !!document.getElementById('l_koppel')?.checked;
+  document.querySelectorAll('.lt-laengs').forEach(tr => { tr.style.display = an ? 'none' : ''; });
+}
+function _lastKoppelSync(){
+  if(!document.getElementById('l_koppel')?.checked) return;
+  _LAST_KOPPEL.forEach(([q,l]) => { const a=document.getElementById(q), b=document.getElementById(l); if(a && b && b.value !== a.value) b.value = a.value; });
+}
+function lastKoppelSet(an){
+  const cb=document.getElementById('l_koppel'); if(cb) cb.checked = !!an;
+  _lastKoppelSync(); _lastKoppelUI();
+  if(typeof updateViewer==='function') updateViewer(); if(typeof scheduleCalc==='function') scheduleCalc();
+}
+// Nach programmatischem Setzen der Lasten (Laden, Lastniveau, Embed): Kopplung nur halten, wenn die Paare gleich sind
+function lastKoppelAbgleich(){
+  const cb=document.getElementById('l_koppel'); if(!cb) return;
+  if(cb.checked && !_lastKoppelGleich()) cb.checked = false;
+  _lastKoppelUI();
+}
+// Eingabe in ein Quer-Feld spiegelt sofort nach längs (Capture: vor dem Inline-Handler des Feldes)
+document.addEventListener('input', e => { if(e.target && _LAST_KOPPEL.some(p => p[0] === e.target.id)) _lastKoppelSync(); }, true);
+
 function lfPresetLabel(p){
   if(p==='quer')   return '<span class="lf-preset-chip quer">Quer x</span>';
   if(p==='laengs') return '<span class="lf-preset-chip laengs">Längs y</span>';

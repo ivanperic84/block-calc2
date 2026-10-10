@@ -143,6 +143,8 @@ function renderResults(res,worst,g){
              ['tan α_zul ('+(zF.perm?'ständig + veränderlich':'nur veränderlich')+')', _1zu(zF.tanZul)],
              ['η Verkippung', isFinite(zF.etaTilt)?zF.etaTilt.toFixed(2):'∞'],
              ['η', isFinite(r.etaGZG)?r.etaGZG.toFixed(2):'∞']],
+       svg:(()=>{ try{ return buildFlachGzgDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
+       diagR:r, diagG:g, diagFn:'buildFlachGzgDiagram',
        note: zF.kern > 1/6
          ? wBox('fail','Resultierende ausserhalb der einfachen Kernweite',
              `|e_x|/B + |e_y|/L = ${zF.kern.toFixed(3)} &gt; 1/6: unter Gebrauchslasten klafft die Sohlfuge.
@@ -222,7 +224,9 @@ function renderResults(res,worst,g){
                : ''),
          svg:(()=>{ try{ return buildGrundbDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildGrundbDiagram'},
-        {id:'gleiten',t:'Gleiten',e:rL.etaGL,f:gleitenFormula,rows:gleitenRows},
+        {id:'gleiten',t:'Gleiten',e:rL.etaGL,f:gleitenFormula,rows:gleitenRows,
+         svg:(()=>{ try{ return buildGleitDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
+         diagR:r, diagG:g, diagFn:'buildGleitDiagram'},
         {id:'kippen',t:'Kippnachweis',e:r.eta_klaf!==undefined?r.eta_klaf:Math.min(r.etaKx,r.etaKy),
          f:'SIA 267 GZT Typ 1  ·  N_d = γ_G,inf·(N_G+G_k)  ·  e_x = M_y,d/N_d  ·  e_y = M_x,d/N_d  →  (e_x/B)² + (e_y/L)² ≤ 1/9',
          rows:[['e_x (Typ1)',(r.ex_kipp!==undefined?r.ex_kipp:r.ex||0).toFixed(3)+' m'],
@@ -248,7 +252,9 @@ function renderResults(res,worst,g){
           {id:'_grp', t:'GZG — Grenzzustand der Gebrauchstauglichkeit  ·  Steckner Gl.11–21'},
           {id:'gzg',t:'Schiefstellung',e:r.etaGZG,
            f:'M_α(α_zul) ≤ M_u,char  →  η = M_α / M_ok  ≥  1.0  (Steckner Gl.11-21)',
-           gzgR:r, gzgG:g},
+           gzgR:r, gzgG:g,
+           svg:(()=>{ try{ return buildBlockGzgDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
+           diagR:r, diagG:g, diagFn:'buildBlockGzgDiagram'},
         ]:[]),
       ]:[]),
     ];

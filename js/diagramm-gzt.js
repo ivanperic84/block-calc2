@@ -312,7 +312,7 @@ function buildGZTDiagram(r, g, wide=false, charMode=false) {
   ${(()=>{const ym_ea=trapCentroidY(okbY,nlY,sigA(z_okb),sigA(z_nl)), xstart=eaX-arrLen;
     window._ym_ea=ym_ea;  // für Ra-Positionierung
     return arrow(xstart, ym_ea, eaX, ym_ea, col.ea, 'Ea='+Ea_val.toFixed(0)+'kN', 'l')
-     +`<text x="${(xstart-2).toFixed(1)}" y="${(ym_ea-3).toFixed(1)}" font-size="6" fill="${col.ea}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">treibend</text>`;
+     +`<text x="${(xstart-2).toFixed(1)}" y="${(ym_ea-3).toFixed(1)}" font-size="7" fill="${col.ea}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">treibend</text>`;
   })()}
 
   <!-- E'p links: Formel 33 — Trapez NL→UK (Sprung bei NL deutlich, Kph >> Ka) -->
@@ -324,7 +324,7 @@ function buildGZTDiagram(r, g, wide=false, charMode=false) {
   <!-- Kraft-Pfeil -->
   ${(()=>{const ym=nlY+(ukY-nlY)*0.5, xstart=eaX-arrLen;
     return arrow(xstart, ym, eaX, ym, col.ep, "E'p="+Epb_val.toFixed(0)+'kN', 'l')
-     +`<text x="${(xstart-2).toFixed(1)}" y="${(ym-3).toFixed(1)}" font-size="6" fill="${col.ep}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">stabilisierend</text>`;
+     +`<text x="${(xstart-2).toFixed(1)}" y="${(ym-3).toFixed(1)}" font-size="7" fill="${col.ep}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">stabilisierend</text>`;
   })()}
 
   <!-- Ra ↓: am Schwerpunkt-y von Ea, am linken Blockrand -->
@@ -338,7 +338,7 @@ function buildGZTDiagram(r, g, wide=false, charMode=false) {
   ${sigLbl(ewX + Math.max(epTopW, epW) + 4, okbY+4, sigEp(z_okb), 'start')}
   ${sigLbl(ewX + Math.max(epTopW, epW) + 4, nlY-2, sigEp(z_nl), 'start')}
   <!-- Label: mob=25% Markierung -->
-  ${epW > ewW + 6 ? `<text x="${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)}" y="${((okbY+nlY)/2).toFixed(1)}" font-size="6" fill="${col.ep}" text-anchor="start" font-family="var(--f-mono)" opacity="0.7" transform="rotate(-90,${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)},${((okbY+nlY)/2).toFixed(1)})">mob=25%</text>` : ''}
+  ${epW > ewW + 6 ? `<text x="${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)}" y="${((okbY+nlY)/2).toFixed(1)}" font-size="7" fill="${col.ep}" text-anchor="start" font-family="var(--f-mono)" opacity="0.7" transform="rotate(-90,${(ewX+ewW+(epW-ewW)/2+2).toFixed(1)},${((okbY+nlY)/2).toFixed(1)})">mob=25%</text>` : ''}
 
   <!-- Ew: mobilisierter Anteil (Formel 32) — Trapez OK-Block → NL (gefüllt) -->
   <polygon points="${ew_pts}" fill="${col.ew}" opacity="0.25"/>
@@ -349,7 +349,7 @@ function buildGZTDiagram(r, g, wide=false, charMode=false) {
   ${(()=>{const ym_ep=trapCentroidY(okbY,nlY,sigPm(z_okb),sigPm(z_nl)), xstart=ewX+arrLen;
     window._ym_ep=ym_ep;  // für Rp-Positionierung
     return arrow(xstart, ym_ep, ewX, ym_ep, col.ew, 'Ew='+Ew_val.toFixed(0)+'kN', 'r')
-     +`<text x="${(xstart+2).toFixed(1)}" y="${(ym_ep-3).toFixed(1)}" font-size="6" fill="${col.ew}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">Widerstand</text>`;
+     +`<text x="${(xstart+2).toFixed(1)}" y="${(ym_ep-3).toFixed(1)}" font-size="7" fill="${col.ew}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">Widerstand</text>`;
   })()}
 
   <!-- Rp ↑: am Schwerpunkt-y von Ep, am rechten Blockrand -->
@@ -378,11 +378,11 @@ ${sigLbl(cx-r0pbw-4, ukY-1, s0_uk, 'end')}`;
 
   <!-- R_0 ←: Resultante an Fundamentachse cx (Schwerpunkt E₀ über NL, destabilisierend) -->
   ${R0>0.5 ? arrow(cx, y_R0, cx-r0ArrW, y_R0, col.e0, 'R₀='+R0.toFixed(0)+'kN', 'r') : ''}
-  ${R0>0.5 ? `<text x="${(cx-r0ArrW-2).toFixed(1)}" y="${(y_R0-4).toFixed(1)}" font-size="6" fill="${col.e0}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">destab.</text>` : ''}
+  ${R0>0.5 ? `<text x="${(cx-r0ArrW-2).toFixed(1)}" y="${(y_R0-4).toFixed(1)}" font-size="7" fill="${col.e0}" text-anchor="end" font-style="italic" font-family="var(--f-mono)">destab.</text>` : ''}
 
   <!-- R_0' →: Resultante an Fundamentachse cx (Schwerpunkt E₀' unter NL, stabilisierend) -->
   ${R0p>0.5 ? arrow(cx, y_R0p, cx+r0pArrW, y_R0p, col.e0, 'R₀′='+R0p.toFixed(0)+'kN', 'l') : ''}
-  ${R0p>0.5 ? `<text x="${(cx+r0pArrW+2).toFixed(1)}" y="${(y_R0p-4).toFixed(1)}" font-size="6" fill="${col.e0}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">stabilis.</text>` : ''}
+  ${R0p>0.5 ? `<text x="${(cx+r0pArrW+2).toFixed(1)}" y="${(y_R0p-4).toFixed(1)}" font-size="7" fill="${col.e0}" text-anchor="start" font-style="italic" font-family="var(--f-mono)">stabilis.</text>` : ''}
 
   <!-- Sohlenpressung p_u + Sohlkräfte N_u/R_u (Steckner Bild 4: p_u gleichverteilt über x am Druckrand,
        N_u = Resultante am Blockschwerpunkt im Abstand u von der Achse, R_u horizontal entgegen H) -->

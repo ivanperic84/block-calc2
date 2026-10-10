@@ -1644,11 +1644,15 @@ function gztKombView(R, k){ const r=k.r||{};
 // Pfahlfundament: Lasten und Pfahlkräfte der gezeigten Kombination statt der global massgebenden
 function _vcPbViz(viz){
   try{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r; if(!r||!r.kombs||!r.kombs.length) return viz;
-    if(_vcLfMode==='global' && !_vcKomb) return viz;
+    // k-Modus: Pfahlkräfte unter charakteristischer Last des gezeigten Lastfalls (vorher blieben die
+    // Bemessungswerte stehen, während die Lastpfeile auf k umschalteten). d-Modus «Massgebend»: Umhüllende je Pfahl.
+    const isChar=(typeof _gztCharMode!=='undefined')&&_gztCharMode;
+    if(_vcLfMode==='global' && !_vcKomb && !isChar) return viz;
     const lf=LF[_vcLfIdx], ks=r.kombs.filter(k=>lf&&k.lf===lf.name); if(!ks.length) return viz;
     const k=(_vcKomb&&ks.find(x=>x.nr===_vcKomb)) || ks.reduce((a,b)=>b.eta<a.eta?b:a);
-    if(!k.F) return viz;
-    return { ...viz, pileRes:k.F.map(F=>({F:+F.toFixed(1), zug:F<0})), govLoad:k.load, govLoadChar:k.loadChar, govCombo:k.label,
+    const FF = isChar ? (k.Fk||k.F) : k.F;
+    if(!FF) return viz;
+    return { ...viz, pileRes:FF.map(F=>({F:+F.toFixed(1), zug:F<0})), govLoad:k.load, govLoadChar:k.loadChar, govCombo:k.label,
              mastN:{ k:Math.max(0,(k.loadChar&&k.loadChar.NMast)||0), d:Math.max(0,k.load.NMast||0) } };
   }catch(_){ return viz; } }
 function syncLFSel(){

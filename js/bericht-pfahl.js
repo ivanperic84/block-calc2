@@ -224,6 +224,7 @@ function buildNachweisDocPfahl(r, piles, n){
       ${r.tors ? fml("Torsion: T_Rd = r_T · R_s,d  ·  η = 1 / √((|N|/R_d)² + (T_Ed/T_Rd)²)", `T_Ed = ${N(r.tors.T)} kNm · r_T = ${(r.tors.rT*1000).toFixed(0)} mm · T_Rd = ${N(r.tors.TRgeo)} kNm · Anteile ${N(r.tors.uN,2)} / ${N(r.tors.uT,2)} (${r.tors.label||''})`, `η = ${isFinite(r.etaTors)?r.etaTors.toFixed(2):'∞'}`) + eta(r.etaTors)
         + `<div style="font-size:8px;color:var(--xdim);margin-top:3px">Das Torsionsmoment um die Pfahlachse wird über die Mantelreibung mit dem Hebel r_T abgetragen (Rohr d/2, I-Profil ≈ 0.375·b); dieselbe Mantelreibung trägt die Axialkraft, darum die vektorielle Überlagerung. Der Erdwiderstand an den Flanschen ist nicht angesetzt.</div>` : ''}
       ${figFn(()=>buildPbAxialDiagram(r,n,true),'Abb. — Mantelreibungswiderstand R(z) über die Tiefe (Druck/Zug) vs. angesetzte Pfahlkräfte')}
+      ${r.auf ? figFn(()=>buildPbAufbruchDiagram(r,n,true),'Abb. — Aufbruchsicherheit: angehängter Bodenkörper je Zugpfahl gegen die Zugkraft Z_d') : ''}
     </div>
     <div class="np-nw">
       ${nwh('5.2','Innerer Tragwiderstand — Querschnitt (N+M)','SIA 267')}
@@ -234,6 +235,7 @@ function buildNachweisDocPfahl(r, piles, n){
       ${eta(r.etaSteel)}
       ${figFn(()=>buildPbSchnittSVG(r,n,true),'Abb. — Schnittgrössen massg. Pfahl: Verschiebung y, Querkraft V, Moment M über die Tiefe')}
       ${figFn(()=>buildPbSteelDiagram(r,n,true),'Abb. — N+M-Interaktion (Betriebspunkte je Pfahl vs. Grenzlinie)')}
+      ${r.einzel ? figFn(()=>buildPbEinzelDiagram(r,n,true),'Abb. — Ausnutzung des Stahlquerschnitts: Anteile aus N, M quer, M längs und Torsion') : ''}
     </div>
     <div class="np-nw">
       ${nwh('5.3','Innerer Tragwiderstand — Knicken','SIA 263, elast. Bettung')}
@@ -253,6 +255,7 @@ function buildNachweisDocPfahl(r, piles, n){
       </table>
       ${fml("η_lateral = 1 / (V_d/V_u,d + M_gl,d/M_u,d)", `1 / (${N(r.latVd)}/${N(r.Vcap_d)} + ${N(r.latMd)}/${N(r.Mcap_d)})`, `${isFinite(r.etaLat)?r.etaLat.toFixed(2):'∞'}`)}
       ${eta(r.etaLat)}
+      ${figFn(()=>buildPbLateralDiagram(r,n,true),'Abb. — Seitliche Bettung k_s(z) (gestrichelt: ohne oberflächennahe Abminderung) und Grenzwiderstand p_u(z)')}
     </div>`:''}
     <div style="font-size:8px;color:var(--xdim);margin-top:4px">SIA 267 Kap. 9: η_a = ${N(r.etaA,2)} · γ_M,a = ${N(r.gMD,2)} Druck / ${N(r.gMZ,2)} Zug / ${N(r.gMQ,2)} quer · innerer Widerstand ${r.einzel ? 'Stahlprofil nach SIA 263, γ_M1 = '+N(gS,2) : 'η_i = '+N(r.etaI,2)+' · γ_s = '+N(gS,2)} · voller A_s (kein Abrostzuschlag, ASTRA-Bericht 717) · Knicken = elast. Verzweigung (Imperfektion gem. Lieferant) · laterale Bodentragfähigkeit = plastisches Grenzgleichgewicht (Kick-out/Rotation).</div>
   </div>`;
@@ -272,7 +275,7 @@ function buildNachweisDocPfahl(r, piles, n){
       </table>
       ${n>2?`<div style="font-size:8px;color:var(--xdim);padding:2px 0">Verschiebungslimit ±20/±10 mm gilt für 1-/2-Pfahlfundamente.</div>`:''}
       ${eta(r.etaGZG)}
-      ${figFn(()=>buildPbSystemSVG(r,piles,n,true),'Abb. — Systemverformung quer (Schiefstellung θ + Horizontalverschiebung, überhöht)')}
+      ${r.einzel ? '' : figFn(()=>buildPbSystemSVG(r,piles,n,true),'Abb. — Systemverformung quer (Schiefstellung θ + Horizontalverschiebung, überhöht)')}
     </div>
     <div class="np-nw">
       ${nwh('6.2',_pbEinzel()?'Setzung Pfahlkopf':'Setzung Bankett','informativ — kein Grenzwert')}

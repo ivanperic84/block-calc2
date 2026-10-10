@@ -263,6 +263,7 @@ function buildNachweisDocFlach(results, G){
           rL.Rgl.toFixed(1),"kN")+
         fml("η = R_gl / H_d",rL.Rgl.toFixed(1)+" / "+rL.Hd.toFixed(1),rL.etaGL.toFixed(2),"")+
         eta(rL.etaGL)+
+        diagWrap((function(){try{return buildGleitDiagram(r,G,true);}catch(e){return '';}})(), true)+
         '</div>'
       :'')+
 
@@ -411,6 +412,7 @@ function buildNachweisDocFlach(results, G){
         fml("|e_x|/B + |e_y|/L ≤ 1/6", z.ex.toFixed(3)+"/"+B+" + "+z.ey.toFixed(3)+"/"+L, z.kern.toFixed(4), z.kern<=1/6+1e-9 ? "≤ 0.1667" : "> 0.1667")+
         fml("η = (1/6) / (|e_x|/B + |e_y|/L)", "0.1667 / "+z.kern.toFixed(4), isFinite(z.etaKern)?z.etaKern.toFixed(2):"∞","")+
         eta(z.etaKern)+
+        diagWrap((function(){try{return buildFlachGzgDiagram(r,G,true);}catch(e){return '';}})(), true)+
         (z.kern>1/6 ? '<div style="font-size:8.5px;color:var(--fail);margin-top:4px">Die Sohlfuge klafft unter Gebrauchslasten. Ziff. 8.5.4.7 verlangt einen besonderen Nachweis; die folgende Verkippung setzt eine geschlossene Sohlfuge voraus und ist hier zu klein.</div>' : '')+
       '</div>'+
       '<div class="np-nw">'+nwh('G2.','Verkippung','SIA 267 Ziff. 8.5.4.1 · Grenzwert SBB 0161.1011.0007')+

@@ -339,7 +339,9 @@ function pfahlbockAnalyse(cfg){
     const sol = solvePfahlbock(piles, c.load);
     const comps = {};
     _comps.forEach(k => { const ld = {}; ld[k] = c.load[k] || 0; const s = solvePfahlbock(piles, ld); comps[k] = s ? s.F : null; });
-    return { label:c.label, lf:c.lf, nr:c.nr, loadChar:c.loadChar, etaK:Infinity, load:c.load, sol, F:sol?sol.F:null, FLat:sol?sol.FLat:null, comps };
+    // Pfahlkräfte unter der charakteristischen Last desselben Lastfalls (γ = 1) — für die k-Anzeige im 3D
+    const solK = c.loadChar ? solvePfahlbock(piles, c.loadChar) : null;
+    return { label:c.label, lf:c.lf, nr:c.nr, loadChar:c.loadChar, etaK:Infinity, load:c.load, sol, F:sol?sol.F:null, Fk:solK?solK.F:null, FLat:sol?sol.FLat:null, comps };
   });
   const np = piles.length;
   let etaSteel = Infinity, etaGeo = Infinity, govPile = -1, govComboIdx = -1, Ncomp = 0, Mmax = 0, govLat = -1, FLatMax = 0;
@@ -595,8 +597,10 @@ function pfahlbockAnalyse(cfg){
            // Aufbruchsicherheit der Zugpfähle (nur wenn eine Kombination Zug erzeugt)
            ...(auf ? { etaAuf:+auf.eta.toFixed(2), auf:{ Z:+auf.Z.toFixed(1), nZ:auf.nZ, GE1:+auf.GE1.toFixed(1), GEk:+auf.GEk.toFixed(1),
              la:+auf.la.toFixed(2), lb:+auf.lb.toFixed(2), hE:+auf.hE.toFixed(2), gam:+auf.gamEff.toFixed(1), phi:+auf.phi.toFixed(1), label:auf.label } } : {}),
+           // Bettung und Grenzwiderstand über die Tiefe (Diagramm): ks = angesetzt, kv = ohne oberflächennahe Abminderung
+           latProfil: Array.from({length:41}, (_,i) => { const z=i/40*L; return { z, ks:ksAt(z), kv:ksVoll(z), pu:puAtL(z) }; }),
            // alle Kombinationen (Auswahl im 3D): Lasten, Pfahlkräfte und kleinste η aus Mantel/Querschnitt
-           kombs: ulsData.map(u => ({ label:u.label, lf:u.lf, nr:u.nr, load:u.load, loadChar:u.loadChar, F:u.F, eta:u.etaK })),
+           kombs: ulsData.map(u => ({ label:u.label, lf:u.lf, nr:u.nr, load:u.load, loadChar:u.loadChar, F:u.F, Fk:u.Fk, eta:u.etaK })),
            // Spitzenwiderstand (nur Einzelpfahl, nur Druck)
            qb:+qb.toFixed(0), Ab:Ab, Rb_k:+Rb_k.toFixed(1), Rb_d:+Rb_d.toFixed(1),
            // Torsion (nur Einzelpfahl, nur wenn ein Torsionsmoment wirkt)

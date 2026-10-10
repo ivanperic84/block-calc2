@@ -153,6 +153,7 @@ function curModel(){ return MODELS[(typeof CALC_MODEL!=='undefined') ? CALC_MODE
 function calculate(){
   if(typeof _flashCalc==='function') _flashCalc();                      // dezenter „aktualisiert"-Hinweis
   if(typeof _plausCheck==='function') try{ _plausCheck(); }catch(_){}   // Live-Plausibilität der Eingaben
+  if(typeof lastKoppelAbgleich==='function') lastKoppelAbgleich();      // Kopplung längs = quer nie mit abweichenden Werten
   try { curModel().berechnen(); } catch(e){ console.error('calculate() Fehler ('+CALC_MODEL+'):', e); }
   // Embed: Leiste mitführen (Bauart-Wechsel und Grenzüberschreitung sollen beim Dimensionieren
   // sichtbar sein, nicht erst nach dem Übernehmen)

@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10i">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10j">
 </head>
 <body>
 
@@ -696,10 +696,10 @@
                 <td><input id="l_HGx" type="number" value="5" step="1" title="H_Gx — ständige Horizontalkraft quer zum Gleis" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_HWx" type="number" value="5" step="1" title="H_Wx — veränderliche Horizontalkraft quer zum Gleis" oninput="updateViewer();scheduleCalc()"/></td></tr>
             <tr><td><span class="lt-n">Moment M</span><span class="lt-u">kNm · kippt quer</span></td>
                 <td><input id="l_MGy" type="number" value="40" step="1" title="M_Gy — ständiges Moment, das den Mast QUER zum Gleis kippt (Drehachse y)" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_MWy" type="number" value="40" step="1" title="M_Wy — veränderliches Moment, das den Mast QUER zum Gleis kippt (Drehachse y)" oninput="updateViewer();scheduleCalc()"/></td></tr>
-            <tr class="lt-grp"><td colspan="3">Längs zum Gleis <span class="lt-ax">(y)</span></td></tr>
-            <tr><td><span class="lt-n">Horizontalkraft H</span><span class="lt-u">kN</span></td>
+            <tr class="lt-grp"><td colspan="3"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Längs zum Gleis <span class="lt-ax">(y)</span></span><span class="toggle-row" style="margin:0;gap:6px;text-transform:none;letter-spacing:0" title="Ein: die Längslasten übernehmen die Werte der Querrichtung (Regelfall der Standardlasten). Aus: eigene Werte für längs eingeben."><label class="sw"><input type="checkbox" id="l_koppel" checked onchange="lastKoppelSet(this.checked)"><div class="sw-track"></div><div class="sw-thumb"></div></label><label for="l_koppel" style="cursor:pointer;user-select:none;font-size:10px;color:var(--on2)">wie quer</label></span></div></td></tr>
+            <tr class="lt-laengs" style="display:none"><td><span class="lt-n">Horizontalkraft H</span><span class="lt-u">kN</span></td>
                 <td><input id="l_HGy" type="number" value="5" step="1" title="H_Gy — ständige Horizontalkraft längs zum Gleis" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_HWy" type="number" value="5" step="1" title="H_Wy — veränderliche Horizontalkraft längs zum Gleis" oninput="updateViewer();scheduleCalc()"/></td></tr>
-            <tr><td><span class="lt-n">Moment M</span><span class="lt-u">kNm · kippt längs</span></td>
+            <tr class="lt-laengs" style="display:none"><td><span class="lt-n">Moment M</span><span class="lt-u">kNm · kippt längs</span></td>
                 <td><input id="l_MGx" type="number" value="40" step="1" title="M_Gx — ständiges Moment, das den Mast LÄNGS zum Gleis kippt (Drehachse x)" oninput="updateViewer();scheduleCalc()"/></td><td><input id="l_MWx" type="number" value="40" step="1" title="M_Wx — veränderliches Moment, das den Mast LÄNGS zum Gleis kippt (Drehachse x)" oninput="updateViewer();scheduleCalc()"/></td></tr>
             <tr class="lt-grp lt-tors" style="display:none"><td colspan="3">Um die Mastachse <span class="lt-ax">(z)</span></td></tr>
             <tr class="lt-tors" style="display:none"><td><span class="lt-n">Torsion T</span><span class="lt-u">kNm · nur Pfahlfundament</span></td>
@@ -1757,44 +1757,44 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10i"></script>
-<script src="js/helfer.js?v=2026-10-10i"></script>
-<script src="js/speicher.js?v=2026-10-10i"></script>
-<script src="js/einstellungen.js?v=2026-10-10i"></script>
-<script src="js/templates.js?v=2026-10-10i"></script>
-<script src="js/viewer.js?v=2026-10-10i"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10i"></script>
-<script src="js/lasten.js?v=2026-10-10i"></script>
-<script src="js/boden.js?v=2026-10-10i"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10i"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10i"></script>
-<script src="js/modell.js?v=2026-10-10i"></script>
-<script src="js/lastniveaus.js?v=2026-10-10i"></script>
-<script src="js/bettung.js?v=2026-10-10i"></script>
-<script src="js/erddruck.js?v=2026-10-10i"></script>
-<script src="js/kataloge.js?v=2026-10-10i"></script>
-<script src="js/bishop.js?v=2026-10-10i"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10i"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10i"></script>
-<script src="js/sicherung.js?v=2026-10-10i"></script>
-<script src="js/rechenkern.js?v=2026-10-10i"></script>
-<script src="js/dimensionierung.js?v=2026-10-10i"></script>
-<script src="js/bemessung.js?v=2026-10-10i"></script>
-<script src="js/fundamentliste.js?v=2026-10-10i"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10i"></script>
-<script src="js/bericht.js?v=2026-10-10i"></script>
-<script src="js/bericht-flach.js?v=2026-10-10i"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10i"></script>
-<script src="js/diagramme.js?v=2026-10-10i"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10i"></script>
-<script src="js/ergebnis.js?v=2026-10-10i"></script>
-<script src="js/layout.js?v=2026-10-10i"></script>
-<script src="js/projekt.js?v=2026-10-10i"></script>
-<script src="js/mobil.js?v=2026-10-10i"></script>
-<script src="js/selbsttest.js?v=2026-10-10i"></script>
-<script src="js/tastatur.js?v=2026-10-10i"></script>
-<script src="js/embed.js?v=2026-10-10i"></script>
-<script src="js/start.js?v=2026-10-10i"></script>
+<script src="js/boot.js?v=2026-10-10j"></script>
+<script src="js/helfer.js?v=2026-10-10j"></script>
+<script src="js/speicher.js?v=2026-10-10j"></script>
+<script src="js/einstellungen.js?v=2026-10-10j"></script>
+<script src="js/templates.js?v=2026-10-10j"></script>
+<script src="js/viewer.js?v=2026-10-10j"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10j"></script>
+<script src="js/lasten.js?v=2026-10-10j"></script>
+<script src="js/boden.js?v=2026-10-10j"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10j"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10j"></script>
+<script src="js/modell.js?v=2026-10-10j"></script>
+<script src="js/lastniveaus.js?v=2026-10-10j"></script>
+<script src="js/bettung.js?v=2026-10-10j"></script>
+<script src="js/erddruck.js?v=2026-10-10j"></script>
+<script src="js/kataloge.js?v=2026-10-10j"></script>
+<script src="js/bishop.js?v=2026-10-10j"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10j"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10j"></script>
+<script src="js/sicherung.js?v=2026-10-10j"></script>
+<script src="js/rechenkern.js?v=2026-10-10j"></script>
+<script src="js/dimensionierung.js?v=2026-10-10j"></script>
+<script src="js/bemessung.js?v=2026-10-10j"></script>
+<script src="js/fundamentliste.js?v=2026-10-10j"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10j"></script>
+<script src="js/bericht.js?v=2026-10-10j"></script>
+<script src="js/bericht-flach.js?v=2026-10-10j"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10j"></script>
+<script src="js/diagramme.js?v=2026-10-10j"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10j"></script>
+<script src="js/ergebnis.js?v=2026-10-10j"></script>
+<script src="js/layout.js?v=2026-10-10j"></script>
+<script src="js/projekt.js?v=2026-10-10j"></script>
+<script src="js/mobil.js?v=2026-10-10j"></script>
+<script src="js/selbsttest.js?v=2026-10-10j"></script>
+<script src="js/tastatur.js?v=2026-10-10j"></script>
+<script src="js/embed.js?v=2026-10-10j"></script>
+<script src="js/start.js?v=2026-10-10j"></script>
 
 </body>
 </html>
