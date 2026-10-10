@@ -17,7 +17,7 @@ function buildPbAxialDiagram(r, n, wide){
   const Nz_max = Math.max(0, ...pr.filter(p=>p.zug).map(p=>Math.abs(p.F)));
   const xmax = Math.max(Rd, RdZ, Nd_max, Nz_max, 1)*1.16;
   const AMB='var(--warn)', TEAL='#4db8c9';
-  const VB=wide?560:272, padL=32, padR=wide?54:14, padTop=30, padBot=34;
+  const VB=wide?560:272, padL=32, padR=wide?54:14, padTop=30, padBot=44;
   const plotH=wide?300:200, plotW=VB-padL-padR, HB=padTop+plotH+padBot;
   const X=R=>padL+R/xmax*plotW, Y=z=>padTop+z/Math.max(0.01,L)*plotH;
   let s=`<svg viewBox="0 0 ${VB} ${HB}" width="100%" style="display:block">
@@ -42,9 +42,9 @@ function buildPbAxialDiagram(r, n, wide){
   if(hasZ) s+=poly(pZ,TEAL,true);
   s+=poly(pD,AMB,false);
   s+=`<circle cx="${X(Rd).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${AMB}"/>
-      <text x="${(X(Rd)-5).toFixed(1)}" y="${(Y(L)-5).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${AMB}">R_s,d ${Rd.toFixed(0)} kN${hasZ?' Druck':''}</text>`;   // links vom Punkt: rechts lief die Beschriftung aus dem Bild
+      <text x="${(X(Rd)+3).toFixed(1)}" y="${(Y(L)+10).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${AMB}">R_s,d ${Rd.toFixed(0)} kN${hasZ?' Druck':''}</text>`;   // links vom Punkt: rechts lief die Beschriftung aus dem Bild
   if(hasZ) s+=`<circle cx="${X(RdZ).toFixed(1)}" cy="${Y(L).toFixed(1)}" r="2.6" fill="${TEAL}"/>
-      <text x="${(X(RdZ)+4).toFixed(1)}" y="${(Y(L)+9).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${TEAL}">${RdZ.toFixed(0)} kN Zug</text>`;
+      <text x="${(X(RdZ)+4).toFixed(1)}" y="${(Y(L)+19).toFixed(1)}" font-family="var(--f-mono)" font-size="7.5" text-anchor="end" fill="${TEAL}">${RdZ.toFixed(0)} kN Zug</text>`;
   // Angesetzte max. Pfahl-Axialkräfte als Vergleichslinien (Druck/Zug)
   const appl=(N,col,lbl,yl)=>N>0.5?`<line x1="${X(N).toFixed(1)}" y1="${padTop}" x2="${X(N).toFixed(1)}" y2="${(padTop+plotH).toFixed(1)}" stroke="${col}" stroke-width="1" stroke-dasharray="2,2"/>
       <text x="${X(N).toFixed(1)}" y="${yl}" font-family="var(--f-mono)" font-size="7" text-anchor="middle" fill="${col}">${lbl} ${N.toFixed(0)}</text>`:'';

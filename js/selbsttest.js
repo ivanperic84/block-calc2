@@ -105,7 +105,9 @@ function runSelfTest(){
       si('bg_me_ratio','1');
       add('C₁ Setzung ohne Wiederbelastung (Verhältnis 1) [MN/m³]', c1AutoValue().c1_eff, 36.55849519, 1e-5,'rel');
       si('bg_me_ratio','5');
-      _c1Methode=mB; _c1Manual=cB; applyState(_ST_STATE); calculate(); })();
+      _c1Methode=mB; _c1Manual=cB; applyState(_ST_STATE); calculate();
+      // Ausgewiesene Setzung (kein Grenzwert): N_k = G_k + N_G = 173.075 kN, p = 102.41 kPa, davon 62 kPa Wiederbelastung
+      add('Block Setzung s [mm] (N_k, M′_E = 5·M_E)', ((_stRes()||[])[1]||{}).setz ? _stRes()[1].setz.s*1000 : NaN, 1.444568, 1e-5,'rel'); })();
     // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
     // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
     // AUSSERHALB der Sohlfläche; dort ist die Meyerhof-Ersatzfläche nicht definiert. Der frühere

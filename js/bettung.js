@@ -50,13 +50,15 @@ function _boussJ(B, L, x, y, z){
   for(const a of [B/2 - x, B/2 + x]) for(const b of [L/2 - y, L/2 + y]) s += _boussJEcke(a, b, z);
   return s;
 }
-function c1Setzung(o){
-  const {B, L, t, G} = o, ratio = Math.max(1, +o.ratio || 1);
+// Setzung des starren Fundaments im kennzeichnenden Punkt unter der Vertikallast N (charakteristisch).
+// Liest über cgi/cSchichten (Rechenkontext) — wird auch vom Rechenkern für die ausgewiesene Setzung benutzt.
+function setzungFund(o){
+  const {B, L, t, N} = o, ratio = Math.max(1, +o.ratio || 1), S = cSchichten();
   const zgw = gwDepth(), u = isFinite(zgw) && t > zgw ? 10 * (t - zgw) : 0;
-  const p   = Math.max(0, G / (B*L) - u);            // wirksame Sohlpressung aus Eigengewicht [kPa]
+  const p   = Math.max(0, N / (B*L) - u);            // wirksame Sohlpressung [kPa]
   const sv0 = Math.max(0, sigVeffTo(t));             // Gewicht des ausgehobenen Bodens [kPa]
   const pWB = Math.min(p, sv0), pErst = Math.max(0, p - sv0);
-  const meAt = z => Math.max(0.5, (SCHICHTEN.length > 1 ? schichtAtDepth(t + z).me : null) ?? (+gi('bg_me') || 20)) * 1000;
+  const meAt = z => Math.max(0.5, (S.length > 1 ? schichtAtDepth(t + z).me : null) ?? (+cgi('bg_me') || 20)) * 1000;
   const dz = 0.02; let z = dz/2, s = 0, I = 0;
   for(; z < 30; z += dz){
     const J = _boussJ(B, L, 0.37*B, 0.37*L, z);
@@ -64,8 +66,12 @@ function c1Setzung(o){
     const me = meAt(z);
     s += J * dz * (pWB/(ratio*me) + pErst/me); I += J * dz;
   }
-  const k = s > 1e-12 ? p / s / 1000 : 0;            // [MN/m³]
-  return { k, p, sv0, pWB, pErst, s, I, zEnd: z, ratio, G, u };
+  return { p, sv0, pWB, pErst, s, I, zEnd: z, ratio, N, u };
+}
+function _meRatio(){ const v = +cgi('bg_me_ratio'); return v >= 1 ? v : 5; }
+function c1Setzung(o){
+  const r = setzungFund({B:o.B, L:o.L, t:o.t, N:o.G, ratio:o.ratio});
+  return Object.assign(r, { G:o.G, k: r.s > 1e-12 ? r.p / r.s / 1000 : 0 });   // k [MN/m³]
 }
 
 // Tiefengewichteter Mittelwert φ_k [°] über alle Schichten bis Tiefe t
@@ -286,7 +292,7 @@ function openC1Info(){
 // Reiner Auto-C₁-Wert (kleinerer Wert aus Steckner Gl.3 und M_E·Kp/B; β/B/t/φ-abhängig) — ohne UI-Effekte.
 // Wird von autoC1() (mit UI) UND von _doCalculate() (Auto-Modus, live) genutzt, damit C₁ der
 // Geländeneigung, Geometrie und φ immer folgt. Quelle: Steckner 1989 Gl.3/4.
-function c1AutoValue(){
+function c1AutoValue(mitSetz){
   const t         = Math.max(0.1, +gi('g_hblock') + Math.max(0,+gi('g_uberd')||0));
   const B         = Math.max(0.1, +gi('g_bx'));
   const beta      = +gi('bg_beta')||0;
@@ -302,7 +308,8 @@ function c1AutoValue(){
   // Setzungsmethode (wählbar): Eigengewicht des Fundamentkörpers, Böschungsabminderung wie die anderen Äste
   const _Ls = Math.max(0.1, +gi('g_by') || B), _gb = (typeof _gBetonMassiv==='function' && CALC_MODEL!=='block') ? _gBetonMassiv() : (+gi('g_gbeton') || 25);
   const _Gs = (B*_Ls*Math.max(0, +gi('g_hblock')||0) + Math.max(0,+gi('g_kx')||0)*Math.max(0,+gi('g_ky')||0)*Math.max(0,+gi('g_hkopf')||0)) * _gb;
-  const _rs = +gi('bg_me_ratio'), setz = c1Setzung({B, L:_Ls, t, G:_Gs, ratio: _rs >= 1 ? _rs : 5});
+  // Nur rechnen, wenn gebraucht (gewählte Methode oder Anzeige) — die Summation kostet in Sweeps sonst unnötig Zeit
+  const _rs = +gi('bg_me_ratio'), setz = (_c1Methode==='setzung' || mitSetz) ? c1Setzung({B, L:_Ls, t, G:_Gs, ratio: _rs >= 1 ? _rs : 5}) : {k:0};
   const c1_setz = Math.max(1, setz.k * slopeFac);
   let c1_eff, zoneKey, w=0;
   if(_c1Methode === 'setzung'){
@@ -326,10 +333,9 @@ function c1AutoValue(){
 }
 
 function autoC1(){
-  const a = c1AutoValue();
+  const a = c1AutoValue(true);
   let {c1_eff, zoneKey, w, phi_avg, me_avg, B, t, beta, grenzwert, slopeFac,
        c1_steck, c1_me, c1_setz, setz, stecknerGueltig} = a;
-  const _rf = document.getElementById('bg_me_ratio_field'); if(_rf) _rf.style.display = _c1Methode==='setzung' ? '' : 'none';
   // bg_me als Display-Feld aktualisieren
   const bgMeEl = document.getElementById('bg_me');
   if(bgMeEl) bgMeEl.value = me_avg.toFixed(1);

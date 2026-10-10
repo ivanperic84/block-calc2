@@ -124,6 +124,24 @@ function renderResults(res,worst,g){
       hn.textContent='Gebrauchstauglichkeits-Lastfall: der Nachweis der Gebrauchstauglichkeit ist in den Optionen abgeschaltet.';
       scroll.appendChild(hn); return;
     }
+    // Torsion Block: Reservebetrachtung (informativ, nicht Teil von η)
+    const tb=r.torsB, torsNach = !tb ? '' :
+      `<div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 4px;padding-top:7px;border-top:1px solid var(--ol)">Torsion — Reservebetrachtung (informativ)</div>`
+      + [['T_d = γ_G·T_G + γ_Q·T_Q', tb.Td.toFixed(1)+' kNm'],
+         ['N_d,min = γ_G,inf·(G_k + N_G)', tb.Nmin.toFixed(1)+' kN'],
+         ['T_R,d = N_d,min·tan φ′_d·r_m &nbsp;<span style="color:var(--xdim)">r_m = '+tb.rm.toFixed(3)+' m</span>', tb.TRd.toFixed(1)+' kNm'],
+         ['Reserve T_R,d / T_d', '<span style="color:'+etaCol(tb.eta)+'">'+(isFinite(tb.eta)?tb.eta.toFixed(2):'∞')+'</span>']]
+        .map(([k,v])=>`<div class="nw-row"><span>${k}</span><span>${v}</span></div>`).join('')
+      + `<div style="font-size:9px;color:var(--xdim);margin:2px 0 4px">Die Theorie nach Steckner bildet Torsion nicht ab. Ausgewiesen ist allein, was die Reibung an der Sohle aufnähme (ohne Seitenflächen, ohne Überlagerung mit H). Der Wert geht nicht in die Ausnutzung ein.</div>`;
+    // Setzung: nur ausgewiesen, kein Grenzwert (Nutzerentscheid Okt 2026)
+    const sz=r.setz, setzNach = !sz ? '' :
+      `<div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 4px;padding-top:7px;border-top:1px solid var(--ol)">Setzung (informativ — kein Grenzwert)</div>`
+      + [['Sohlpressung p_k = N_k / (B·L)', sz.p.toFixed(1)+' kPa'],
+         ['davon Wiederbelastung / Erstbelastung', sz.pWB.toFixed(1)+' / '+sz.pErst.toFixed(1)+' kPa'],
+         ['M′_E / M_E', sz.ratio.toFixed(1)],
+         ['Setzung s (Boussinesq, kennzeichnender Punkt)', (sz.s*1000).toFixed(1)+' mm']]
+        .map(([k,v])=>`<div class="nw-row"><span>${k}</span><span>${v}</span></div>`).join('')
+      + `<div style="font-size:9px;color:var(--xdim);margin:2px 0 4px">Starres Fundament, Zusatzspannung bis ${sz.zEnd.toFixed(1)} m unter der Sohle (10 %-Grenze). Bis zum Gewicht des Aushubs wird wiederbelastet (Lang/Huder/Amann 8.5); das Verhältnis M′_E/M_E ist eine Eingabe (Startwert 5).</div>`;
     // Flachfundament: Gebrauchstauglichkeit (SIA 267 Ziff. 8.5.4) — Kernweite + Verkippung
     const zF=r.gzgF, _1zu=v=>v>1e-9 ? '1:'+Math.round(1/v) : '–';
     const flachGzgCards = (!g.isBlock && zF) ? [
@@ -144,7 +162,7 @@ function renderResults(res,worst,g){
              ['η Verkippung', isFinite(zF.etaTilt)?zF.etaTilt.toFixed(2):'∞'],
              ['η', isFinite(r.etaGZG)?r.etaGZG.toFixed(2):'∞']],
        svg:(()=>{ try{ return buildFlachGzgDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
-       diagR:r, diagG:g, diagFn:'buildFlachGzgDiagram',
+       diagR:r, diagG:g, diagFn:'buildFlachGzgDiagram', nach:setzNach,
        note: zF.kern > 1/6
          ? wBox('fail','Resultierende ausserhalb der einfachen Kernweite',
              `|e_x|/B + |e_y|/L = ${zF.kern.toFixed(3)} &gt; 1/6: unter Gebrauchslasten klafft die Sohlfuge.
@@ -245,7 +263,7 @@ function renderResults(res,worst,g){
           {id:'_grp', t:'GZT — Grenzzustand der Tragfähigkeit  ·  Steckner Gl.66'},
           {id:'gzt',t:'Standsicherheit'+(r.komb_GZT?` · massgebend Komb. ${r.komb_GZT}`:''),e:r.etaGZT,
            f:"M_u = −(Ew−Ea+E0ü)·v + (Ep+E0)u·v' + Reib·B/2 + Ru·(t−ü) + Nu·u  ≥  M_d",
-           gztR: r, gztG: g,
+           gztR: r, gztG: g, nach:torsNach,
            svg: (()=>{ try{ return buildGZTDiagram(r,g); }catch(e){ return ''; } })()},
         ]:[]),
         ...((r.nw!=='gzt')?[
@@ -254,7 +272,7 @@ function renderResults(res,worst,g){
            f:'M_α(α_zul) ≤ M_u,char  →  η = M_α / M_ok  ≥  1.0  (Steckner Gl.11-21)',
            gzgR:r, gzgG:g,
            svg:(()=>{ try{ return buildBlockGzgDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
-           diagR:r, diagG:g, diagFn:'buildBlockGzgDiagram'},
+           diagR:r, diagG:g, diagFn:'buildBlockGzgDiagram', nach:setzNach},
         ]:[]),
       ]:[]),
     ];
@@ -296,6 +314,7 @@ function renderResults(res,worst,g){
                  ${card.svg}
                </div>`
             : ''}
+          ${card.nach||''}
         </div>`;
       scroll.appendChild(el);
     });

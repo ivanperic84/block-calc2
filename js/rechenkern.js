@@ -190,9 +190,9 @@ function _plausCheck(){
 // gwDepth (bg_gw/bg_gwt), govSoilHansen & Co. (SCHICHTEN global) sowie getGF (lw_G/lw_Q)
 // — für Geometrie-Sweeps konstant und daher unkritisch.
 const _CALC_FIELDS = ['g_bx','g_by','g_hblock','g_uberd','g_kx','g_ky','g_hkopf','g_ex','g_ey',
-  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_bhoehe','bg_delta_fac','bg_delta_sohle','bg_c_gleit',
+  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_bhoehe','bg_delta_fac','bg_delta_sohle','bg_c_gleit','bg_me_ratio','bg_me',
   'tw_phi','tw_c','tw_Ea','tw_Ep',
-  'l_NG','l_HGx','l_HGy','l_HWx','l_HWy','l_MGx','l_MGy','l_MWx','l_MWy',
+  'l_NG','l_HGx','l_HGy','l_HWx','l_HWy','l_MGx','l_MGy','l_MWx','l_MWy','l_TG','l_TW',
   'lw_G','lw_Q','lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_inf','lw_G_gzg','lw_Q_gzg',
   'bg_gw','bg_gwt','bg_me',
   'pfahl_dex','pfahl_dex_seite'];
@@ -1109,6 +1109,17 @@ function _doCalculateKern(P){
       gzgGamG:gzgGamG_, gzgGamQ:gzgGamQ_,
       H_k_GZG, N_k_GZG, C1_GZG: C1_kN,
       Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d, t2, gbD, glD, gzgF,
+      // Setzung unter charakteristischer Vertikallast (nur ausgewiesen, kein Grenzwert — Nutzerentscheid Okt 2026)
+      // Torsion beim Blockfundament — RESERVEBETRACHTUNG (Nutzerentscheid Okt 2026): Steckner bildet Torsion nicht
+      // ab; ausgewiesen wird nur, was die Sohlreibung allein aufnähme: T_R,d = N_d,min·tan φ_d·r_m mit dem mittleren
+      // Abstand r_m der Sohlfläche vom Schwerpunkt (gleichmässige Pressung), N_d,min = γ_G,inf·(G_k + N_G). Ohne
+      // Überlagerung mit H, ohne Seitenflächen. Geht NICHT in η_massg ein.
+      torsB: (isBlock && doGZT) ? (()=>{ const TG=+gi('l_TG')||0, TW=+gi('l_TW')||0; if(Math.abs(TG)+Math.abs(TW) < 1e-9) return null;
+        const Td = Math.abs((+gi('lw_G')||1.35)*TG + (+gi('lw_Q')||1.50)*TW);
+        let sr=0; const n=40; for(let i=0;i<n;i++) for(let j=0;j<n;j++) sr += Math.hypot(((i+0.5)/n-0.5)*B, ((j+0.5)/n-0.5)*L);
+        const rm = sr/(n*n), Nmin = Math.max(0, _gG2inf*(Gk + NG_lf)), TRd = Nmin*Math.tan(phi_d)*rm;
+        return { Td, Nmin, rm, TRd, phi_d:phi_d*180/Math.PI, eta: Td>1e-9 ? TRd/Td : Infinity }; })() : null,
+      setz: doGZG ? (()=>{ try{ return setzungFund({B, L, t, N:Math.max(0, NG_lf + Gk), ratio:_meRatio()}); }catch(_){ return null; } })() : null,
       gb_q, gb_g, q0, soilName:soil.name, govSoilName:govHB.phi+'°',
       // Steckner extras
       Ep_x, Ep_y, Tf_total,

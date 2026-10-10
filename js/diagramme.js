@@ -6,7 +6,7 @@
 function _sohlColors(smax, qu){
   const c_ok='var(--ok)', c_warn='var(--warn)', c_fail='var(--fail)';
   return { c_ok, c_warn, c_fail,
-    c_sig: smax>qu ? c_fail : (smax>qu*0.8 ? c_warn : c_ok),
+    c_sig: smax>qu ? c_fail : c_ok,   // binär wie die Nachweiskarten (kein Orange als Ausnutzungsfarbe)
     c_fund:'#7b9ccc', c_dim:'var(--dim)', c_on2:'var(--on2)', c_ol:'var(--ol)' };
 }
 
@@ -310,7 +310,7 @@ function buildStrutDecompSVG(alpha_deg, H_eff, F_s, V_pf, H_pf, strutZug, pullou
   <!-- Stütze F_s entlang Achse -->
   <line x1="${bx}" y1="${by}" x2="${px}" y2="${py}" stroke="${dirC}" stroke-width="2.4" stroke-linecap="round"/>
   <text x="${(bx+px)/2}" y="${(by+py)/2 + (lowBlock?10:-4)}" font-family="var(--f-mono)" font-size="7" fill="${dirC}" text-anchor="middle">F_s=${F_s.toFixed(1)} kN</text>
-  <text x="${px-36}" y="${py + (lowBlock?9:-3)}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
+  <text x="${px-36}" y="${py + (lowBlock?-3:10)}" font-family="var(--f-mono)" font-size="7" fill="${c_dim}" text-anchor="end">α=${alpha_deg.toFixed(1)}°</text>
   <!-- H_eff horizontal (Broms-Lateral) -->
   ${arr(px, py, hx2, py, c_pu)}
   <text x="${hx2}" y="${py - 5}" font-family="var(--f-mono)" font-size="7" fill="${c_pu}" text-anchor="${strutZug?'start':'end'}">H=${H_pf.toFixed(1)} kN</text>

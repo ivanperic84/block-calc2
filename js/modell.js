@@ -43,7 +43,8 @@ function setModel(m, silent){
   const pbBtn = document.getElementById('model-btn-pfahlbock');
   if(pbBtn) pbBtn.classList.toggle('active', m==='pfahlbock');
   // Torsion führt nur das Pfahlfundament → Zeile der Lasttabelle sonst ausblenden
-  document.querySelectorAll('.lt-tors').forEach(el => { el.style.display = m==='pfahlbock' ? '' : 'none'; });
+  // Torsion: Pfahlfundament (Nachweis) und Blockfundament (nur Reservebetrachtung); Flach führt keine
+  document.querySelectorAll('.lt-tors').forEach(el => { el.style.display = (m==='pfahlbock' || m==='block') ? '' : 'none'; });
   // ── Pfahlbock: eigenständiges Panel, separate Pipeline (block/flach-Logik übersprungen)
   const geoStd = document.getElementById('geo-standard');
   const pbSec  = document.getElementById('pfahlbock-section');

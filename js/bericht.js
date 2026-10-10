@@ -319,6 +319,18 @@ function _npAnnahmen(sys, ph){
       'Anschluss des Mastes an das Fundament. Die Kennwerte des Baugrunds sind Eingaben des Nutzers.</div>'+
   '</div>';
 }
+// Setzung: nur ausgewiesen (kein Grenzwert) — gemeinsamer Baustein für Block- und Flachbericht
+function _npSetzung(r){
+  var z=r && r.setz; if(!z) return '';
+  return '<div class="np-sh2">Setzung (informativ — kein Grenzwert)</div>'+
+    '<table class="np-tbl" style="margin-bottom:4px"><tr><th>Grösse</th><th>Beschreibung</th><th class="r">Wert</th></tr>'+
+    '<tr><td>p_k</td><td>Sohlpressung aus N_k = '+_npN(z.N)+' kN'+(z.u>0?' abzüglich Auftrieb':'')+'</td><td class="r">'+_npN(z.p)+' kPa</td></tr>'+
+    '<tr><td>σ′_v(t)</td><td>Gewicht des ausgehobenen Bodens — bis dahin Wiederbelastung</td><td class="r">'+_npN(z.sv0)+' kPa</td></tr>'+
+    '<tr><td>p_WB / p_Erst</td><td>Wiederbelastung mit M′_E = '+z.ratio.toFixed(1)+'·M_E / Erstbelastung mit M_E</td><td class="r">'+_npN(z.pWB)+' / '+_npN(z.pErst)+' kPa</td></tr>'+
+    '<tr class="hl"><td>s</td><td>Σ J·Δz·(p_WB/M′_E + p_Erst/M_E), Boussinesq im kennzeichnenden Punkt bis '+z.zEnd.toFixed(1)+' m unter der Sohle</td><td class="r"><b>'+(z.s*1000).toFixed(1)+' mm</b></td></tr>'+
+    '</table>'+
+    '<div style="font-size:8px;color:var(--xdim)">Lang/Huder/Amann, Bodenmechanik und Grundbau, Abschn. 8.2–8.5. Das Verhältnis M′_E/M_E ist eine Eingabe (Startwert 5, pauschale Annahme). Die Setzung wird ausgewiesen und nicht gegen einen Grenzwert geprüft.</div>';
+}
 function _npDef(k,desc,v,u){                                                                       // Bezeichnung | Beschreibung | Wert
   return '<div class="np-def"><span class="dk">'+k+'</span><span class="ds">'+desc+'</span><span class="dv">'+v+(u?'&ensp;'+u:'')+'</span></div>';
 }
@@ -699,6 +711,13 @@ function buildNachweisDoc(results,G){
           _npN(r.etaGZT))+
       '</div>'+
       '<div style="margin-top:4px">'+_npEta(r.etaGZT,false)+'</div>'+
+      (r.torsB ? '<div class="np-sh2">Torsion — Reservebetrachtung (informativ)</div>'+
+        '<table class="np-tbl" style="margin-bottom:4px"><tr><th>Grösse</th><th>Beschreibung</th><th class="r">Wert</th></tr>'+
+        '<tr><td>T_d</td><td>γ_G·T_G + γ_Q·T_Q</td><td class="r">'+_npN(r.torsB.Td)+' kNm</td></tr>'+
+        '<tr><td>N_d,min</td><td>γ_G,inf·(G_k + N_G)</td><td class="r">'+_npN(r.torsB.Nmin)+' kN</td></tr>'+
+        '<tr><td>T_R,d</td><td>N_d,min · tan φ′_d · r_m, mit r_m = '+r.torsB.rm.toFixed(3)+' m (mittlerer Abstand der Sohlfläche vom Schwerpunkt)</td><td class="r">'+_npN(r.torsB.TRd)+' kNm</td></tr>'+
+        '<tr class="hl"><td>Reserve</td><td>T_R,d / T_d</td><td class="r"><b>'+_npN(r.torsB.eta)+'</b></td></tr></table>'+
+        '<div style="font-size:8px;color:var(--xdim)">Die Theorie nach Steckner bildet Torsion nicht ab. Ausgewiesen ist allein die Reibung an der Sohle, ohne Seitenflächen und ohne Überlagerung mit der Horizontalkraft. Der Wert ist eine Reservebetrachtung und geht nicht in die Ausnutzung ein.</div>' : '')+
 
       hr()+
 
@@ -786,6 +805,7 @@ function buildNachweisDoc(results,G){
              '<td class="'+(etaErf(r.etaGZG)?'ok':'fail')+'">'+(etaErf(r.etaGZG)?'✓ Erfüllt':'✗ Nicht erfüllt')+'</td></tr>'+
       '</table>'+
       _npEta(r.etaGZG,false)+
+      _npSetzung(r)+
       (function(){ try{ var sv=buildBlockGzgDiagram(r,G,true); return sv ? '<div class="np-fig" style="max-width:440px;margin:10px auto 0">'+sv+'<div style="font-size:8px;color:var(--dim);margin-top:3px">Abb. — Schiefstellung (überhöht) mit Bettungsdreieck an der Stirnfläche und Sohlbettung</div></div>' : ''; }catch(e){ return ''; } })()+
     '</div>';
   }).join('');

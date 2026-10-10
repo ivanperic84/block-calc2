@@ -2444,7 +2444,9 @@ nav a { position:relative; }
       <tr><td>Böschung im Tragsicherheitsnachweis</td><td>Vorgabe aus; ein: K_p,β/K_p talseitig, nur quer</td><td>Erweiterung über Steckner hinaus</td></tr>
       <tr><td>Bettungsziffer C₁</td><td>min(Steckner Gl. 3 ; M_E·K_p/B)</td><td>Annahme des Programms (Okt 2026), Abschn. 3.4.1a; SIA 267 Gl. (53) als Bezug</td></tr>
       <tr><td>Bettungsziffer, Wahlmethode «Setzung mit Wiederbelastung»</td><td>k_sm = p/s aus dem Eigengewicht des Fundamentkörpers; M′_E = 5·M_E (Startwert); gleicher Wert für Sohle und Stirnflächen</td><td>Lang/Huder/Amann Abschn. 11.6 und 8.5. Annahmen des Programms: das Verhältnis 5 (pauschal, kein Literaturwert) und die Übertragung des vertikalen Werts auf die Stirnflächen; Abschn. 3.4.1b</td></tr>
-      <tr><td>C₂ (Sohle)</td><td>= C₁</td><td>Steckner</td></tr>
+      <tr><td>C₂ (Sohle)</td><td>= C₁</td><td>Steckner</td></tr>
+      <tr><td>Torsion beim Blockfundament</td><td>nur Reservebetrachtung: T_R,d = N_d,min·tan φ′_d·r_m (Reibung an der Sohle, r_m = mittlerer Abstand der Sohlfläche vom Schwerpunkt)</td><td>Annahme des Programms. Die Theorie nach Steckner bildet Torsion nicht ab; ohne Seitenflächen, ohne Überlagerung mit H; geht nicht in die Ausnutzung ein</td></tr>
+      <tr><td>Setzung (Block und Flach)</td><td>ausgewiesen, kein Grenzwert: charakteristische Vertikallast, Wiederbelastung bis zum Aushubgewicht mit M′_E = 5·M_E (Startwert), Boussinesq im kennzeichnenden Punkt bis zur 10 %-Grenze</td><td>Lang/Huder/Amann Abschn. 8.2–8.5; das Verhältnis 5 ist eine pauschale Annahme</td></tr>
       <tr><td>Stirnbettung</td><td>über die Blockfläche D = t − ü</td><td>Programmwahl; ü = 0 entspricht Steckner</td></tr>
       <tr><td>Sohlspannung, Grundbruch, Gleiten</td><td>informativ, kein Versagenskriterium</td><td>die Standsicherheit führt Gl. 66</td></tr>
       <tr><td>Bettungsvergleich k_h = 0.5·M_E/t</td><td>reine Anzeige</td><td>EAB EB 102</td></tr>
@@ -2508,7 +2510,7 @@ nav a { position:relative; }
 </div><!-- /hb-layout -->
 
 <!-- GZT-Diagramm: dieselbe Datei wie in der App (keine zweite Kopie mehr) -->
-<script src="js/diagramm-gzt.js?v=2026-10-10j"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10k"></script>
 <script>
 
 let _lastResults=null, _lastG=null;

@@ -470,5 +470,8 @@ ${sigLbl(cx-r0pbw-4, ukY-1, s0_uk, 'end')}`;
 <text x="${axX}" y="${axY-axL-4}" font-size="11" fill="${col.dim}" text-anchor="middle" font-family="var(--f-mono)">z</text>`;
   })()}
 </svg>`;
-  return svg;
+  // Schmale Fassung (Nachweiskarte): Nebenbeschriftungen weglassen — die Eckwerte der Erddrücke [kPa] und die
+  // kursiven Hinweise (treibend/Widerstand/…) überdeckten sich dort. Vergrössert (⤢) und im Bericht stehen sie.
+  return wide ? svg : svg.replace(/<text[^>]*font-style="italic"[^>]*>[^<]*<\/text>/g,'')
+                         .replace(/<text[^>]*fill="var\(--dim\)"[^>]*>-?\d+ kPa<\/text>/g,'');
 }

@@ -427,7 +427,7 @@ function buildNachweisDocFlach(results, G){
         '<div style="font-size:8px;color:var(--xdim);margin-top:4px">Starres Fundament auf dem elastischen Halbraum (Borowicka), ν = '+z.nu+'; M_E = harmonisches Mittel der Schichten von der Sohle bis 1.5·Breite darunter. Einbindung und seitliche Stützung sind nicht angesetzt. Die SIA 267 regelt das Berechnungsverfahren nicht; der Grenzwert '+(z.perm?'1:100 (ständig + veränderlich)':'1:200 (nur veränderlich)')+' stammt aus der SBB-Vorgabe.</div>'+
       '</div>'+
       '<div style="font-size:9.5px;margin-top:8px"><b>Gebrauchstauglichkeit: η = min(Kernweite, Verkippung) = '+(isFinite(r.etaGZG)?r.etaGZG.toFixed(2):'∞')+'</b></div>'+
-    '</div>'; });
+    _npSetzung(r)+'</div>'; });
   return cover + toc + page2 + page3 + nwPages.join('') + gzgPages.join('') + bishPage + summary + _npAnnahmen('flach', ph);
 }
 
