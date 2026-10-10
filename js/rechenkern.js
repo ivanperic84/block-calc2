@@ -20,8 +20,11 @@ function _evalBlockFlach(model){
                    H_Kopf:num('g_hkopf'), ueberdeckung:ue, e_x:num('g_ex'), e_y:num('g_ey') },
             etaT:null, etaG:null, gov:'–', lf:null };
   if(model==='block'){ o.etaT=w&&isFinite(w.etaGZT)?w.etaGZT:null; o.etaG=w&&isFinite(w.etaGZG)?w.etaGZG:null; }
-  else { const uls=[w&&w.etaGB, w&&w.etaGL, w&&w.eta_klaf].filter(isFinite);
-         o.etaT = uls.length?Math.min(...uls):null; }   // Flach: kein GZG
+  else { const R=(res&&res.results)||[];
+         const uls=R.filter(r=>r.nw!=='gzg').flatMap(r=>[r.etaGB, r.etaGL, r.eta_klaf]).filter(isFinite);
+         o.etaT = uls.length?Math.min(...uls):null;
+         const sls=R.filter(r=>r.gzgF && nwOn('flach','gzg')).map(r=>r.etaGZG).filter(isFinite);
+         o.etaG = sls.length?Math.min(...sls):null; }   // Flach: GZG = Kernweite + Verkippung
   try{ o.gov=_dimGovName(res); }catch(_){}
   o.lf = (w&&w.name) || null;
   return o;
@@ -52,6 +55,69 @@ function _evalPfahl(){
   }
   return o;
 }
+// ── Grundbruchwiderstand nach EN 1997-1 Anhang D.4 (dränierte Verhältnisse) ─────────────────────
+//   σ_f = c′·N_c·s_c·i_c·g_c + q′·N_q·s_q·i_q·g_q + 0.5·γ′·B′·N_γ·s_γ·i_γ·g_γ      [kPa auf A′ = B′·L′]
+//   N_q = e^(π·tanφ)·tan²(45° + φ/2) · N_c = (N_q − 1)·cotφ · N_γ = 2·(N_q − 1)·tanφ
+//   s_q = 1 + (B′/L′)·sinφ · s_γ = 1 − 0.3·(B′/L′) · s_c = (s_q·N_q − 1)/(N_q − 1)
+//   i_q = [1 − H/(N + A′·c′·cotφ)]^m · i_γ = [...]^(m+1) · i_c = i_q − (1 − i_q)/(N_c·tanφ)
+//   m = m_L·cos²θ + m_B·sin²θ,  m_B = (2 + B′/L′)/(1 + B′/L′),  m_L = (2 + L′/B′)/(1 + L′/B′),
+//   θ = Winkel von H zur Richtung L′.   KEINE Tiefenbeiwerte (der Anhang kennt keine).
+// φ = 0 (undräniert, D.3): σ_f = (π + 2)·c·s_c·i_c + q mit s_c = 1 + 0.2·B′/L′, i_c = ½·(1 + √(1 − H/(A′·c))).
+// Die Geländebeiwerte g_c, g_q, g_γ (Böschung) stehen NICHT im Anhang D; sie stammen wie bisher aus
+// Brinch Hansen und kommen als fertige Faktoren herein (1 = waagrechtes Gelände).
+// B = kleinere, L = grössere wirksame Seite; HB/HL = Horizontalkraft in Richtung B′ bzw. L′.
+function grundbruchEC7(p){
+  const phi=Math.max(0,p.phi||0), c=Math.max(0,p.c||0), B=Math.max(1e-6,p.B), L=Math.max(B,p.L||B), A=B*L, r=B/L;
+  const H=Math.hypot(p.HB||0, p.HL||0), N=Math.max(1e-6, p.N||0);
+  const gc=p.gc??1, gq=p.gq??1, gg=p.gg??1;
+  if(phi <= 0.001){
+    const sc=1+0.2*r, ic=c>1e-9 ? 0.5*(1+Math.sqrt(Math.max(0, 1-H/(A*c)))) : 0;
+    return { Nq:1, Nc:Math.PI+2, Ng:0, sq:1, sc, sg:1, iq:1, ic, ig:1, m:0, al: c>1e-9 ? H/(A*c) : 0,
+             sigf:(Math.PI+2)*c*sc*ic*gc + (p.q||0)*gq };
+  }
+  const tp=Math.tan(phi);
+  const Nq=Math.exp(Math.PI*tp)*Math.tan(Math.PI/4+phi/2)**2, Nc=(Nq-1)/tp, Ng=2*(Nq-1)*tp;
+  const sq=1+r*Math.sin(phi), sg=1-0.3*r, sc=(sq*Nq-1)/(Nq-1);
+  const mB=(2+r)/(1+r), mL=(2+1/r)/(1+1/r);
+  const m = H>1e-9 ? (mL*(p.HL||0)**2 + mB*(p.HB||0)**2)/(H*H) : mB;
+  const al=H/(N + A*c/tp), base=Math.max(0, 1-al);
+  const iq=Math.pow(base,m), ig=Math.pow(base,m+1), ic=iq-(1-iq)/(Nc*tp);
+  return { Nq, Nc, Ng, sq, sc, sg, iq, ic:Math.max(0,ic), ig, m, al,
+           sigf: c*Nc*sc*Math.max(0,ic)*gc + (p.q||0)*Nq*sq*iq*gq + 0.5*(p.gam||0)*B*Ng*sg*ig*gg };
+}
+// ── Flachfundament: Gebrauchstauglichkeit (SIA 267 Ziff. 8.5.4) ─────────────────────────────────
+// 1) Ziff. 8.5.4.7: «Ohne besonderen Nachweis soll in der Regel im Grenzzustand Gebrauchstauglichkeit
+//    die Exzentrizität der resultierenden Fundamentlast die EINFACHE KERNWEITE der Fundamentsohlfläche
+//    nicht überschreiten (Beschränkung der Verkippung).» Rechteck: |e_x|/B + |e_y|/L ≤ 1/6.
+// 2) Verkippung gegen den Grenzwert des Bauwerks (Ziff. 8.5.4.1: objektbezogen — hier SBB 1:100 / 1:200).
+//    Die Norm regelt das Berechnungsverfahren nicht (Vorwort). Angesetzt wird das starre Fundament auf
+//    dem elastischen Halbraum (Borowicka): tan α = 3·(1−ν)·M / (8·G·r³), mit dem Ersatzradius gleichen
+//    Trägheitsmoments r = (4·I/π)^¼ (I = L·B³/12 für die Verkippung quer) und G = M_E·(1−2ν)/(2·(1−ν)),
+//    ν = 0.3. M_E = harmonisches Mittel der Schichten zwischen Sohle und 1.5·Breite darunter.
+//    Einbindung und seitliche Stützung werden nicht angesetzt (sichere Seite). Das Modell ist linear und
+//    gilt nur bei geschlossener Sohlfuge — darum bleibt die Kernweite als eigene Bedingung bestehen.
+// Lasten charakteristisch (γ_F = 1.0, Ziff. 5.3.3.6), Baugrundwerte charakteristisch (Ziff. 5.3.2.8).
+function meMittelHarm(z0, z1){
+  const S=cSchichten(), fb=Math.max(0.5, +cgi('bg_me')||20); let z=0, sum=0, len=0;
+  for(let i=0;i<S.length;i++){ const s=S[i], bot=(s.d===999||i===S.length-1) ? Infinity : z+(+s.d||0);
+    const a=Math.max(z,z0), b=Math.min(bot,z1);
+    if(b>a){ const me=Math.max(0.5, S.length>1 ? (s.me ?? fb) : fb); sum+=(b-a)/me; len+=b-a; }
+    z=bot; if(z>=z1) break; }
+  return len>0 ? len/sum : fb;
+}
+function flachGZG(p){
+  const nu=0.3, B=p.B, L=p.L, N=Math.max(1e-6, p.N);
+  const ex=Math.abs(p.May)/N, ey=Math.abs(p.Max)/N;
+  const kern=ex/B+ey/L, etaKern = kern>1e-9 ? (1/6)/kern : Infinity;
+  const dir=(b,l,M,z)=>{ const ME=meMittelHarm(z, z+1.5*b), G=ME*1000*(1-2*nu)/(2*(1-nu));
+    const r=Math.pow(4*(l*Math.pow(b,3)/12)/Math.PI, 0.25), K=8*G*Math.pow(r,3)/(3*(1-nu));
+    return { ME, G, r, K, tan: Math.abs(M)/K }; };
+  const X=dir(B, L, p.May, p.t), Y=dir(L, B, p.Max, p.t);      // X: Verkippung quer (um die y-Achse)
+  const quer = X.tan >= Y.tan, tan=Math.max(X.tan, Y.tan);
+  const etaTilt = tan>1e-12 ? p.tanZul/tan : Infinity;
+  return { N, Max:p.Max, May:p.May, ex, ey, kern, etaKern, X, Y, quer, tan, tanZul:p.tanZul, etaTilt, nu,
+           eta: Math.min(etaKern, etaTilt) };
+}
 const MODELS = {
   block: { id:'block', label:'Blockfundament', kopf:'Steckner Blockfundament',
     standard:true, sicherung:true, gl66:true, dimensionierbar:true,
@@ -59,7 +125,7 @@ const MODELS = {
     hatErgebnis(){ return !!RESULT.block; },
     bericht(){ return buildNachweisDoc(RESULT.block.results, RESULT.block.G); },
     auswerten(){ return _evalBlockFlach('block'); } },
-  flach: { id:'flach', label:'Flachfundament', kopf:'Flachfundament (Hansen)',
+  flach: { id:'flach', label:'Flachfundament', kopf:'Flachfundament (starre Sohle)',
     standard:false, sicherung:false, gl66:false, dimensionierbar:true,
     berechnen(){ _doCalculate(); },
     hatErgebnis(){ return !!RESULT.flach; },
@@ -113,7 +179,7 @@ function _plausCheck(){
 // gwDepth (bg_gw/bg_gwt), govSoilHansen & Co. (SCHICHTEN global) sowie getGF (lw_G/lw_Q)
 // — für Geometrie-Sweeps konstant und daher unkritisch.
 const _CALC_FIELDS = ['g_bx','g_by','g_hblock','g_uberd','g_kx','g_ky','g_hkopf','g_ex','g_ey',
-  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_bhoehe','bg_delta_fac','bg_delta_sohle',
+  'g_gbeton','g_gauf','bg_qu','bg_c1','bg_beta','bg_btyp','bg_bhoehe','bg_delta_fac','bg_delta_sohle','bg_c_gleit',
   'tw_phi','tw_c','tw_Ea','tw_Ep',
   'l_NG','l_HGx','l_HGy','l_HWx','l_HWy','l_MGx','l_MGy','l_MWx','l_MWy',
   'lw_G','lw_Q','lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_inf','lw_G_gzg','lw_Q_gzg',
@@ -296,7 +362,7 @@ function _doCalculateKern(P){
   const _gG1sup = +gi('lw_G1_sup') || 1.20;  // Typ 1 sup (Kippen, destabilisierend)
   const _gG1inf = +gi('lw_G1_inf') || 0.80;  // Typ 1 inf (Kippen, stabilisierend N)
   const _gQ1    = +gi('lw_Q1')     || 1.50;  // Typ 1 veränderlich
-  const _gG2inf = +gi('lw_G_inf')  || 1.00;  // Typ 2 inf (Gleiten, günstiger N)
+  const _gG2inf = gGinfT2(isBlock ? 'block' : 'flach');  // Typ 2 inf (Gleiten, günstiger N)
 
   const results = (P.LF||LF).map(lf=>{
     const c = lf.comp;
@@ -356,17 +422,6 @@ function _doCalculateKern(P){
       const kB=B/6, kL=L/6, inKern=Math.abs(ex_)<=kB && Math.abs(ey_)<=kL;
       const etaSIG = qu/(smax>0.001?smax:0.001);
 
-      // ── Tragfähigkeitsbeiwerte (Hansen-Basis, beide Modelle)
-      const Nq=Math.exp(Math.PI*Math.tan(phi_d))*Math.tan(Math.PI/4+phi_d/2)**2;
-      const Nc=phi_d>0.001?(Nq-1)/Math.tan(phi_d):5.14;
-      const Ng=2*(Nq+1)*Math.tan(phi_d);
-
-      // Neigungsbeiwerte Lasten
-      const al=Hd/Math.max(Nd,0.001);
-      const ic=Math.max(0,1-al/(A*c_d*Math.max(Nq,1)/Math.max(Nd,0.001)+1))**2;
-      const iq=Math.max(0,1-0.7*al)**5;
-      const ig=Math.max(0,1-al)**5;
-
       // Effektive Fläche (Meyerhof) — Be/Le = effektive Abmessung in x bzw. y.
       // GÜLTIGKEIT (Aug 2026): der Clamp auf 0.1 m täuschte bei sehr grosser Ausmitte eine Rest-
       // fläche vor, die es physikalisch nicht gibt → R_d fror ein statt gegen 0 zu gehen
@@ -398,37 +453,28 @@ function _doCalculateKern(P){
       const _fSub  = Math.min(1, Math.max(0, (t + _dBr - _zgw)/_dBr)); // Anteil unter GW
       const gs_b_e = gs_b*(1-_fSub) + gamEff(soil)*_fSub;
 
-      // ── 2. GRUNDBRUCH
+      // ── 2. GRUNDBRUCH — EN 1997-1 Anhang D (dräniert), Normformat N_d ≤ R_d = σ_f,d·A′
+      // (Okt 2026 umgestellt: vorher N_γ nach Vesić, eigene Neigungsbeiwerte, Hansen-Tiefenbeiwerte
+      //  und Vergleich mit der Kantenpressung σ_max — siehe grundbruchEC7.)
+      const _gbHB = (Be <= Le) ? Hxd : Hyd, _gbHL = (Be <= Le) ? Hyd : Hxd;   // H-Anteile in Richtung B′ / L′
+      const A_eff = Be*Le;
+      const GB = grundbruchEC7({ phi:phi_d, c:c_d, q:q0, gam:gs_b_e, B:B_eff, L:L_eff, HB:_gbHB, HL:_gbHL, N:Nd,
+                                 gc:gb_c, gq:gb_q, gg:gb_g });
+      const Nq=GB.Nq, Nc=GB.Nc, Ng=GB.Ng, ic=GB.ic, iq=GB.iq, ig=GB.ig, al=GB.al;
       let Rd, etaGB;
       if(isBlock){
-        // Steckner: Grundbruchwiderstand = Sohle (Hansen) + Anteil Mantelreibung
-        // Sohle wie Hansen, aber mit Steckner-Erhöhung durch Einbindung
-        // Tiefenbeiwerte sq, sc, sg nach Brinch Hansen (SIA 267 Tab. 3.1)
-        const sq = 1 + rBL*Math.sin(phi_d);
-        const sg = 1 - 0.3*rBL;
-        const sc = sq - (1-sq)/(Nc*Math.tan(phi_d)||1);
-        const Rd_sohle = (c_d*Nc*ic*sc*gb_c + q0*Nq*iq*sq*gb_q + 0.5*gs_b_e*B_eff*Ng*ig*sg*gb_g);
-        // Steckner-Zusatz: Mantelreibungsanteil (umgerechnet auf Flächenspannung)
-        const Rd_mantel = Tf_total / A;
-        Rd = Rd_sohle + Rd_mantel;
+        // Block (informativ): Sohlwiderstand + Mantelreibungsanteil, verglichen mit der Kantenpressung —
+        // die Resultierende liegt beim eingespannten Block regelmässig ausserhalb des Kerns, eine
+        // Ersatzfläche im Normformat wäre dort nicht aussagekräftig.
+        Rd = GB.sigf + Tf_total / A;
         etaGB = Rd / (smax>0 ? smax : 0.001);
       } else {
-        // Flach (Hansen) — Starre Methode SIA 267 mit Form- und Tiefenbeiwerten
-        // Formbeiwerte (Vesic/Hansen, rechteckig)
-        const sqq = 1 + rBL*Math.tan(phi_d);
-        const scc = phi_d>0.001 ? sqq-(1-sqq)/(Nc*Math.tan(phi_d)) : 1+0.2*rBL;
-        const sgg = Math.max(0.6, 1-0.4*rBL);
-        // Tiefenbeiwerte (Hansen) — nur Beton (eingebettet); bei Stahl dq≈1 (t<<B)
-        let dc_f=1, dq_f=1;
-        const useDepth = FLACH_MAT!=='stahl' && t>0.05;
-        if(useDepth){
-          const tr=Math.min(t/B_eff, 1.0);  // begrenzt auf 1 (Hansen), über B'
-          dq_f = phi_d>0.001 ? 1+2*Math.tan(phi_d)*(1-Math.sin(phi_d))**2*Math.atan(tr) : 1;
-          dc_f = phi_d>0.001 ? dq_f-(1-dq_f)/(Nc*Math.tan(phi_d)) : 1+0.4*tr;
-        }
-        Rd = c_d*Nc*ic*scc*dc_f*gb_c + q0*Nq*iq*sqq*dq_f*gb_q + 0.5*gs_b_e*B_eff*Ng*ig*sgg*gb_g;
-        etaGB = Rd / (smax>0 ? smax : 0.001);
+        // Flach: R_d = σ_f,d·A′ gegen N_d (σ_f,d auf der Ersatzfläche, Rd bleibt als Spannung [kPa] geführt)
+        Rd = GB.sigf;
+        etaGB = Rd*A_eff / Math.max(0.001, Nd);
       }
+      const gbD = { Aeff:A_eff, sEff:Nd/Math.max(1e-9,A_eff), RdKN:GB.sigf*A_eff, m:GB.m, sq:GB.sq, sc:GB.sc, sg:GB.sg,
+                    iq:GB.iq, ic:GB.ic, ig:GB.ig, Nq:GB.Nq, Nc:GB.Nc, Ng:GB.Ng, gam:gs_b_e, Bp:B_eff, Lp:L_eff };
       // Resultierende ausserhalb der Sohlfläche ⇒ keine effektive Fläche ⇒ Nachweis NICHT führbar.
       // Kein Zahlenwert ausweisen (der geklemmte R_d wäre frei erfunden) → η = 0 (nicht erfüllt).
       // NUR beim FLACHFUNDAMENT: dort ist der Sohldruck ein echtes Versagenskriterium. Beim
@@ -438,7 +484,7 @@ function _doCalculateKern(P){
 
       // ── 3. GLEITEN — SIA 267 Typ 2: Widerstand und Einwirkung aus DERSELBEN Kombination
       const Nd_gl = Nd;
-      let Rgl, etaGL;
+      let Rgl, etaGL, gl_dK=0, gl_dD=0, gl_cR=0, gl_cAn=false;
       if(isBlock){
         // Block: Sohlreibung (volles φ'_d) + passiver Erddruck der Stirnfläche
         const Rgl_sohle = Nd_gl*Math.tan(phi_d) + c_d*A;
@@ -449,15 +495,24 @@ function _doCalculateKern(P){
       } else {
         // Gleiten: δ_Sohle aus Selektor
         const dSohleFac = +gi('bg_delta_sohle') || +gi('bg_delta_fac') || 0.667;
-        const delta_sohle = dSohleFac * phi_d;
-        Rgl = Nd_gl*Math.tan(delta_sohle) + c_d*A;
+        // SIA 267 Ziff. 8.4.1.1: δ_k = φ'_k (rau) bzw. ½…⅔·φ'_k (glatt), höchstens 35°; der
+        // Bemessungswert δ_d entsteht mit γ_φ auf tan δ (Ziff. 8.5.2.2). Vorher: Faktor·φ'_d, ohne Grenze.
+        const _phiK_gl = Math.atan(Math.tan(phi_d) * gph);
+        gl_dK = Math.min(dSohleFac * _phiK_gl, 35*Math.PI/180);
+        gl_dD = Math.atan(Math.tan(gl_dK) / Math.max(1, gph));
+        // Ziff. 8.4.1.2: Kohäsion im Gleitwiderstand nur, wenn sie dauerhaft erhalten bleibt (Wahl
+        // bg_c_gleit, Vorgabe: nicht ansetzen). Gl. (31): R_T,d = (E_N,d·tan δ_d + A'_d·c'_d)/γ_R —
+        // mit der WIRKSAMEN Fläche A', γ_R = 1.0.
+        gl_cAn = String(gi('bg_c_gleit')) === '1';
+        gl_cR = gl_cAn ? c_d * A_eff : 0;
+        Rgl = Nd_gl*Math.tan(gl_dD) + gl_cR;
         etaGL = Rgl / (Hd>0.001 ? Hd : 0.001);
       }
-      return { Nd_mast, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y, M_ax, M_ay, s0, smx, smy, _amx, _amy, smax, smin, ex_, ey_, kB, kL, inKern, etaSIG, Nq, Nc, Ng, al, ic, iq, ig, _eRx, _eRy, effAusserhalb, effUeberDrittel, Be, Le, B_eff, L_eff, rBL, q0, _zgw, _dBr, _fSub, gs_b_e, Rd, etaGB, Nd_gl, Rgl, etaGL };
+      return { Nd_mast, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y, M_ax, M_ay, s0, smx, smy, _amx, _amy, smax, smin, ex_, ey_, kB, kL, inKern, etaSIG, Nq, Nc, Ng, al, ic, iq, ig, _eRx, _eRy, effAusserhalb, effUeberDrittel, Be, Le, B_eff, L_eff, rBL, q0, _zgw, _dBr, _fSub, gs_b_e, Rd, etaGB, gbD, Nd_gl, Rgl, etaGL, glD:{dK:gl_dK, dD:gl_dD, cR:gl_cR, cAn:gl_cAn, Aeff:A_eff} };
     };
     // Anzeige-Kombination der flachen Ergebnisfelder: alles ungünstig (= Komb. 8); bei reinen
     // GZG-Lastfällen die charakteristische Kombination.
-    let { Nd_mast, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y, M_ax, M_ay, s0, smx, smy, _amx, _amy, smax, smin, ex_, ey_, kB, kL, inKern, etaSIG, Nq, Nc, Ng, al, ic, iq, ig, _eRx, _eRy, effAusserhalb, effUeberDrittel, Be, Le, B_eff, L_eff, rBL, q0, _zgw, _dBr, _fSub, gs_b_e, Rd, etaGB, Nd_gl, Rgl, etaGL } = _isGzgLF ? evalT2(1.00, gG, gW) : evalT2(gG, gG, gW);
+    let { Nd_mast, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y, M_ax, M_ay, s0, smx, smy, _amx, _amy, smax, smin, ex_, ey_, kB, kL, inKern, etaSIG, Nq, Nc, Ng, al, ic, iq, ig, _eRx, _eRy, effAusserhalb, effUeberDrittel, Be, Le, B_eff, L_eff, rBL, q0, _zgw, _dBr, _fSub, gs_b_e, Rd, etaGB, gbD, Nd_gl, Rgl, etaGL, glD } = _isGzgLF ? evalT2(1.00, gG, gW) : evalT2(gG, gG, gW);
     let t2 = null;
     if(!_isGzgLF){
       const _all = buildCombos(_gG2inf, gG, gW).map(cb =>
@@ -468,8 +523,11 @@ function _doCalculateKern(P){
         effAusserhalb:o.effAusserhalb, effUeberDrittel:o.effUeberDrittel,
         eRx:+o._eRx.toFixed(3), eRy:+o._eRy.toFixed(3),
         etaSIG:o.etaSIG, etaGB:o.etaGB, etaGL:o.etaGL, Rd:o.Rd, Rgl:o.Rgl, Nd_gl:o.Nd,
-        Be:o.Be, Le:o.Le, q0:o.q0, komb:o.komb, fE:o.fE, fG:o.fG, fQ:o.fQ });
-      t2 = { sig:_view(_pick('etaSIG')), gb:_view(_pick('etaGB')), gl:_view(_pick('etaGL')) };
+        Be:o.Be, Le:o.Le, q0:o.q0, gbD:o.gbD, glD:o.glD, komb:o.komb, fE:o.fE, fG:o.fG, fQ:o.fQ });
+      t2 = { sig:_view(_pick('etaSIG')), gb:_view(_pick('etaGB')), gl:_view(_pick('etaGL')),
+             // alle 8 Kombinationen (Berichtstabelle, Nachvollziehbarkeit)
+             all:_all.map(o => ({ nr:o.komb, fE:o.fE, fG:o.fG, fQ:o.fQ, Nd:o.Nd, Hd:o.Hd,
+                                  etaSIG:o.etaSIG, etaGB:o.etaGB, etaGL:o.etaGL })) };
       etaSIG = t2.sig.etaSIG;
       etaGB  = t2.gb.etaGB;  Rd  = t2.gb.Rd;
       etaGL  = t2.gl.etaGL;  Rgl = t2.gl.Rgl;  Nd_gl = t2.gl.Nd;
@@ -519,6 +577,7 @@ function _doCalculateKern(P){
     let Epa_GZT_=0, Ra_v_GZT_=0, Rp_va_GZT_=0, Rp_vb_GZT_=0;
     let u_ecc_GZT_=0, arm_v_GZT_=0, arm_vp_GZT_=0;
     let komb_GZT_=0;   // massgebende Lastfall-Kombination (1-8, 0 = n/a)
+    let kombs_GZT_=[]; // ALLE Kombinationen dieses Lastfalls (Auswahl im 3D, Nachvollziehbarkeit)
     let Nd_GZT_=0;     // N_d DIESER Kombination (die Gl.46-Herleitung muss damit aufgehen)
     let bzGred_=0, bzGredAktiv_=false;   // Bauzustand: effektiver γ_G im Aushubzustand
     // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
@@ -696,7 +755,7 @@ function _doCalculateKern(P){
       // ── Lastfall-Kombinationen (ST-Fundament-konform, SIA 260):
       // Komb 1-8 = EG ∈ {γ_G,inf, γ_G,sup} × Ständig ∈ {inf, sup} × Variabel ∈ {0, γ_Q}
       // Generiert aus den Lastbeiwerten (keine separate Eingabe) — massgebend = min η
-      const _gGi_c = +gi('lw_G_inf') || 1.00;
+      const _gGi_c = +gi('lw_G_inf') || 0.80;
       const COMBOS = buildCombos(_gGi_c, gG, gW);
       // Bauzustand (Option, SIA 267 Ziff. 5.4.3.6): im AUSHUBZUSTAND darf der ständige
       // Lastbeiwert reduziert werden (γ_G,red ≈ 1.20). Der Endzustand-Nachweis oben bleibt
@@ -742,6 +801,8 @@ function _doCalculateKern(P){
         const ry_c = computeGZT_dir(Math.abs(Hyd_c), Math.abs(Moky_s), L, B, {N: Nd_c});
         const ux_c = Math.abs(Hxd_c) >= Math.abs(Hyd_c);
         const eta_c = ux_c ? rx_c.eta : ry_c.eta;
+        kombs_GZT_.push({ nr:cb.nr, fE:cb.fE, fG:cb.fG, fQ:cb.fQ, eta:eta_c, ux:ux_c, Nd:Nd_c, Hxd:Hxd_c, Hyd:Hyd_c,
+                          Mok:Math.abs(ux_c ? Mokx_s : Moky_s), r: ux_c ? rx_c : ry_c });
         if(!best || eta_c < best.eta){ best = {eta:eta_c, nr:cb.nr, cb, rx:rx_c, ry:ry_c, ux:ux_c, mokx_s:Mokx_s}; }
       }
 
@@ -1002,6 +1063,15 @@ function _doCalculateKern(P){
       }
     }
 
+    // ── FLACH: Gebrauchstauglichkeit (Kernweite + Verkippung), charakteristische Lasten
+    let gzgF = null;
+    if(!isBlock && doGZG){
+      const gGzF = _gzgFac('lw_G_gzg', 1.00), gQzF = _gzgFac('lw_Q_gzg', 1.00);
+      const kF = evalT2(1.00, gGzF, gQzF);                   // Eigengewicht immer 1.00, wie beim Block
+      gzgF = flachGZG({ B, L, t, N:kF.Nd, Max:kF.M_ax, May:kF.M_ay, tanZul:_tanZul(gGzF > 0) });
+      gzgF.gamG = gGzF; gzgF.gamQ = gQzF; gzgF.perm = gGzF > 0; gzgF.Hk = kF.Hd;
+      etaGZG = gzgF.eta; alpha_GZG_calc = gzgF.tan; tanZul_GZG_ = gzgF.tanZul; gzgPerm_ = gzgF.perm;
+    }
     const chk=[];
     // Sohlspannung: nur für Flachfundament als Versagenskriterium.
     // Bei Block (Steckner) ist σ_max informativ — Kraftübertragung über Erdwiderstand/Mantel.
@@ -1016,6 +1086,7 @@ function _doCalculateKern(P){
       if(NW.gleiten)chk.push(_etaOk(etaGL));
       if(NW.kippen) chk.push(isBlock ? inKern : _etaOk(eta_klaf));
     }
+    if(!isBlock && gzgF && nwOn('flach','gzg')) chk.push(_etaOk(etaGZG));   // Flach: Kernweite + Verkippung
 
     return {
       name:lf.name, comp:lf.comp, nw:_lfNW, Nd, Hxd, Hyd, Hd, Mxd, Myd, Md_ext_x, Md_ext_y,
@@ -1029,7 +1100,7 @@ function _doCalculateKern(P){
       gzgDir:gzgDir_, gzgHxk:gzgHxk_, gzgHyk:gzgHyk_, gzgMxk:gzgMxk_, gzgMyk:gzgMyk_,
       gzgGamG:gzgGamG_, gzgGamQ:gzgGamQ_,
       H_k_GZG, N_k_GZG, C1_GZG: C1_kN,
-      Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d, t2,
+      Rd, Rgl, Nd_gl, Nq, Nc, Ng, Be, Le, phi_d, c_d, t2, gbD, glD, gzgF,
       gb_q, gb_g, q0, soilName:soil.name, govSoilName:govHB.phi+'°',
       // Steckner extras
       Ep_x, Ep_y, Tf_total,
@@ -1045,6 +1116,7 @@ function _doCalculateKern(P){
       arm_v_GZT:  arm_v_GZT_,
       arm_vp_GZT: arm_vp_GZT_,
       komb_GZT:   komb_GZT_,
+      kombs_GZT:  kombs_GZT_,
       Nd_GZT:     Nd_GZT_,
       bzGred: bzGred_, bzGredAktiv: bzGredAktiv_,
       // Zustand A — Aushub ohne Massnahme (Sicherungs-Modul)
@@ -1083,7 +1155,7 @@ function _doCalculateKern(P){
 
   const _relevantEtas = r => isBlock
     ? [r.etaGZT, r.etaGZG]
-    : [r.etaSIG, r.etaGB, r.etaGL];
+    : [...(r.nw!=='gzg' ? [r.etaSIG, r.etaGB, r.etaGL] : []), ...(r.gzgF && nwOn('flach','gzg') ? [r.etaGZG] : [])];
   if(!results.length) return null;
   const worst = results.reduce((a, b) => {
     const ma = Math.min(..._relevantEtas(a).filter(isFinite));

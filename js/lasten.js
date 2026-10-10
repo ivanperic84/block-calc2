@@ -53,7 +53,7 @@ function toggleSecWrap(id, head){
 
 function resetSIALastbeiwerte(){
   const vals = {
-    lw_G:'1.35', lw_G_inf:'1.00', lw_Q:'1.50',
+    lw_G:'1.35', lw_G_inf:'0.80', lw_Q:'1.50',
     lw_G1_sup:'1.20', lw_G1_inf:'0.80', lw_Q1:'1.50',
     lw_G_gzg:'1.00', lw_Q_gzg:'1.00'
   };
@@ -86,6 +86,15 @@ function getGF(lf){
 // Anlegen nie nachgeführt und dürfen NICHT gelesen werden (das Pfahlfundament und der
 // 3D-Viewer taten das bis Okt 2026 und ignorierten damit geänderte Lastbeiwerte).
 // Vollständiger Satz nach SIA 260: Eigengewicht {inf,sup} × ständig {inf,sup} × veränderlich {0,γ_Q}
+// γ_G,inf für die Typ-2-Nachweise. Allgemein SIA 260 Tab. 1 (0.80, Feld lw_G_inf). Für Gleiten und
+// Grundbruch von FLACHFUNDATIONEN legt SIA 267 Ziff. 8.5.2.4 fest: «…gilt in der Regel für die günstig
+// wirkende Eigenlast von Fundament und Hinterfüllung sowie für die vorsichtig bestimmten Eigenlasten
+// aus dem Überbau folgender Lastbeiwert: γ_G,inf = 1,0 (35)». Darum rechnet das Flachfundament fest
+// mit 1.00 — unabhängig vom Feld, das für Blockfundament und Pfahlfundament gilt.
+function gGinfT2(model){
+  if((model || CALC_MODEL) === 'flach') return 1.00;
+  const v = +cgi('lw_G_inf'); return v > 0 ? v : 0.80;
+}
 function buildCombos(gInf, gSup, gQ){
   const A = []; let k = 1;
   for(const fE of [gInf, gSup]) for(const fG of [gInf, gSup]) for(const fQ of [0, gQ])
@@ -213,7 +222,7 @@ function buildLFMatrix(){
 
   // Aktuelle Lastbeiwerte aus Lastbeiwerte-Karte lesen
   const gG2s = +gi('lw_G')     || 1.35;  // Typ 2 sup
-  const gG2i = +gi('lw_G_inf') || 1.00;  // Typ 2 inf
+  const gG2i = gGinfT2();  // Typ 2 inf (Flach fest 1.00, SIA 267 Ziff. 8.5.2.4)
   const gQ2  = +gi('lw_Q')     || 1.50;  // Typ 2 Q
   const gG1s = +gi('lw_G1_sup')|| 1.20;  // Typ 1 sup
   const gG1i = +gi('lw_G1_inf')|| 0.80;  // Typ 1 inf (N_G stabilisierend)
@@ -223,14 +232,14 @@ function buildLFMatrix(){
 
   // Grenzzustände: modellabhängig + benutzerdefinierte Beschriftungen aus SETTINGS
   const isBlock = CALC_MODEL === 'block';
-  const lbl = SETTINGS.gz_labels || {};
+  const sys = CALC_MODEL === 'pfahlbock' ? 'pfahl' : (isBlock ? 'block' : 'flach');   // Zeile der Beschriftungs-Matrix
 
   // Block (eingespannt): kein Kippen/Ausmitte-Nachweis → keine Typ-1-Zeile
   // Typ 2 / ST wird als 8 Kombinationszeilen direkt in der Matrix dargestellt (s.u.)
   const GZ_BLOCK = [
     {
       label: 'GZG',
-      sub:   lbl.gzg_block || 'Schiefstellung (Steckner Gl.11–21)',
+      sub:   gzLabel('gzg_'+sys),
       color: 'var(--dim)',
       gk:    1.00,   // GZG: Eigengewicht immer 1.00
       gamma: (c) => c[3]==='W' ? gQz : gGz
@@ -241,7 +250,7 @@ function buildLFMatrix(){
   const GZ_FLACH = [
     {
       label: 'Typ 1',
-      sub:   lbl.t1_flach || 'Kippen / Ausmitte',
+      sub:   gzLabel('t1_flach'),
       color: 'var(--warn)',
       gk:    gG1i,   // Eigengewicht wirkt beim Kippen günstig → γ_G,inf
       gamma: (c) => { if(c[3]==='W') return gQ1; if(c[0]==='NG') return gG1i; return gG1s; }
@@ -256,7 +265,8 @@ function buildLFMatrix(){
     gamma: (c) => c[3]==='W' ? (gz.gQ||1.50) : (gz.gG||1.35)
   }));
 
-  const GZ = [...(isBlock ? GZ_BLOCK : GZ_FLACH), ...GZ_CUSTOM];
+  // Block und Pfahlfundament: GZG-Zeile · Flach: Typ-1-Zeile (Kippen)
+  const GZ = [...(sys==='flach' ? [...GZ_FLACH, ...GZ_BLOCK] : GZ_BLOCK), ...GZ_CUSTOM];
 
   const thV = `font-family:var(--f-mono);font-size:9px;letter-spacing:.04em;color:var(--dim);padding:3px 5px;text-align:center;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);height:52px;vertical-align:bottom`;
   const thL = `font-family:var(--f-mono);font-size:9px;letter-spacing:.04em;color:var(--dim);padding:3px 8px;text-align:left;border-bottom:1px solid var(--ol);border-right:1px solid var(--ol);white-space:nowrap;vertical-align:bottom;height:52px`;
@@ -276,7 +286,7 @@ function buildLFMatrix(){
   // Block: Typ 2 / ST als 8 generierte Kombinationen direkt in der Matrix
   // (EG ∈ {γ_G,inf, γ_G,sup} × Ständig ∈ {inf, sup} × Variabel ∈ {0, γ_Q})
   {
-    html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)">Typ 2 — ${isBlock ? (lbl.t2_block || 'Steckner GZT — Standsicherheit') : (lbl.t2_flach || 'Grundbruch · Gleiten · Sohlspannung')} · 8 Kombinationen (SIA 260): Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td></tr>`;
+    html += `<tr><td colspan="${cols.length+2}" style="padding:4px 8px;font-family:var(--f-mono);font-size:8.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--xdim);border-bottom:1px solid var(--ol);background:var(--s2)">Typ 2 — ${esc(gzLabel('t2_'+sys))} · 8 Kombinationen (SIA 260): Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q</td></tr>`;
     let _k = 1;
     for(const fE of [gG2i, gG2s]) for(const fG of [gG2i, gG2s]) for(const fQ of [0, gQ2]){
       const bg = _k%2===0 ? `background:var(--s1)` : '';

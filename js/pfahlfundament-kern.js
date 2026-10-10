@@ -318,7 +318,7 @@ function pfahlbockAnalyse(cfg){
     const sol = solvePfahlbock(piles, c.load);
     const comps = {};
     _comps.forEach(k => { const ld = {}; ld[k] = c.load[k] || 0; const s = solvePfahlbock(piles, ld); comps[k] = s ? s.F : null; });
-    return { label:c.label, lf:c.lf, load:c.load, sol, F:sol?sol.F:null, FLat:sol?sol.FLat:null, comps };
+    return { label:c.label, lf:c.lf, nr:c.nr, loadChar:c.loadChar, etaK:Infinity, load:c.load, sol, F:sol?sol.F:null, FLat:sol?sol.FLat:null, comps };
   });
   const np = piles.length;
   let etaSteel = Infinity, etaGeo = Infinity, govPile = -1, govComboIdx = -1, Ncomp = 0, Mmax = 0, govLat = -1, FLatMax = 0;
@@ -332,6 +332,7 @@ function pfahlbockAnalyse(cfg){
       const eG = Math.abs(F) > 0.01 ? Rsd/Math.abs(F) : Infinity;
       const utilS = Math.abs(F)/Math.max(0.01,Rt_d) + Math.abs(Mp)/Math.max(0.01,M_Rd);
       const eS = utilS > 1e-6 ? 1/utilS : Infinity;
+      if(Math.min(eG,eS) < u.etaK) u.etaK = Math.min(eG,eS);
       if(eG < eGeo_i){ eGeo_i = eG; geoCombo = ci; }
       if(eS < eSteel_i) eSteel_i = eS;
       if(F > Ncomp) Ncomp = F;
@@ -541,6 +542,8 @@ function pfahlbockAnalyse(cfg){
              nwOn('pfahl','gzg')   ? etaGZG   : Infinity,
              nwOn('pfahl','lat')   ? etaLat   : Infinity).toFixed(2),
            skinModel: _ramm ? 'ramm' : 'verpresst',
+           // alle Kombinationen (Auswahl im 3D): Lasten, Pfahlkräfte und kleinste η aus Mantel/Querschnitt
+           kombs: ulsData.map(u => ({ label:u.label, lf:u.lf, nr:u.nr, load:u.load, loadChar:u.loadChar, F:u.F, eta:u.etaK })),
            // Spitzenwiderstand (nur Einzelpfahl, nur Druck)
            qb:+qb.toFixed(0), Ab:Ab, Rb_k:+Rb_k.toFixed(1), Rb_d:+Rb_d.toFixed(1),
            // Torsion (nur Einzelpfahl, nur wenn ein Torsionsmoment wirkt)

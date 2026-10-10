@@ -163,7 +163,7 @@ function _checkTWOverrides(){
     ['tw_Ea',    SETTINGS.tEa  ?? 1.35],
     ['tw_Ep',    SETTINGS.tEp  ?? 1.40],
     ['lw_G',      SETTINGS.lw_G      ?? 1.35],
-    ['lw_G_inf',  SETTINGS.lw_G_inf  ?? 1.00],
+    ['lw_G_inf',  SETTINGS.lw_G_inf  ?? 0.80],
     ['lw_Q',      SETTINGS.lw_Q      ?? 1.50],
     ['lw_G1_sup', SETTINGS.lw_G1_sup ?? 1.20],
     ['lw_G1_inf', SETTINGS.lw_G1_inf ?? 0.80],

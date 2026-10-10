@@ -1065,7 +1065,7 @@ nav a { position:relative; }
   <div class="np-sh" id="s35">3.5 · Ergänzende Nachweise (Flachfundament)</div>
 
   <div class="np-p">
-    Für das Flachfundament werden die Nachweise nach SIA 267 / Hansen geführt. Beim Blockfundament
+    Für das Flachfundament werden die Nachweise nach SIA 267 geführt, der Grundbruchwiderstand nach EN 1997-1 Anhang D. Beim Blockfundament
     werden sie <strong>informativ</strong> mitgerechnet, sind dort aber <strong>nicht massgebend</strong> —
     der eingespannte Block wird über Steckner Gl. 66 nachgewiesen (Begründung in Abschnitt 3.6).
   </div>
@@ -1073,7 +1073,7 @@ nav a { position:relative; }
   <table class="np-tbl">
     <thead><tr><th>Nachweis</th><th>Kriterium</th><th>Methode</th></tr></thead>
     <tbody>
-      <tr><td>Grundbruch</td><td>η = R_d / σ_max ≥ 1 &nbsp;(beide in kPa)</td><td>Hansen mit Ersatzfläche (Abschnitt 3.6)</td></tr>
+      <tr><td>Grundbruch</td><td>η = σ_f,d·A&#39; / N_d ≥ 1</td><td>EN 1997-1 Anhang D mit Ersatzfläche (Abschnitt 3.6)</td></tr>
       <tr><td>Gleiten</td><td>η = R_gl / H_d ≥ 1 &nbsp;mit&nbsp; R_gl = N_d·tan δ_Sohle + c'_d·A, N_d und H_d aus derselben Kombination (massgebend: kleinstes η der 8)</td><td>SIA 267 §4.4</td></tr>
       <tr><td>Ausmitte / Kippen</td><td>η = (1/9) / [(e_x/B)² + (e_y/L)²] ≥ 1</td><td>2. Kernweite, zweiachsig</td></tr>
       <tr><td>Sohlspannung</td><td>η = q_u / σ_max ≥ 1</td><td>SIA 267, informativ</td></tr>
@@ -1188,25 +1188,28 @@ nav a { position:relative; }
     Beachten Sie, wo der Bruchkörper endet: <strong>auf Sohlniveau</strong>, nicht an der
     Geländeoberkante. Das Erdreich über der Sohle wird im Modell nicht als Scherwiderstand
     angesetzt, sondern nur durch die Auflast q₀ ersetzt — eine bewusst konservative Vereinfachung,
-    denn in Wirklichkeit muss die Bruchfläche auch dieses Erdreich durchtrennen. Genau das holen
-    die <em>Tiefenbeiwerte</em> d_c und d_q näherungsweise nach; sie sind der Grund, weshalb ein
-    tiefer eingebundenes Fundament mehr trägt als eines, das nur aufliegt.
+    denn in Wirklichkeit muss die Bruchfläche auch dieses Erdreich durchtrennen. <em>Tiefenbeiwerte</em>,
+    die das näherungsweise nachholen würden, setzt das Programm seit Oktober 2026 nicht mehr an: der
+    Anhang D der EN 1997-1 kennt sie nicht, und sie setzen eine Scherfestigkeit der Überschüttung voraus,
+    die bei einer Hinterfüllung nicht gesichert ist.
   </div>
 
-  <div class="np-sh2">Bemessungswiderstand (Hansen, SIA 267)</div>
+  <div class="np-sh2">Bemessungswiderstand (EN 1997-1 Anhang D)</div>
   <div class="np-calc">
-    <div class="np-cf">R_d = c&#39;_d·N_c·s_c·i_c·d_c·g_c  +  q₀·N_q·s_q·i_q·d_q·g_q  +  0.5·γ&#39;₂·B&#39;·N_γ·s_γ·i_γ·g_γ   [kPa]</div>
+    <div class="np-cf">σ_f,d = c&#39;_d·N_c·s_c·i_c·g_c  +  q₀·N_q·s_q·i_q·g_q  +  0.5·γ&#39;₂·B&#39;·N_γ·s_γ·i_γ·g_γ   [kPa auf A&#39;]</div>
     <div class="np-cf">N_q = e^(π·tan φ&#39;_d) · tan²(45° + φ&#39;_d/2)</div>
-    <div class="np-cf">N_c = (N_q − 1) / tan φ&#39;_d &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;N_γ = 2·(N_q + 1)·tan φ&#39;_d</div>
-    <div class="np-cf">η_GB = R_d / σ_max ≥ 1.0</div>
+    <div class="np-cf">N_c = (N_q − 1) / tan φ&#39;_d &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;N_γ = 2·(N_q − 1)·tan φ&#39;_d</div>
+    <div class="np-cf">s_q = 1 + (B&#39;/L&#39;)·sin φ&#39;_d &nbsp;&nbsp; s_γ = 1 − 0.3·B&#39;/L&#39; &nbsp;&nbsp; s_c = (s_q·N_q − 1)/(N_q − 1)</div>
+    <div class="np-cf">i_q = [1 − H_d/(N_d + A&#39;·c&#39;_d·cot φ&#39;_d)]^m &nbsp;&nbsp; i_γ = [...]^(m+1) &nbsp;&nbsp; m aus B&#39;/L&#39; und der Richtung von H</div>
+    <div class="np-cf">R_d = σ_f,d · A&#39; &nbsp;&nbsp;→&nbsp;&nbsp; η_GB = R_d / N_d ≥ 1.0</div>
   </div>
 
   <table class="np-tbl">
     <thead><tr><th>Beiwert</th><th>berücksichtigt</th><th>Bemerkung</th></tr></thead>
     <tbody>
       <tr><td class="sym">s_c, s_q, s_γ</td><td>Form</td><td>über B&#39;/L&#39; ≤ 1 — der Bruchkörper eines schmalen Streifens ist ungünstiger als der eines Quadrats</td></tr>
-      <tr><td class="sym">i_c, i_q, i_γ</td><td>Lastneigung</td><td>aus H_d/N_d; eine geneigte Resultierende bricht früher aus</td></tr>
-      <tr><td class="sym">d_c, d_q</td><td>Einbindetiefe</td><td>nur beim Flachfundament aus Beton; bei Stahlplatten ist t ≪ B, deshalb ≈ 1</td></tr>
+      <tr><td class="sym">i_c, i_q, i_γ</td><td>Lastneigung</td><td>aus H_d/(N_d + A&#39;·c&#39;_d·cot φ&#39;_d) mit dem Exponenten m; eine geneigte Resultierende bricht früher aus</td></tr>
+      <tr><td class="sym">d_c, d_q</td><td>Einbindetiefe</td><td><b>nicht angesetzt</b> — der Anhang D kennt keine Tiefenbeiwerte; die Einbindung wirkt nur über die Auflast q₀</td></tr>
       <tr><td class="sym">g_c, g_q, g_γ</td><td>Geländeneigung</td><td>mindert den Widerstand bei Böschung; die Böschungshöhe h_β schwächt die Abminderung anteilig ab</td></tr>
     </tbody>
   </table>
@@ -1375,8 +1378,10 @@ nav a { position:relative; }
       <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Blockfundament (Steckner) — massgebend</td></tr>
       <tr><td>GZT</td><td>Standsicherheit Gl.66</td><td>M_u / M_d</td><td>≥ 1.0</td></tr>
       <tr><td>GZG</td><td>Schiefstellung Mastfuss</td><td>α_zul / α</td><td>≥ 1.0</td></tr>
-      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Flachfundament (Hansen) — beim Block informativ</td></tr>
-      <tr><td>GZT</td><td>Grundbruch Hansen</td><td>R_d / σ_max</td><td>≥ 1.0</td></tr>
+      <tr class="hl"><td colspan="4" style="font-size:8px;color:var(--xdim)">Flachfundament — beim Block informativ (dort gegen σ_max)</td></tr>
+      <tr><td>GZT</td><td>Grundbruch (EN 1997-1 Anh. D)</td><td>σ_f,d·A&#39; / N_d</td><td>≥ 1.0</td></tr>
+      <tr><td>GZG</td><td>Kernweite (SIA 267 Ziff. 8.5.4.7)</td><td>(1/6) / (|e_x|/B + |e_y|/L)</td><td>≥ 1.0</td></tr>
+      <tr><td>GZG</td><td>Verkippung (starres Fundament, Halbraum)</td><td>tan α_zul / tan α</td><td>≥ 1.0</td></tr>
       <tr><td>GZT</td><td>Gleiten</td><td>R_gl / H_d</td><td>≥ 1.0</td></tr>
       <tr><td>GZT</td><td>Ausmitte / Kippen (2. Kernweite)</td><td>(1/9) / [(e_x/B)²+(e_y/L)²]</td><td>≥ 1.0</td></tr>
       <tr><td>GZT</td><td>Sohlspannung</td><td>q_u / σ_max</td><td>≥ 1.0</td></tr>
@@ -2350,7 +2355,7 @@ nav a { position:relative; }
 </div><!-- /hb-layout -->
 
 <!-- GZT-Diagramm: dieselbe Datei wie in der App (keine zweite Kopie mehr) -->
-<script src="js/diagramm-gzt.js?v=2026-10-10c"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10d"></script>
 <script>
 
 let _lastResults=null, _lastG=null;

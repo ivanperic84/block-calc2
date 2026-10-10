@@ -40,6 +40,7 @@ function renderResults(res,worst,g){
       if(NW.grundb && worst && !_etaOk(worst.etaGB)) failNames.push('Grundbruch');
       if(NW.gleiten && worst && !_etaOk(worst.etaGL)) failNames.push('Gleiten');
       if(NW.kippen  && worst && (g.isBlock ? !worst.inKern : !_etaOk(worst.eta_klaf??1))) failNames.push(g.isBlock ? 'Ausmitte' : 'Kippnachweis');
+      if(!g.isBlock && NW.gzg && res.some(x => x.gzgF && !_etaOk(x.etaGZG))) failNames.push('Gebrauchstauglichkeit');
     }
     pill.textContent = failNames.length ? `Nicht erfüllt · ${failNames.join(', ')}` : 'Nicht erfüllt';
   } else {
@@ -63,8 +64,8 @@ function renderResults(res,worst,g){
   const modelLabel = g.isBlock
     ? '<span style="color:var(--acc)">Steckner Blockfundament</span>'
     : FLACH_MAT==='stahl'
-      ? '<span style="color:var(--on2)">Stahl-Basisplatte · Hansen starr</span>'
-      : '<span style="color:var(--on2)">Flachfundament Beton · Hansen starr</span>';
+      ? '<span style="color:var(--on2)">Stahl-Basisplatte · starre Sohle</span>'
+      : '<span style="color:var(--on2)">Flachfundament Beton · starre Sohle</span>';
   banner += `<div style="font-family:var(--f-mono);font-size:9px;color:var(--xdim);padding:8px 0 2px">Modell: ${modelLabel} · SIA 267</div>`;
   if(g.btyp!=='none'&&Math.abs(g.beta_deg)>0.1){
     const betaHint = g.isBlock
@@ -118,17 +119,44 @@ function renderResults(res,worst,g){
 
     // Flachfundament + reiner GZG-Lastfall: keine Karten (früher standen hier dieselben vier
     // Tragfähigkeitsnachweise ein zweites Mal, mit γ = 1 und unter der Überschrift «GZT»).
-    if(!g.isBlock && r.nw==='gzg'){
+    if(!g.isBlock && r.nw==='gzg' && !(r.gzgF && NW.gzg)){
       const hn=document.createElement('div'); hn.className='hint'; hn.style.cssText='margin:2px 2px 10px';
-      hn.textContent='Gebrauchstauglichkeits-Lastfall: das Flachfundament führt hier keinen Nachweis (Tragfähigkeit siehe GZT-Lastfälle).';
+      hn.textContent='Gebrauchstauglichkeits-Lastfall: der Nachweis der Gebrauchstauglichkeit ist in den Optionen abgeschaltet.';
       scroll.appendChild(hn); return;
     }
+    // Flachfundament: Gebrauchstauglichkeit (SIA 267 Ziff. 8.5.4) — Kernweite + Verkippung
+    const zF=r.gzgF, _1zu=v=>v>1e-9 ? '1:'+Math.round(1/v) : '–';
+    const flachGzgCards = (!g.isBlock && zF) ? [
+      {id:'_grp', t:'GZG — Gebrauchstauglichkeit  ·  SIA 267 Ziff. 8.5.4'},
+      {id:'gzg', t:'Kernweite & Verkippung', e:r.etaGZG,
+       f:'|e_x|/B + |e_y|/L ≤ 1/6 (einfache Kernweite)   ·   tan α = 3·(1−ν)·M_k / (8·G·r³) ≤ tan α_zul',
+       rows:[['Lasten charakteristisch', 'γ_G '+zF.gamG.toFixed(2)+' · γ_Q '+zF.gamQ.toFixed(2)+' · Eigengewicht 1.00'],
+             ['N_k', zF.N.toFixed(1)+' kN'],
+             ['M_k quer / längs (Sohle)', Math.abs(zF.May).toFixed(1)+' / '+Math.abs(zF.Max).toFixed(1)+' kNm'],
+             ['e_x / e_y', zF.ex.toFixed(3)+' / '+zF.ey.toFixed(3)+' m'],
+             ['|e_x|/B + |e_y|/L', zF.kern.toFixed(4)+' &nbsp;<span style="color:var(--xdim)">≤ 0.1667</span>'],
+             ['η Kernweite', isFinite(zF.etaKern)?zF.etaKern.toFixed(2):'∞'],
+             ['M_E (Mittel bis 1.5·B unter Sohle)', (zF.quer?zF.X:zF.Y).ME.toFixed(1)+' MN/m²'],
+             ['G = M_E·(1−2ν)/(2·(1−ν)), ν = '+zF.nu.toFixed(1), ((zF.quer?zF.X:zF.Y).G/1000).toFixed(2)+' MN/m²'],
+             ['Ersatzradius r = (4·I/π)^¼', (zF.quer?zF.X:zF.Y).r.toFixed(3)+' m'],
+             ['tan α quer / längs', _1zu(zF.X.tan)+' / '+_1zu(zF.Y.tan)],
+             ['tan α_zul ('+(zF.perm?'ständig + veränderlich':'nur veränderlich')+')', _1zu(zF.tanZul)],
+             ['η Verkippung', isFinite(zF.etaTilt)?zF.etaTilt.toFixed(2):'∞'],
+             ['η', isFinite(r.etaGZG)?r.etaGZG.toFixed(2):'∞']],
+       note: zF.kern > 1/6
+         ? wBox('fail','Resultierende ausserhalb der einfachen Kernweite',
+             `|e_x|/B + |e_y|/L = ${zF.kern.toFixed(3)} &gt; 1/6: unter Gebrauchslasten klafft die Sohlfuge.
+              SIA 267 Ziff. 8.5.4.7 verlangt dann einen <b>besonderen Nachweis</b>. Die hier gerechnete
+              Verkippung setzt eine geschlossene Sohlfuge voraus und ist in diesem Fall <b>zu klein</b>;
+              sie ersetzt den besonderen Nachweis nicht. Abhilfe: Fundament vergrössern oder Auflast erhöhen.`)
+         : `<div style="font-size:9px;color:var(--xdim);margin:2px 0 4px">Starres Fundament auf elastischem Halbraum (Borowicka), ohne Einbindung und seitliche Stützung. Gilt bei geschlossener Sohlfuge.</div>`},
+    ] : [];
     // Je Typ-2-Nachweis die Sicht seiner massgebenden Kombination
     const rS=t2View(r,'sig'), rG=t2View(r,'gb'), rL=t2View(r,'gl');
     // Build cards dynamically based on model
     const gleitenFormula = g.isBlock
       ? "R_gl = Sohle(N·tan φ_d + c_d·A) + Ep (passiv Seite)"
-      : "R_gl = N_d · tan(φ'_d) + c'_d · A";
+      : "R_gl = N_d · tan δ_d + A' · c'_d   ·   δ_d aus tan δ_k / γ_φ   (SIA 267 Gl. 31)";
     const gleitenRows = g.isBlock ? [
       ['Kombination',t2KombText(rL)],
       ['N_d',(rL.Nd_gl??rL.Nd).toFixed(1)+' kN'],
@@ -139,17 +167,22 @@ function renderResults(res,worst,g){
     ] : [
       ['Kombination',t2KombText(rL)],
       ['N_d',(rL.Nd_gl??rL.Nd).toFixed(1)+' kN'],
+      ...(rL.glD ? [['δ_k / δ_d', (rL.glD.dK*180/Math.PI).toFixed(1)+'° / '+(rL.glD.dD*180/Math.PI).toFixed(1)+'°'],
+                    ['Kohäsion A′·c′_d', rL.glD.cAn ? rL.glD.cR.toFixed(1)+' kN' : 'nicht angesetzt (Ziff. 8.4.1.2)']] : []),
       ['R_gl',rL.Rgl.toFixed(1)+' kN'],['H_d',rL.Hd.toFixed(1)+' kN'],['η',rL.etaGL.toFixed(2)]
     ];
 
     const grundbFormula = g.isBlock
-      ? "R_d = Hansen(Sohle+Tiefenbwt) + T_mantel/A"
-      : "R_d = c'_d·Nc·ic + q·Nq·iq + 0.5·γ·B'·Nγ·iγ";
+      ? "σ_f,d (EN 1997-1 Anh. D) + T_mantel/A  gegen σ_max"
+      : "σ_f,d = c'_d·Nc·sc·ic + q·Nq·sq·iq + 0.5·γ·B'·Nγ·sγ·iγ   ·   η = σ_f,d·A' / N_d";
     const grundbRows = [
       ['Kombination',t2KombText(rG)],
       ['N_d / H_d',rG.Nd.toFixed(1)+' / '+rG.Hd.toFixed(1)+' kN'],
       ['Schicht',rG.soilName],
-      ['R_d', rG.effAusserhalb ? 'n. führbar' : rG.Rd.toFixed(1)+' kPa'],   // Karte nur beim Flach
+      ['σ_f,d (auf A′)', rG.effAusserhalb ? 'n. führbar' : rG.Rd.toFixed(1)+' kPa'],   // Karte nur beim Flach
+      ...(!g.isBlock && rG.gbD && !rG.effAusserhalb ? [['R_d = σ_f,d·A′', rG.gbD.RdKN.toFixed(0)+' kN'],
+        ['N_γ / s_q / s_γ', rG.gbD.Ng.toFixed(1)+' / '+rG.gbD.sq.toFixed(2)+' / '+rG.gbD.sg.toFixed(2)],
+        ['i_q / i_γ (m = '+rG.gbD.m.toFixed(2)+')', rG.gbD.iq.toFixed(3)+' / '+rG.gbD.ig.toFixed(3)]] : []),
       ...(g.isBlock?[['T_mantel/A',(rG.Tf_total/g.B/g.L).toFixed(1)+' kPa'],
                      ['Kp',rG.Kp.toFixed(2)],
                      ['δ_d',(rG.delta_d*180/Math.PI).toFixed(1)+'°']]:[] ),
@@ -162,7 +195,7 @@ function renderResults(res,worst,g){
 
     const allCards=[
       // ── Flachfundament (Hansen)
-      ...(!g.isBlock?[
+      ...(!g.isBlock && r.nw!=='gzg'?[
         {id:'_grp', t:'GZT — Grenzzustand der Tragfähigkeit'},
         {id:'sohlsp',t:'Sohlspannung',e:rS.etaSIG,
          f:'σ = N/A ± M_x/W_x ± M_y/W_y  →  σ_max ≤ q_u',
@@ -200,6 +233,7 @@ function renderResults(res,worst,g){
          svg: (()=>{ try{ return buildKippDiagram(r,g,_gztExpanded); }catch(e){ return ''; } })(),
          diagR:r, diagG:g, diagFn:'buildKippDiagram'},
       ]:[]),
+      ...flachGzgCards,
       // ── Blockfundament (Steckner) — nur GZT + GZG (je nach lf.nw)
       ...(g.isBlock?[
         ...((r.nw!=='gzg')?[

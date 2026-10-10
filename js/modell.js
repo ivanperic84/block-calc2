@@ -120,7 +120,7 @@ function setModel(m, silent){
   // Hint text
   const hints = {
     block: 'Steckner-Methode: Blockwiderstand inkl. Erdwiderstand an Seitenflächen, Mantelreibung und Kippwiderstand über Erddruckarm.',
-    flach: 'Flachfundament · Starre Methode · SIA 267: Grundbruch (Hansen) mit Form- und Tiefenbeiwerten, Gleiten, Ausmitte.'
+    flach: 'Flachfundament · Starre Methode · SIA 267: Grundbruch nach EN 1997-1 Anhang D (N_d ≤ R_d), Gleiten, Ausmitte.'
   };
   document.getElementById('model-hint').textContent = hints[m];
   // Topbar subtitle

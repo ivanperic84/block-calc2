@@ -220,7 +220,7 @@ async function runBemessung(){
 }
 // Kürzel des massgebenden Nachweises (für die Wertetabelle)
 function _bemGovAbbr(g){ return ({'GZT Standsicherheit':'GZT','GZG Schiefstellung':'GZG',
-  'Grundbruch':'GB','Gleiten':'GL','Kippen':'Ki','Sohlspannung':'σ'})[g]||'–'; }
+  'Grundbruch':'GB','Gleiten':'GL','Kippen':'Ki','Sohlspannung':'σ','Gebrauchstauglichkeit':'GZG'})[g]||'–'; }
 // Wertetabelle: Lastniveau × Kurve → erf. Abmessung + massgebender Nachweis (ablesesicher, auch fürs PDF)
 function _bemTableHTML(series, lvls, meta){
   const betas=meta.betas;
@@ -257,7 +257,7 @@ function _bemTableHTML(series, lvls, meta){
   h+='</tbody></table>'
     +'<div style="font-size:8.5px;color:var(--xdim);margin-top:5px;line-height:1.6">Werte = erforderliche '
     +(meta.mode==='H'?'Blocktiefe H':'Seitenlänge B')+' [m] (η ≥ 1.0) · Kürzel = massgebender Nachweis: '
-    +(CALC_MODEL==='block'?'GZT Standsicherheit · GZG Schiefstellung':'GB Grundbruch · GL Gleiten · Ki Kippen · σ Sohlspannung')
+    +(CALC_MODEL==='block'?'GZT Standsicherheit · GZG Schiefstellung':'GB Grundbruch · GL Gleiten · Ki Kippen · σ Sohlspannung · GZG Gebrauchstauglichkeit')
     +' · <b>m³ = Betonkubatur</b> (Fundamentkörper + Kopf, Wirtschaftlichkeits-Richtwert) · <b>Zelle anklicken → Abmessung ins Modell übernehmen</b> · — keine Lösung im Suchbereich</div>';
   return h;
 }
@@ -396,7 +396,7 @@ function printBemessung(){
       svg{ width:100%; max-width:960px; }
       @media print { body{ margin:10mm; } }
     </style></head><body>
-    <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (Hansen / SIA 267)'}</span>
+    <div class="hd"><span class="t">Bemessungsdiagramm — ${CALC_MODEL==='block'?'Blockfundament (Steckner / SIA 267)':'Flachfundament (SIA 267 / EN 1997-1)'}</span>
       <span style="font-size:11px">${esc(SETTINGS.firma||'BlockCalc')}</span></div>
     <div class="meta">Projekt: ${esc(st.p_name||'–')} · Fundament: ${esc(st.p_fundname||'–')} · Nr. ${esc(st.p_nr||'–')} ·
       Bearbeiter: ${esc(st.p_bearbeiter||SETTINGS.bearbeiter||'–')} · ${now}</div>

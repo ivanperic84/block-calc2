@@ -18,16 +18,31 @@ const HEB_PROFILES = {
   'HEB280': { b:0.280, h:0.280, tw:0.0105, tf:0.018, Iy:19270e-8, Wply:1534e-6, A:131.4e-4, Iz:6595e-8, Wplz:717.6e-6 },
   'HEB300': { b:0.300, h:0.300, tw:0.0110, tf:0.019, Iy:25170e-8, Wply:1869e-6, A:149e-4, Iz:8563e-8, Wplz:870.1e-6 },
 };
-// Krinner V-Serie als Sicherungs-Pfahl (Stahlrohr S355, Wandstärke t=5 mm, di=da−10 mm, gestossen).
-// b=da (laterale Breite für Broms/Bettung), Iy=π/64·(da⁴−di⁴), Wply=(da³−di³)/6, A=π/4·(da²−di²).
-// round:true → 3D als Zylinder (statt I-Profil). Stahlgüte S355 (Mpl nutzt fy=355, wie HEB).
-const KRINNER_PILES = {
-  'KRV76':  { da:0.076, di:0.066, b:0.076, h:0.076, round:true, Iy:7.06e-7,  Wply:25.3e-6,  A:11.15e-4 },
-  'KRV89':  { da:0.089, di:0.079, b:0.089, h:0.089, round:true, Iy:1.168e-6, Wply:35.3e-6,  A:13.19e-4 },
-  'KRV114': { da:0.114, di:0.104, b:0.114, h:0.114, round:true, Iy:2.548e-6, Wply:59.4e-6,  A:17.12e-4 },
-  'KRV140': { da:0.140, di:0.130, b:0.140, h:0.140, round:true, Iy:4.840e-6, Wply:91.2e-6,  A:21.21e-4 },
-  'KRV168': { da:0.168, di:0.158, b:0.168, h:0.168, round:true, Iy:8.512e-6, Wply:133.0e-6, A:25.61e-4 },
-};
+// Krinner V-Serie (Schraubpfahl). Kenndaten aus der allgemeinen Bauartgenehmigung DIBt Z-34.15-253
+// vom 22.12.2023 (gültig bis 22.12.2028), Anlage 1 — bis Okt 2026 standen hier ANNAHMEN (S355, t = 5 mm):
+//   KSF V 89   Ø  88.9 × 5.0 mm   S235 JRH
+//   KSF V 114  Ø 114.3 × 5.0 mm   S235 JRH
+//   KSF V 140  Ø 139.7 × 6.3 mm   S235 JRH
+// V 76 und V 168 sind NICHT Gegenstand der Genehmigung (zul:false) — Abmessungen bleiben Annahmen.
+// Aus dem Bescheid, für die Anwendung massgebend:
+//   · Ziff. 1(6) / 2.2(7): planmässig NUR AXIAL (Zug/Druck); Horizontallasten höchstens 3 % der
+//     Vertikallast; Biegung ist konstruktiv zu vermeiden (≥ 3 Pfähle unter einer Einzellast).
+//   · Ziff. 2.4.1: innere Tragfähigkeit mit 1.5 mm Abrostung der Nennwanddicke (Dauereinsatz).
+//   · Ziff. 2.4.2 / 2.5: äussere Tragfähigkeit je Baugrösse durch Probebelastung; max. Prüfkraft
+//     Zug 113 / 197 / 243 kN (V 89 / 114 / 140); Einbindung ≥ 1.20 m in die tragfähige Schicht.
+//   · Stoss: Steckverbindung (gepresster 8-Kant) mit zwei Bolzen M24 → im Programm als Gelenk.
+// Die Verwendung als biegebeanspruchter Sicherungs- oder Einzelpfahl liegt damit AUSSERHALB der
+// Genehmigung; das Programm rechnet sie weiter (Bauzustand), weist aber darauf hin.
+// abrost [mm]: Abzug von der Wanddicke (aussen angesetzt). round:true → 3D als Zylinder.
+function _krinnerRohr(da_mm, t_mm, zul, pmax){
+  const q=_rohrQuerschnitt(da_mm, t_mm);
+  return { ...q, durchgehend:false, fy:235, zul:!!zul, tNenn:t_mm/1000, FpMax:pmax||0 };
+}
+function krinnerAbgerostet(typ, abrost_mm){
+  const p=KRINNER_PILES[typ]; if(!p) return null;
+  const t=Math.max(0.5, p.tNenn*1000-(abrost_mm||0)), q=_rohrQuerschnitt(p.da*1000-2*(abrost_mm||0), t);
+  return { ...p, ...q, durchgehend:false, b:p.b, h:p.h, da:q.da, di:q.di, t:q.t };
+}
 // Rammrohre (Stahlrohr, durchgehend — KEIN Stoss-Gelenk wie beim Krinner-Rohr), nur Einzelpfahl des
 // Pfahlfundaments. Abmessungen da × t nach EN 10219; Querschnittswerte aus der Kreisringformel
 // (exakt): I = π/64·(da⁴−di⁴), W_pl = (da³−di³)/6, A = π/4·(da²−di²).
@@ -37,6 +52,14 @@ function _rohrQuerschnitt(da_mm, t_mm){
            Iy:Math.PI/64*(Math.pow(da,4)-Math.pow(di,4)), Wply:(Math.pow(da,3)-Math.pow(di,3))/6,
            A:Math.PI/4*(da*da-di*di) };
 }
+const KRINNER_PILES = {
+  'KRV76':  _krinnerRohr( 76.1, 5.0, false),
+  'KRV89':  _krinnerRohr( 88.9, 5.0, true, 113),
+  'KRV114': _krinnerRohr(114.3, 5.0, true, 197),
+  'KRV140': _krinnerRohr(139.7, 6.3, true, 243),
+  'KRV168': _krinnerRohr(168.3, 6.3, false),
+};
+const KRINNER_HINWEIS = 'Krinner V-Serie: nach Bauartgenehmigung DIBt Z-34.15-253 planmässig nur axial belastbar (Horizontallast ≤ 3 % der Vertikallast), äusserer Widerstand durch Probebelastung.';
 const RAMMROHRE = {
   'RR324': _rohrQuerschnitt(323.9, 10.0),
   'RR406': _rohrQuerschnitt(406.4, 10.0),
@@ -152,7 +175,8 @@ function onPfahlTyp(val){
   const EI = 210e6 * p.Iy; // kNm²  (E = 210'000 MPa = 210e6 kN/m²)
   const el = document.getElementById('pfahl-ei-row');
   if(el) el.textContent =
-    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${p.round?'Ø':'B'} = ${(p.b*100).toFixed(0)} cm  ·  W_pl = ${(p.Wply*1e6).toFixed(0)} cm³`;
+    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${p.round?'Ø':'B'} = ${(p.b*100).toFixed(0)} cm  ·  W_pl = ${(p.Wply*1e6).toFixed(0)} cm³  ·  S${p.fy||355}`
+    + (KRINNER_PILES[val] ? '  ·  '+KRINNER_HINWEIS+(p.zul?'':' Diese Baugrösse ist nicht Teil der Genehmigung (Abmessungen angenommen).') : '');
   calcPfahlsicherung();
 }
 

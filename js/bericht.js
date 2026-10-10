@@ -194,6 +194,124 @@ function _npCalc(formula, substitution, result, unit){                          
     '<div class="np-cr">= '+result+(unit?' '+unit:'')+'</div>'+
   '</div>';
 }
+// ── Tabelle der Kombinationen eines Lastfalls (SIA 260): Beiwerte, Kenngrössen und η je Kombination.
+// liste: [{nr,fE,fG,fQ,…}] · spalten: [{t:'Kopf', v:k=>Zahl, d:Dezimalen, eta:true|false}].
+// In jeder η-Spalte wird das Minimum (massgebend) hervorgehoben.
+function _npKombTab(liste, spalten, hinweis){
+  if(!liste || !liste.length) return '';
+  var mins = spalten.map(function(sp){ if(!sp.eta) return null;
+    var m=Infinity; liste.forEach(function(k){ var v=sp.v(k); if(v!=null && !isNaN(v) && v<m) m=v; }); return m; });
+  var fz=function(v,d){ return (v==null||isNaN(v)) ? '–' : !isFinite(v) ? '∞' : (+v).toFixed(d==null?2:d); };
+  return '<table class="np-tbl" style="margin:4px 0 4px">'+
+    '<tr><th>Komb.</th><th class="r">γ_Eig</th><th class="r">γ_G</th><th class="r">γ_Q</th>'+
+      spalten.map(function(sp){ return '<th class="r">'+sp.t+'</th>'; }).join('')+'</tr>'+
+    liste.map(function(k){
+      return '<tr><td>'+k.nr+'</td><td class="r">'+fz(k.fE)+'</td><td class="r">'+fz(k.fG)+'</td><td class="r">'+fz(k.fQ)+'</td>'+
+        spalten.map(function(sp,i){ var v=sp.v(k), g=sp.eta && v===mins[i];
+          return '<td class="r"'+(g?' style="font-weight:700"':'')+'>'+fz(v,sp.d)+(g?' ◄':'')+'</td>'; }).join('')+'</tr>'; }).join('')+
+    '</table>'+
+    '<div style="font-size:8px;color:var(--xdim);margin-bottom:8px">8 Kombinationen nach SIA 260: Eigengewicht Fundament inf/sup × ständige Mastlasten inf/sup × veränderlich 0/γ_Q. ◄ = massgebend (kleinstes η).'+(hinweis?' '+hinweis:'')+'</div>';
+}
+// ── Anhang «Annahmen und Vorgabewerte»: was das Programm annimmt, woher der Wert stammt und ob er
+// gegenüber der Vorgabe geändert wurde. sys: 'block' | 'flach' | 'pfahl'.
+function _npAnnahmen(sys, ph){
+  var S=SETTINGS, Z=[];
+  var num=function(id){ var v=gi(id); return (v===''||v==null) ? null : +v; };
+  var z=function(name,w,v,q,d){ Z.push({name:name,w:w,v:v,q:q,d:(d==null?2:d)}); };
+  var g=function(t){ Z.push({grp:t}); };
+  var an=function(b){ return b ? 'ein' : 'aus'; };
+  g('Lastbeiwerte');
+  z('γ_G,sup — ständig ungünstig (Typ 2)', num('lw_G'), 1.35, 'SIA 260 Tab. 1');
+  if(sys==='flach') z('γ_G,inf — ständig günstig (Gleiten, Grundbruch)', '1.00', '1.00', 'fest; SIA 267 Ziff. 8.5.2.4 Gl. (35) für Fundationen');
+  else z('γ_G,inf — ständig günstig (Typ 2)', num('lw_G_inf'), 0.80, 'SIA 260 Tab. 1');
+  z('γ_Q — veränderlich (Typ 2)', num('lw_Q'), 1.50, 'SIA 260 Tab. 1');
+  if(sys==='flach'){
+    z('γ_G,sup / γ_G,inf — Kippen (Typ 1)', (num('lw_G1_sup')||0).toFixed(2)+' / '+(num('lw_G1_inf')||0).toFixed(2), '1.20 / 0.80', 'Vorgabe des Programms; SIA 260 Tab. 1 nennt 1.10 / 0.90 (das Programm ist strenger)');
+    z('γ_Q — Kippen (Typ 1)', num('lw_Q1'), 1.50, 'SIA 260 Tab. 1');
+  } else {
+  }
+  z('γ_G / γ_Q — Gebrauchstauglichkeit', (num('lw_G_gzg')||0).toFixed(2)+' / '+(num('lw_Q_gzg')||0).toFixed(2), '1.00 / 1.00', 'charakteristische Lasten; γ_G = 0 ⇒ nur veränderlich (Grenzwert 1:200)');
+  z('Kombinationen je Lastfall', '8', '8', 'Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q; ständige Mastlasten N, H, M gemeinsam');
+  g('Baugrund');
+  z('γ_φ auf tan φ′', num('tw_phi'), 1.20, 'SIA 267');
+  z('γ_c auf c′', num('tw_c'), 1.50, 'SIA 267');
+  if(sys==='block'){
+    z('γ_Ea — aktiver Erddruck', num('tw_Ea'), 1.35, 'SIA 267 / DC-Fundament (Beiwert auf der Kraft)');
+    z('γ_Ep — Erdwiderstand', num('tw_Ep'), 1.40, 'SIA 267 / DC-Fundament (Beiwert auf der Kraft)');
+    g('Modell Blockfundament (Steckner 1989)');
+    z('Wandreibung Erdwiderstand δ_p', '0.5·φ_k', '0.5·φ_k', 'fest; wie DC-Fundament, vorsichtiger als das Steckner-Papier');
+    z('Wandreibung aktiv / Ruhedruck δ₁', '⅔·φ_k', '⅔·φ_k', 'fest; Steckner Gl. 8');
+    z('Mobilisierung des Erdwiderstands über der Nulllinie', S.stecknerMob!==false ? 'mob = '+(+S.mob).toFixed(2) : 'aus (voller λ_p)', 'mob = 0.25', 'wie DC-Fundament: E_p = E_p0 + mob·(E_p − E_p0)');
+    z('Böschung im Tragsicherheitsnachweis', an(S.stecknerSlope===true), 'aus', 'Erweiterung über Steckner hinaus (K_p,β/K_p talseitig)');
+    var _c1t=(num('bg_c1')!=null?num('bg_c1').toFixed(1):'–')+' MN/m³ · '+(_c1Manual?'manuell':'automatisch');
+    z('Bettungsziffer C₁', _c1t, _c1Manual ? 'automatisch' : _c1t, 'aus M_E, φ, B, t (Mischung Winkler / Steckner Gl. 4); Böschung mindert ab');
+    z('Zulässige Schiefstellung (veränderlich / ständig + veränderlich)', '1:'+Math.round(1/(S.alphaZul||0.005))+' / 1:'+Math.round(1/(S.alphaZulFull||0.01)), '1:200 / 1:100', 'SBB 0161.1011.0007');
+    z('Seitliche Auffüllung in der Vertikallast', 'nicht angesetzt', 'nicht angesetzt', 'fest; nur Betonkörper abzüglich Auftrieb');
+    z('Sohlspannung, Grundbruch, Gleiten', 'informativ', 'informativ', 'die Standsicherheit des eingespannten Blocks führt Gl. 66');
+  }
+  if(sys==='flach'){
+    g('Modell Flachfundament');
+    z('Grundbruchwiderstand', 'EN 1997-1 Anhang D', 'EN 1997-1 Anhang D', 'fest; ohne Tiefenbeiwerte; Geländebeiwerte bei Böschung nach Brinch Hansen');
+    z('Ersatzfläche bei Ausmitte', "B′ = B − 2·e", "B′ = B − 2·e", 'fest; Meyerhof. |e|/B > 1/3: Näherung, ≥ 1/2: nicht führbar');
+    z('Sohlreibung δ_k / φ′_k', num('bg_delta_sohle'), 0.667, 'Eingabe; SIA 267 Ziff. 8.4.1.1: rau 1.0, glatt ½…⅔, δ_k ≤ 35°; δ_d mit γ_φ', 3);
+    z('Kohäsion im Gleitwiderstand', gi('bg_c_gleit')==='1' ? 'angesetzt (A′·c′_d)' : 'nicht angesetzt', 'nicht angesetzt', 'SIA 267 Ziff. 8.4.1.2: nur bei dauerhafter Wirkung; Gl. (31) mit wirksamer Fläche A′');
+    z('Gleiten: Erdwiderstand vor dem Fundament', 'nicht angesetzt', 'nicht angesetzt', 'fest');
+    z('Zulässige Sohlspannung q_u', (num('bg_qu')!=null?num('bg_qu').toFixed(0):'–')+' kPa', '300 kPa', 'Eingabe (Baugrundgutachten)');
+    z('Kippen', '(e_x/B)² + (e_y/L)² ≤ 1/9', '(e_x/B)² + (e_y/L)² ≤ 1/9', 'fest; zweite Kernweite');
+    z('γ_R — Grundbruch- und Gleitwiderstand', '1.00', '1.00', 'SIA 267 Ziff. 8.5.2.1: 1.0 … 1.2; 1.0 bei erprobten Verfahren');
+    z('Gebrauchstauglichkeit: Lastexzentrizität', 'einfache Kernweite', 'einfache Kernweite', 'fest; SIA 267 Ziff. 8.5.4.7');
+    z('Gebrauchstauglichkeit: Verkippung', 'starres Fundament, Halbraum, ν = 0.3', 'starres Fundament, Halbraum, ν = 0.3', 'Borowicka; G aus M_E, ohne Einbindung. Verfahren von der Norm nicht geregelt');
+    z('Zulässige Verkippung (veränderlich / ständig + veränderlich)', '1:'+Math.round(1/(S.alphaZul||0.005))+' / 1:'+Math.round(1/(S.alphaZulFull||0.01)), '1:200 / 1:100', 'SBB 0161.1011.0007 (SIA 267 Ziff. 8.5.4.1: objektbezogen)');
+  }
+  if(sys==='pfahl'){
+    var ein=(typeof _pbEinzel==='function') && _pbEinzel();
+    var ramm=ein && (gi('pb_einbau')!=='verpresst');
+    var qsMan=SCHICHTEN.filter(function(s){ return s.qs!=null && +s.qs>0; }).length;
+    g('Modell Pfahlfundament');
+    z('γ_R — Pfahlwiderstand im Baugrund', num('pb_gR'), 1.40, 'Vorgabe des Programms ohne Probebelastung');
+    z('γ_s — Stahl', num('pb_gS'), 1.15, 'Vorgabe des Programms');
+    z('Mantelreibung q_s,k', ramm ? 'K₀·σ′v·tan(⅔·φ′)' : (qsMan ? qsMan+' Schicht(en) eingegeben' : 'Vorgabe je Bodenart'),
+      ramm ? 'K₀·σ′v·tan(⅔·φ′)' : 'Vorgabe je Bodenart',
+      ramm ? 'gerammtes Profil ohne Verpresskörper; Kohäsion nicht angesetzt' : 'EA-Pfähle Tab. 5.29/5.30, untere Grenze der niedrigsten tragfähigen Klasse — massgebend ist die Probebelastung');
+    if(!ramm){
+      z('Abminderung Verrohrung / Zug', (num('pb_skinfac')||1).toFixed(2)+' / '+(num('pb_zugfac')||1).toFixed(2), '1.00 / 1.00', 'Eingabe');
+      z('Wirksame Verpresslänge L_crit', (+S.pfahlLcrit||0)>0 ? (+S.pfahlLcrit).toFixed(1)+' m' : 'keine Begrenzung', 'keine Begrenzung', 'konstruktive Regel, keine Normformel');
+    }
+    z('Spitzenwiderstand', ein && (num('pb_qb')||0)>0 ? 'q_b,k = '+num('pb_qb').toFixed(0)+' kPa (eingegeben)' : 'nicht angesetzt', 'nicht angesetzt', 'nur Einzelpfahl ab 300 mm Breite (EA-Pfähle), nur Druck');
+    z('Seitliche Bettung k_s = α·M_E/((1−ν²)·d)', 'α = '+(+(S.pfahlAlphaLat??0.30)).toFixed(2), 'α = 0.30', 'Vorgabe des Programms; EA-Pfähle k_s ≈ E_s/D wäre rund dreimal steifer');
+    if(!ein){
+      z('Seitlicher Gruppeneffekt (p-Multiplier)', an(S.pfahlLatGroup!==false), 'ein', 'ein Mittelwert je Gruppe aus s/D');
+      z('Verformung mit senkrechter Pfahlachse', an(S.pfahlGzgDecouple!==false), 'ein', 'nur Gebrauchstauglichkeit; Kräfte immer mit Neigung');
+      z('Bankett', 'starr', 'starr', 'fest; Biegung, Durchstanzen und Bewehrung nicht nachgewiesen');
+      z('Pfahlkopf', 'gelenkig', 'gelenkig', 'fest; Drehfixität nur bei kollinearer Anordnung');
+    } else {
+      z('Einzelpfahl: Bettung', 'linear', 'linear', 'fest; Bettungsbalken mit H und M am Kopf, Bodenfliessen nur in der getrennten Grenzlastprüfung');
+    }
+    z('Knicken', 'Kurve c, N_cr = 2·√(k·EI)', 'Kurve c, N_cr = 2·√(k·EI)', 'fest; SIA 263, elastische Bettung der weichsten Schicht');
+    z('Korrosion', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag', ein && KRINNER_PILES[gi('pb_prof')] ? '1.5 mm Abrostung' : 'kein Zuschlag',
+      ein && KRINNER_PILES[gi('pb_prof')] ? 'DIBt Z-34.15-253' : 'SIA 267 / ASTRA 717: Schutz über die Schutzart');
+    z('Zulässige Schiefstellung / Verschiebung', '1:'+Math.round(1/(S.alphaZulFull||0.01))+' / 1:'+Math.round(1/(S.alphaZul||0.005))+' · ±20 / ±10 mm', '1:100 / 1:200 · ±20 / ±10 mm', 'SBB 0161.1011.0007; Verschiebung nur bis 2 Pfähle');
+  }
+  var fz=function(v,d){ return typeof v==='number' ? v.toFixed(d) : (v==null ? '–' : esc(String(v))); };
+  var nGe=0;
+  var rows=Z.map(function(r){
+    if(r.grp) return '<tr><th colspan="4">'+r.grp+'</th></tr>';
+    var ge = (typeof r.w==='number' && typeof r.v==='number') ? Math.abs(r.w-r.v)>1e-9 : String(r.w)!==String(r.v);
+    if(ge) nGe++;
+    return '<tr><td>'+r.name+'</td><td class="r"'+(ge?' style="font-weight:700"':'')+'>'+fz(r.w,r.d)+'</td>'+
+           '<td class="r">'+(ge ? fz(r.v,r.d) : '=')+'</td><td style="color:var(--dim)">'+r.q+'</td></tr>'; }).join('');
+  return '<div class="np-page">'+(ph?ph():'')+
+    _npCh('A','Annahmen und Vorgabewerte')+
+    '<div style="font-size:8.5px;color:var(--dim);margin-bottom:8px">Werte, die das Programm annimmt oder vorbelegt. '+
+      '«=» in der Spalte Vorgabe heisst: unverändert. '+(nGe ? '<b>'+nGe+' Wert'+(nGe>1?'e':'')+' weich'+(nGe>1?'en':'t')+' von der Vorgabe ab</b> (fett).' : 'Alle Werte entsprechen der Vorgabe.')+'</div>'+
+    '<table class="np-tbl"><tr><th>Grösse</th><th class="r">Wert</th><th class="r">Vorgabe</th><th>Quelle / Bemerkung</th></tr>'+rows+'</table>'+
+    _npSh2('Nicht Gegenstand dieses Nachweises')+
+    '<div style="font-size:8.5px;color:var(--dim);line-height:1.6">Erdbeben und Anprall · Ermüdung und zyklische Abminderung von Mantelreibung und Bettung · '+
+      'Bemessung der Betonbauteile (Bewehrung, Durchstanzen) · Setzungen · hydraulischer Grundbruch · '+
+      (sys==='pfahl' ? 'angehängter Bodenkörper bei Zugpfahlgruppen · Rammbarkeit · ' : '')+
+      'Anschluss des Mastes an das Fundament. Die Kennwerte des Baugrunds sind Eingaben des Nutzers.</div>'+
+  '</div>';
+}
 function _npDef(k,desc,v,u){                                                                       // Bezeichnung | Beschreibung | Wert
   return '<div class="np-def"><span class="dk">'+k+'</span><span class="ds">'+desc+'</span><span class="dv">'+v+(u?'&ensp;'+u:'')+'</span></div>';
 }
@@ -526,6 +644,10 @@ function buildNachweisDoc(results,G){
       // ── Kap 6: Grenzmoment ───────────────────────────────────────
       ch('6','Grenzzustände und Widerstände (GZT · Steckner Gl.66)')+
       (r.komb_GZT ? '<div class="np-sh2" style="margin-top:0">Massgebende Lastfall-Kombination: Nr. '+r.komb_GZT+' (von 8, generiert aus γ_G sup/inf · γ_Q — min. η)</div>' : '')+
+      _npKombTab(r.kombs_GZT, [
+        {t:'N_d [kN]', v:function(k){return k.Nd;}, d:1}, {t:'M_ok,d [kNm]', v:function(k){return k.Mok;}, d:1},
+        {t:'M_u,d [kNm]', v:function(k){return k.r?k.r.Mu:null;}, d:1},
+        {t:'η_GZT', v:function(k){return k.eta;}, eta:true}], 'M_ok,d = Moment an OK Block, M_u,d = Grenzmoment nach Gl. 66 der jeweiligen Kombination.')+
       '<div class="np-sh2">Reibungskräfte (Steckner Gl.38-40, charakteristische Basis)</div>'+
       calc('R_a = E_a,k · tan(δ₁) ,  δ₁ = ⅔·φ_k  (Gl.8)',
         '… · tan(⅔·'+_npDeg(phi_k)+')',
@@ -720,7 +842,7 @@ function buildNachweisDoc(results,G){
   }).join('');
   var allOk=results.every(function(r){return r.ok;});
 
-  var summary='<div class="np-page">'+ph()+
+  var summary='<div class="np-page np-pb">'+ph()+
     ch((5+lfCount)+'.','Ergebniszusammenfassung')+
     '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
     'Übersicht aller Nachweis-Ausnutzungsgrade η je Lastfall. Nachweis erbracht wenn η ≥ 1.0.'+
@@ -728,7 +850,7 @@ function buildNachweisDoc(results,G){
     '<table class="np-tbl" style="margin-bottom:14px">'+
       '<thead><tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr></thead><tbody>'+
       sumRowBlock('Sohlspannung (informativ)', function(r){return r.etaSIG;}, NW.sohlsp, true)+
-      sumRowBlock('Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb)+
+      sumRowBlock('Grundbruch — GZT Typ 2 (informativ)', function(r){return r.etaGB;}, NW.grundb)+
       sumRowBlock('Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten)+
       sumRowBlock('Kippnachweis — GZT Typ 1', function(r){return isFinite(r.eta_klaf)?r.eta_klaf:Math.min(r.etaKx,r.etaKy);}, NW.kippen)+
       '<tr class="hl"><td><b>GZT — Standsicherheit (Steckner Gl.66)</b></td>'+gztRow+'</tr>'+
@@ -740,7 +862,7 @@ function buildNachweisDoc(results,G){
     '</div>'+
   '</div>';
 
-  return '<div class="np-wrap">'+cover+toc+page2+page3+nwPages+summary+'</div>';
+  return '<div class="np-wrap">'+cover+toc+page2+page3+nwPages+summary+_npAnnahmen('block', ph)+'</div>';
 }
 
 // ════════════════════════════════════════════════════════════════

@@ -84,7 +84,7 @@ function runSelfTest(){
       // Komb. 8 (alles ungünstig, auch das Eigengewicht mit γ_G,sup). Unabhängig am Vorstand
       // nachgestellt (8 einzeln gerechnete Kombinationen): σ_max 647.6134, η_GB,min 0.910692.
       add('Block σ_max [kPa] (arm-abhängig)', _stRes()[0].smax, 647.6133932635412, 1e-4,'rel');
-      add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 0.9106923066249866, 1e-4,'rel');
+      add('Block η_Grundbruch (informativ, arm-abhängig)', _stRes()[0].etaGB, 1.06324, 1e-4,'rel');
       add('Block N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 233.65125, 1e-6,'rel'); })();
     // ── T5 Flach/Hansen (Golden). B×L auf 2.60 m VERGRÖSSERT gegenüber dem ST-Zustand:
     // Golden-Historie Aug 2026 — mit B = 1.30 liegt die Lastresultierende bei e_x/B = 0.757, also
@@ -100,12 +100,40 @@ function runSelfTest(){
       // Golden Okt 2026 (8 Kombinationen statt einer von Hand gewählten; unabhängig nachgestellt):
       // Grundbruch massgebend Komb. 8 (η 1.7975 → 1.6459, das Eigengewicht trägt jetzt γ_G,sup),
       // Gleiten massgebend Komb. 4 (η 6.3752 → 6.8035, N und H aus DERSELBEN Kombination).
-      add('Flach Grundbruch η', r.etaGB, 1.645932,  1e-4,'rel');
-      add('Flach Gleiten η',    r.etaGL, 6.803465,  1e-4,'rel');
-      add('Flach R_d [kN]',     r.Rd,    268.5416, 1e-4,'rel');
+      // Golden Okt 2026 (Grundbruch nach EN 1997-1 Anhang D im Normformat N_d ≤ σ_f,d·A′, Nutzerentscheid
+      // nach Audit A1/B1–B3): η 1.6459 → 2.0873, σ_f,d 268.54 → 266.25 kPa. Unabhängig nachgerechnet:
+      // φ_d 25.693°, e 0.2585, B′ 2.0829, N_q 11.4734, N_γ 10.0780, s_q 1.3473, s_γ 0.7597, m 1.5552,
+      // i_q 0.9558, i_γ 0.9284 ⇒ σ_f,d 266.2471 kPa, R_d 1441.90 kN, η = 1441.90/690.795 = 2.087308.
+      add('Flach Grundbruch η', r.etaGB, 2.087308,  1e-5,'rel');
+      // Golden Okt 2026: γ_G,inf = 1.00 für Gleiten/Grundbruch von Fundationen (SIA 267 Ziff. 8.5.2.4, am Normtext
+      // nachgelesen) statt des allgemeinen Werts aus lw_G_inf (0.80): Komb. 4 mit N_d = 1.00·461.7 + 1.35·50 =
+      // 529.2 kN ⇒ η = 529.2·tan(0.667·25.6934°)/19.8 = 8.241527 (vorher 6.803465).
+      // Okt 2026, zweite Anpassung (Nutzerentscheid): δ nach Ziff. 8.4.1.1 — δ_k = 0.667·30° = 20.01°,
+      // δ_d = arctan(tan 20.01°/1.2) = 16.8816° (vorher 0.667·φ_d = 17.137°) ⇒ η = 529.2·tan δ_d/19.8 = 8.111012.
+      add('Flach Gleiten η',    r.etaGL, 8.111012,  1e-5,'rel');
+      add('Flach Gleiten: δ_d = arctan(tan δ_k/γ_φ)', r.t2&&r.t2.gl.glD.dD*180/Math.PI, 16.881640, 1e-6,'rel');
+      add('Flach Gleiten: Kohäsion ohne Wahl nicht angesetzt', r.t2&&r.t2.gl.glD.cR, 0, 0,'abs');
+      { const b=collectCalcInputs(), S=(b.SCHICHTEN||SCHICHTEN).map(x=>({...x, c:15}));
+        const v=_doCalculate({...b, raw:{...b.raw, bg_c_gleit:'1'}, SCHICHTEN:S, _pure:true}).results[0].t2.gl;
+        add('Flach Gleiten: Kohäsion gewählt ⇒ A′·c′_d (Gl. 31)', v.glD.cR, (15/1.5)*v.Be*v.Le, 1e-9,'rel');
+        const o=_doCalculate({...b, SCHICHTEN:S, _pure:true}).results[0].t2.gl;
+        add('Flach Gleiten: c′ > 0 ohne Wahl bleibt ohne Kohäsion', o.glD.cR, 0, 0,'abs'); }
+      add('Flach σ_f,d [kPa]',  r.Rd,    266.24709, 1e-5,'rel');
+      add('Flach R_d = σ_f,d·A′ [kN]', r.t2&&r.t2.gb.gbD.RdKN, 1441.9019, 1e-5,'rel');
+      // grundbruchEC7 direkt: φ 30°, c 0, q 10, γ 18, B = L = 2 ⇒ N_q 18.4011, N_γ 20.0931, s_q 1.5, s_γ 0.7
+      add('EC7 D.4: σ_f (φ 30°, quadratisch, lotrecht)', grundbruchEC7({phi:Math.PI/6,c:0,q:10,gam:18,B:2,L:2,N:1000}).sigf, 10*18.4011*1.5+0.5*18*2*20.0931*0.7, 1e-4,'rel');
+      add('EC7 D.3: σ_f undräniert (c_u 50, q 10, quadratisch)', grundbruchEC7({phi:0,c:50,q:10,B:2,L:2,N:1000}).sigf, (Math.PI+2)*50*1.2+10, 1e-9,'rel');
       add('Flach Grundbruch: massgebende Kombination', r.t2&&r.t2.gb.komb, 8, 0,'abs');
       add('Flach Gleiten: massgebende Kombination',    r.t2&&r.t2.gl.komb, 4, 0,'abs');
-      add('Flach N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 690.795, 1e-6,'rel'); })();
+      add('Flach N_d [kN] (Komb. 8 = 1.35·(N_G+G_k))', r.Nd, 690.795, 1e-6,'rel');
+      // Gebrauchstauglichkeit (SIA 267 Ziff. 8.5.4), LF 2 charakteristisch: N_k = 50 + 461.7 = 511.7 kN,
+      // M_k = (8+6)·3.30 + 80 = 126.2 kNm ⇒ e = 0.24663 m, e/B = 0.094857 ⇒ η_Kern = 1.757041.
+      // Verkippung: G = 30000·0.4/1.4 = 8571.43 kPa, r = 2.6·(1/(3π))^¼ = 1.483903 m,
+      // K = 8·G·r³/(3·0.7) = 106694.15 kNm ⇒ tan α = 1.182820e-3, η = 0.01/tan α = 8.4544.
+      const z=(_stRes()[1]||{}).gzgF||{};
+      add('Flach GZG: η Kernweite (8.5.4.7)', z.etaKern, (1/6)/((126.2/511.7)/2.6), 1e-6,'rel');
+      add('Flach GZG: tan α (Borowicka)', z.tan, 126.2/(8*(30000*0.4/1.4)*Math.pow(2.6*Math.pow(1/(3*Math.PI),0.25),3)/2.1), 1e-6,'rel');
+      add('Flach GZG: η = min(Kernweite, Verkippung)', (_stRes()[1]||{}).etaGZG, 1.757041, 1e-5,'rel'); })();
     // ── T5c H_Kopf wirkt beim Flach auf die Vertikallast. Bis Aug 2026 zaehlte der
     // Fundamentkopf beim Flachfundament GAR NICHT mit — H_Kopf war dort ohne jeden
     // Einfluss auf N_d, obwohl der Kopf im 3D gezeichnet und im Bericht bemasst wird.
@@ -192,9 +220,15 @@ function runSelfTest(){
     (()=>{ const R=()=>RESULT.pfahlbock&&RESULT.pfahlbock.r||{};
       const eta0=R().etaGeo;
       si('pb_qb','5000'); si('pb_spitze','voll'); renderPfahlbock();
-      add('Spitze: R_b,k = q_b,k·b·h = 5000·0.04', R().Rb_k, 200, 0.05,'abs');
-      add('Spitze erhöht η_Geo (Druck)', R().etaGeo>eta0?1:0, 1, 0,'abs');
-      si('pb_qb','0'); si('pb_spitze','stahl');
+      add('Spitze: unter 300 mm Breite nicht angesetzt (HEB 200)', R().Rb_k, 0, 1e-9,'abs');
+      si('pb_prof','HEB300'); renderPfahlbock(); const eta3=R().etaGeo;
+      add('Spitze: R_b,k = q_b,k·b·h = 5000·0.09 (HEB 300)', R().Rb_k, 450, 0.05,'abs');
+      si('pb_qb','0'); renderPfahlbock();
+      add('Spitze erhöht η_Geo (Druck)', eta3>R().etaGeo?1:0, 1, 0,'abs');
+      // Krinner V 140: Rohr 139.7 × 6.3, S235, 1.5 mm Abrostung (DIBt Z-34.15-253)
+      si('pb_prof','KRV140'); renderPfahlbock();
+      add('Krinner V 140: N_pl,k = A(t − 1.5 mm)·235', R().N_pl_k, Math.PI/4*(Math.pow(0.1367,2)-Math.pow(0.1271,2))*235000, 1.0,'abs');
+      si('pb_prof','HEB200'); si('pb_spitze','stahl'); renderPfahlbock();
       // Torsion HEB 200: W_t = I_T/t_f, I_T = (2·b·t_f³ + h_w·t_w³)/3 ⇒ T_Rd = W_t·f_yk/(√3·γ_s)
       const eS0=R().etaSteel; si('l_TW','2'); renderPfahlbock();
       const It=(2*0.2*Math.pow(0.015,3)+0.17*Math.pow(0.009,3))/3;

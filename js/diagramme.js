@@ -1060,7 +1060,7 @@ function buildGrundbDiagram(r, g, wide=false){
   <text x="${legX}" y="168" font-size="8" fill="${c_dim}">e_y = ${ey.toFixed(3)} m</text>
   <line x1="${legX}" y1="178" x2="${W-12}" y2="178" stroke="var(--ol)" stroke-width="0.6" opacity="0.5"/>
   <text x="${legX}" y="192" font-size="9" fill="${redPct>30?c_fail:redPct>15?c_warn:c_ok}" font-weight="500">−${redPct}% Fläche</text>
-  <text x="${legX}" y="206" font-size="8.5" fill="${c_dim}">R_d = ${r.Rd?r.Rd.toFixed(1):'—'} kPa</text>
+  <text x="${legX}" y="206" font-size="8.5" fill="${c_dim}">σ_f,d = ${r.Rd?r.Rd.toFixed(1):'—'} kPa</text>
   ` : `
   <!-- Status unten -->
   <text x="${diagW/2}" y="${H-16}" text-anchor="middle" font-size="8" fill="${c_dim}">

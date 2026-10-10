@@ -17,7 +17,7 @@
 <script src="vendor/three.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=2026-10-10c">
+<link rel="stylesheet" href="css/app.css?v=2026-10-10d">
 </head>
 <body>
 
@@ -199,7 +199,7 @@
               </svg>
             </div>
             <div class="model-btn-name">Flachfundament</div>
-            <div class="model-btn-desc">SIA 267 Hansen<br>Nur Sohle</div>
+            <div class="model-btn-desc">SIA 267 · EN 1997-1<br>Nur Sohle</div>
           </div>
           <div id="model-btn-pfahlbock" class="model-btn" onclick="setModel('pfahlbock')">
             <div class="model-btn-icon">
@@ -368,7 +368,7 @@
                 <option value="RR508">Ø 508.0 × 12.5</option><option value="RR610">Ø 610.0 × 12.5</option>
                 <option value="RR711">Ø 711.0 × 12.5</option>
               </optgroup>
-              <optgroup label="Krinner V (Stahlrohr S355, t=5 mm)">
+              <optgroup label="Krinner V-Serie (Rohr S235, Z-34.15-253)">
                 <option value="KRV76">V 76</option><option value="KRV89">V 89</option>
                 <option value="KRV114">V 114</option><option value="KRV140">V 140</option>
                 <option value="KRV168">V 168</option>
@@ -392,7 +392,8 @@
                 <option value="stahl" selected>Stahlquerschnitt</option>
                 <option value="voll">umschriebene Fläche</option></select></div>
             </div>
-            <div class="hint" style="margin-top:0">Wirkt nur auf Druck. <b>0 = nicht angesetzt</b> (Vorgabe). Den Wert liefert das Baugrundgutachten oder die Sondierung; das Programm schlägt keinen vor. «Umschriebene Fläche» setzt Pfropfenbildung bzw. eine geschlossene Spitze voraus.</div>
+            <div class="hint" id="pb_qb_hint" style="margin-top:0;display:none;color:var(--warn)"></div>
+            <div class="hint" style="margin-top:0">Wirkt nur auf Druck und erst <b>ab 300 mm Pfahlbreite</b> (EA-Pfähle). <b>0 = nicht angesetzt</b> (Vorgabe). Den Wert liefert das Baugrundgutachten oder die Sondierung; das Programm schlägt keinen vor. «Umschriebene Fläche» setzt Pfropfenbildung bzw. eine geschlossene Spitze voraus.</div>
           </div>
 
           <div id="pb-grp-tendon">
@@ -583,8 +584,16 @@
                   <option value="0.5">1/2 · φ — Stahl auf Beton</option>
                   <option value="0.333">1/3 · φ — glatt</option>
                 </select>
-                <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.5">Gleitwiderstand R_gl = N_d · tan(δ_Sohle).<br>Für die <b>raue Ortbetonsohle</b> lässt SIA 267 Gl. 27 δ = φ′ zu (Praxis: auf ≤ 35° begrenzen). Die Voreinstellung 2/3 · φ′ ist auf Fertigteil-/Sauberkeitsschicht-Sohlen zugeschnitten und für Ortbeton konservativ.</span>
+                <span style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);margin-top:2px;display:block;line-height:1.5">Gleitwiderstand R_gl = N_d · tan δ_d + A′ · c′_d (SIA 267 Gl. 31).<br>Für die <b>raue Ortbetonsohle</b> lässt SIA 267 Gl. 27 δ_k = φ′_k zu; das Programm begrenzt δ_k auf 35°. Die Voreinstellung 2/3 · φ′ ist auf Fertigteil-/Sauberkeitsschicht-Sohlen zugeschnitten und für Ortbeton konservativ.</span>
               </div>
+              <div class="field" style="margin-top:4px">
+                <label>Kohäsion im Gleitwiderstand</label>
+                <select id="bg_c_gleit" onchange="scheduleCalc()" title="SIA 267 Ziff. 8.4.1.2: Die Kohäsion soll beim Gleitwiderstand in der Sohlfuge nicht berücksichtigt werden, es sei denn, sie bleibt unter allen möglichen Einwirkungen dauerhaft erhalten.">
+                  <option value="0" selected>nicht ansetzen (SIA 267 Ziff. 8.4.1.2)</option>
+                  <option value="1">ansetzen — dauerhaft gesichert</option>
+                </select>
+              </div>
+              <div class="hint" style="margin-top:2px">δ_k = Faktor·φ′_k, höchstens 35°; δ_d mit γ_φ auf tan δ (SIA 267 Ziff. 8.4.1.1). Kohäsion wirkt auf der wirksamen Fläche A′ (Gl. 31).</div>
               <!-- Berechnete Bemessungswerte (read-only, nach Berechnung befüllt) -->
               <div style="margin-top:10px;padding:8px 10px;background:var(--s2);border-radius:var(--r1);border:1px solid var(--ol)">
                 <div style="font-size:8.5px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Bemessungswerte (berechnet)</div>
@@ -719,9 +728,10 @@
             </div>
             <div class="g2" style="margin-bottom:8px">
               <div class="field"><label>γ_G sup  ungünstig</label><input id="lw_G" type="number" value="1.35" step="0.05" oninput="refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
-              <div class="field"><label>γ_G inf  günstig</label><input id="lw_G_inf" type="number" value="1.00" step="0.05" oninput="refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
+              <div class="field"><label>γ_G inf  günstig</label><input id="lw_G_inf" type="number" value="0.80" step="0.05" oninput="refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
               <div class="field"><label>γ_Q  veränderl.</label><input id="lw_Q" type="number" value="1.50" step="0.05" oninput="refreshMatrix();_checkTWOverrides();scheduleCalc()"/></div>
             </div>
+            <div class="hint" style="margin:-4px 0 8px">SIA 260 Tab. 1. <b>Flachfundament:</b> Gleiten und Grundbruch rechnen fest mit γ_G,inf = 1.00 (SIA 267 Ziff. 8.5.2.4); das Feld gilt für Block- und Pfahlfundament.</div>
 
             <!-- Typ 1 — Kippen (nur Flachfundament; Block ist eingespannt → kein Kippen) -->
             <div id="lw-typ1-sec" style="display:none">
@@ -793,7 +803,7 @@
                 <option value="HEB260">HEB 260</option>
                 <option value="HEB300">HEB 300</option>
               </optgroup>
-              <optgroup label="Krinner V-Serie (Rohr S355, t=5mm)">
+              <optgroup label="Krinner V-Serie (Rohr S235, Z-34.15-253)">
                 <option value="KRV76">Krinner V 76</option>
                 <option value="KRV89">Krinner V 89</option>
                 <option value="KRV114">Krinner V 114</option>
@@ -993,15 +1003,19 @@
       <!-- Achsen-Widget unten links -->
       <div id="axis-widget" style="position:absolute;bottom:10px;left:10px;z-index:2;"></div>
       <!-- Nachweis-Badge oben mittig -->
-      <div id="viewer-nw-badge" style="position:absolute;top:48px;left:50%;transform:translateX(-50%);z-index:2;display:none;pointer-events:none"></div>
-      <!-- LF-Auswahl unten mittig -->
-      <div id="viewer-lf" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:2" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
-        <div style="background:var(--s1);border:1px solid var(--ol);border-radius:var(--r2);padding:5px 8px;display:flex;align-items:center;gap:6px">
-          <span style="font-family:var(--f-mono);font-size:8.5px;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase">LF</span>
-          <div id="vc-lf-btns" style="display:flex;gap:4px"></div>
-          <span style="width:1px;height:12px;background:var(--ol);display:inline-block;margin:0 2px"></span>
+      <div id="viewer-nw-badge" style="position:absolute;top:72px;left:50%;transform:translateX(-50%);z-index:2;display:none;pointer-events:none"></div>
+      <!-- Lastfall- und Kombinationswahl oben mittig -->
+      <div id="viewer-lf" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+        <div class="vc-lf-bar">
+          <div id="vc-lf-mode" class="vc-lf-grp"></div>
+          <span class="vc-lf-sep"></span>
+          <div id="vc-lf-btns" class="vc-lf-grp"></div>
+          <span class="vc-lf-sep"></span>
+          <select id="vc-komb" onchange="selectVcKomb(this.value)" title="Kombination nach SIA 260: massgebende oder eine der 8 Einzelkombinationen (Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q). Wirkt auf Einwirkungen (Modus d), Spannungsbild und Resultierende."></select>
+          <span class="vc-lf-sep"></span>
           <button id="vc-char-toggle" class="on" onclick="toggleGZTChar(event)" title="Einwirkungen und Erddrücke im Modell: k = charakteristische Werte (Start) · d = Bemessungswerte">k</button>
         </div>
+        <div id="vc-komb-info"></div>
       </div>
       <!-- Legende unten rechts -->
       <div id="viewer-legend-wrap" style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:flex-end" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
@@ -1492,13 +1506,13 @@
           </div>
         </details>
         <details class="nw-sub" data-sys="flach">
-          <summary><span>Flachfundament — Hansen</span><span class="nw-cnt"></span><svg class="sg-chev" width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5l5 5-5 5"/></svg></summary>
+          <summary><span>Flachfundament</span><span class="nw-cnt"></span><svg class="sg-chev" width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5l5 5-5 5"/></svg></summary>
           <div class="toggle-row">
             <div><div class="toggle-label">Sohlspannung</div><div class="toggle-sub">σ_max ≤ q_u</div></div>
             <label class="sw"><input type="checkbox" id="nw-f-sohlsp" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
           </div>
           <div class="toggle-row">
-            <div><div class="toggle-label">Grundbruch</div><div class="toggle-sub">R_d / σ_max ≥ 1.0  [Hansen, Ersatzfläche]</div></div>
+            <div><div class="toggle-label">Grundbruch</div><div class="toggle-sub">N_d ≤ σ_f,d·A′  [EN 1997-1 Anh. D, Ersatzfläche]</div></div>
             <label class="sw"><input type="checkbox" id="nw-f-grundb" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
           </div>
           <div class="toggle-row">
@@ -1508,6 +1522,10 @@
           <div class="toggle-row">
             <div><div class="toggle-label">Kippen / Ausmitte</div><div class="toggle-sub">(e_x/B)² + (e_y/L)² ≤ 1/9  [2. Kernweite]</div></div>
             <label class="sw"><input type="checkbox" id="nw-f-kippen" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">Gebrauchstauglichkeit</div><div class="toggle-sub">Kernweite |e_x|/B + |e_y|/L ≤ 1/6 und Verkippung ≤ 1:100 / 1:200  [SIA 267 Ziff. 8.5.4]</div></div>
+            <label class="sw"><input type="checkbox" id="nw-f-gzg" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
           </div>
           <div class="toggle-row">
             <div><div class="toggle-label">Globale Standsicherheit (Bishop)</div><div class="toggle-sub">Gleitkreis · nur mit Böschung · Standard aus</div></div>
@@ -1572,28 +1590,8 @@
     <details class="set-group">
       <summary><span>Grenzzustände — Nachweisbeschriftungen</span><svg class="sg-chev" width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 5l5 5-5 5"/></svg></summary>
       <div style="padding:10px 14px">
-        <div style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Blockfundament</div>
-        <div class="field" style="margin-bottom:6px">
-          <label>Typ 2 / ST</label>
-          <input id="gz_t2_block" type="text" value="Grundbruch · Gleiten · Sohlsp. · Steckner GZT"
-            oninput="SETTINGS.gz_labels.t2_block=this.value;refreshMatrix()"/>
-        </div>
-        <div class="field" style="margin-bottom:12px">
-          <label>GZG</label>
-          <input id="gz_gzg_block" type="text" value="Schiefstellung (Steckner Gl.11–21)"
-            oninput="SETTINGS.gz_labels.gzg_block=this.value;refreshMatrix()"/>
-        </div>
-        <div style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">Flachfundament</div>
-        <div class="field" style="margin-bottom:6px">
-          <label>Typ 2</label>
-          <input id="gz_t2_flach" type="text" value="Grundbruch · Gleiten · Sohlspannung"
-            oninput="SETTINGS.gz_labels.t2_flach=this.value;refreshMatrix()"/>
-        </div>
-        <div class="field" style="margin-bottom:12px">
-          <label>Typ 1</label>
-          <input id="gz_t1_flach" type="text" value="Kippen / Ausmitte"
-            oninput="SETTINGS.gz_labels.t1_flach=this.value;refreshMatrix()"/>
-        </div>
+        <div class="hint" style="margin:0 0 8px">Beschriftung der Nachweise je Fundamentart und Nachweistyp (SIA 260). Sie erscheint in der Kombinationsmatrix im Tab «Lasten». Felder mit «—» führt das jeweilige Modell nicht.</div>
+        <div id="gz-matrix" style="overflow-x:auto;margin-bottom:12px"></div>
         <div style="font-size:9px;color:var(--xdim);font-family:var(--f-mono);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Benutzerdefinierte Grenzzustände</div>
         <div id="gz-custom-list" style="margin-bottom:6px"></div>
         <button class="btn btn-tonal btn-sm" onclick="addCustomGZ()">+ Grenzzustand</button>
@@ -1745,44 +1743,44 @@
 </div>
 
 <!-- Reihenfolge ist verbindlich: jede Datei darf beim Laden nur auf frühere zugreifen -->
-<script src="js/boot.js?v=2026-10-10c"></script>
-<script src="js/helfer.js?v=2026-10-10c"></script>
-<script src="js/speicher.js?v=2026-10-10c"></script>
-<script src="js/einstellungen.js?v=2026-10-10c"></script>
-<script src="js/templates.js?v=2026-10-10c"></script>
-<script src="js/viewer.js?v=2026-10-10c"></script>
-<script src="js/viewer-sicherung.js?v=2026-10-10c"></script>
-<script src="js/lasten.js?v=2026-10-10c"></script>
-<script src="js/boden.js?v=2026-10-10c"></script>
-<script src="js/pfahlfundament.js?v=2026-10-10c"></script>
-<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10c"></script>
-<script src="js/modell.js?v=2026-10-10c"></script>
-<script src="js/lastniveaus.js?v=2026-10-10c"></script>
-<script src="js/bettung.js?v=2026-10-10c"></script>
-<script src="js/erddruck.js?v=2026-10-10c"></script>
-<script src="js/kataloge.js?v=2026-10-10c"></script>
-<script src="js/bishop.js?v=2026-10-10c"></script>
-<script src="js/pfahl-bettung.js?v=2026-10-10c"></script>
-<script src="js/pfahlfundament-kern.js?v=2026-10-10c"></script>
-<script src="js/sicherung.js?v=2026-10-10c"></script>
-<script src="js/rechenkern.js?v=2026-10-10c"></script>
-<script src="js/dimensionierung.js?v=2026-10-10c"></script>
-<script src="js/bemessung.js?v=2026-10-10c"></script>
-<script src="js/fundamentliste.js?v=2026-10-10c"></script>
-<script src="js/nachweis-zeilen.js?v=2026-10-10c"></script>
-<script src="js/bericht.js?v=2026-10-10c"></script>
-<script src="js/bericht-flach.js?v=2026-10-10c"></script>
-<script src="js/bericht-pfahl.js?v=2026-10-10c"></script>
-<script src="js/diagramme.js?v=2026-10-10c"></script>
-<script src="js/diagramm-gzt.js?v=2026-10-10c"></script>
-<script src="js/ergebnis.js?v=2026-10-10c"></script>
-<script src="js/layout.js?v=2026-10-10c"></script>
-<script src="js/projekt.js?v=2026-10-10c"></script>
-<script src="js/mobil.js?v=2026-10-10c"></script>
-<script src="js/selbsttest.js?v=2026-10-10c"></script>
-<script src="js/tastatur.js?v=2026-10-10c"></script>
-<script src="js/embed.js?v=2026-10-10c"></script>
-<script src="js/start.js?v=2026-10-10c"></script>
+<script src="js/boot.js?v=2026-10-10d"></script>
+<script src="js/helfer.js?v=2026-10-10d"></script>
+<script src="js/speicher.js?v=2026-10-10d"></script>
+<script src="js/einstellungen.js?v=2026-10-10d"></script>
+<script src="js/templates.js?v=2026-10-10d"></script>
+<script src="js/viewer.js?v=2026-10-10d"></script>
+<script src="js/viewer-sicherung.js?v=2026-10-10d"></script>
+<script src="js/lasten.js?v=2026-10-10d"></script>
+<script src="js/boden.js?v=2026-10-10d"></script>
+<script src="js/pfahlfundament.js?v=2026-10-10d"></script>
+<script src="js/pfahlfundament-ergebnis.js?v=2026-10-10d"></script>
+<script src="js/modell.js?v=2026-10-10d"></script>
+<script src="js/lastniveaus.js?v=2026-10-10d"></script>
+<script src="js/bettung.js?v=2026-10-10d"></script>
+<script src="js/erddruck.js?v=2026-10-10d"></script>
+<script src="js/kataloge.js?v=2026-10-10d"></script>
+<script src="js/bishop.js?v=2026-10-10d"></script>
+<script src="js/pfahl-bettung.js?v=2026-10-10d"></script>
+<script src="js/pfahlfundament-kern.js?v=2026-10-10d"></script>
+<script src="js/sicherung.js?v=2026-10-10d"></script>
+<script src="js/rechenkern.js?v=2026-10-10d"></script>
+<script src="js/dimensionierung.js?v=2026-10-10d"></script>
+<script src="js/bemessung.js?v=2026-10-10d"></script>
+<script src="js/fundamentliste.js?v=2026-10-10d"></script>
+<script src="js/nachweis-zeilen.js?v=2026-10-10d"></script>
+<script src="js/bericht.js?v=2026-10-10d"></script>
+<script src="js/bericht-flach.js?v=2026-10-10d"></script>
+<script src="js/bericht-pfahl.js?v=2026-10-10d"></script>
+<script src="js/diagramme.js?v=2026-10-10d"></script>
+<script src="js/diagramm-gzt.js?v=2026-10-10d"></script>
+<script src="js/ergebnis.js?v=2026-10-10d"></script>
+<script src="js/layout.js?v=2026-10-10d"></script>
+<script src="js/projekt.js?v=2026-10-10d"></script>
+<script src="js/mobil.js?v=2026-10-10d"></script>
+<script src="js/selbsttest.js?v=2026-10-10d"></script>
+<script src="js/tastatur.js?v=2026-10-10d"></script>
+<script src="js/embed.js?v=2026-10-10d"></script>
+<script src="js/start.js?v=2026-10-10d"></script>
 
 </body>
 </html>

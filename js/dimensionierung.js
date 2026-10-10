@@ -6,7 +6,9 @@
 // (leichte Näherung) — nach «Übernehmen» rechnet die App exakt und zeigt das echte η.
 function _dimEtaMin(r){
   const w=r.worst;
-  const es = r.G.isBlock ? [w.etaGZT, w.etaGZG] : [w.etaGB, w.etaGL, w.eta_klaf, w.etaSIG];
+  // Flach: Tragfähigkeit aus dem massgebenden Lastfall, Gebrauchstauglichkeit über ALLE Lastfälle
+  const gz = r.G.isBlock ? [] : (r.results||[]).filter(x=>x.gzgF && nwOn('flach','gzg')).map(x=>x.etaGZG);
+  const es = r.G.isBlock ? [w.etaGZT, w.etaGZG] : [w.etaGB, w.etaGL, w.eta_klaf, w.etaSIG, ...gz];
   const f = es.filter(isFinite);
   return f.length ? Math.min(...f) : Infinity;
 }
@@ -14,7 +16,8 @@ function _dimGovName(r){
   const w=r.worst, e=_dimEtaMin(r);
   const map = r.G.isBlock
     ? [[w.etaGZT,'GZT Standsicherheit'],[w.etaGZG,'GZG Schiefstellung']]
-    : [[w.etaGB,'Grundbruch'],[w.etaGL,'Gleiten'],[w.eta_klaf,'Kippen'],[w.etaSIG,'Sohlspannung']];
+    : [[w.etaGB,'Grundbruch'],[w.etaGL,'Gleiten'],[w.eta_klaf,'Kippen'],[w.etaSIG,'Sohlspannung'],
+       ...(r.results||[]).filter(x=>x.gzgF && nwOn('flach','gzg')).map(x=>[x.etaGZG,'Gebrauchstauglichkeit'])];
   const hit = map.find(([v])=>isFinite(v) && Math.abs(v-e)<1e-9);
   return hit ? hit[1] : '–';
 }

@@ -42,7 +42,7 @@ function _syncMobUI(){
 // ihn ganz. Jetzt führt jedes System seine eigene Liste, und die Flags wirken durchgängig.
 const _NW_DEF = {
   block: { gzt:true, gzg:true, info:true },
-  flach: { sohlsp:true, grundb:true, gleiten:true, kippen:true, bishop:false },
+  flach: { sohlsp:true, grundb:true, gleiten:true, kippen:true, gzg:true, bishop:false },
   pfahl: { geo:true, stahl:true, knick:true, lat:true, gzg:true },
   sich:  { lat:true, ax:true, stahl:true, sys:true, kern:true, verf:true, gzgsys:true }
 };
@@ -82,7 +82,7 @@ function _nwFor(sys){
     return { gzt:nwOn('block','gzt'), gzg:nwOn('block','gzg'),
              sohlsp:inf, grundb:inf, gleiten:inf, kippen:inf, bishop:false };
   }
-  return { gzt:false, gzg:false,
+  return { gzt:false, gzg:nwOn('flach','gzg'),
            sohlsp:nwOn('flach','sohlsp'),  grundb:nwOn('flach','grundb'),
            gleiten:nwOn('flach','gleiten'), kippen:nwOn('flach','kippen'),
            bishop:nwOn('flach','bishop') };
@@ -176,7 +176,7 @@ function loadSettings(){
   chk('nw-b-gzt',     nw.block.gzt);      chk('nw-b-gzg',   nw.block.gzg);
   chk('nw-b-info',    nw.block.info);
   chk('nw-f-sohlsp',  nw.flach.sohlsp);   chk('nw-f-grundb', nw.flach.grundb);
-  chk('nw-f-gleiten', nw.flach.gleiten);  chk('nw-f-kippen', nw.flach.kippen);
+  chk('nw-f-gleiten', nw.flach.gleiten);  chk('nw-f-kippen', nw.flach.kippen);  chk('nw-f-gzg', nw.flach.gzg);
   chk('nw-f-bishop',  nw.flach.bishop);   // Standard inaktiv
   chk('nw-p-geo',     nw.pfahl.geo);      chk('nw-p-stahl',  nw.pfahl.stahl);
   chk('nw-p-knick',   nw.pfahl.knick);    chk('nw-p-lat',    nw.pfahl.lat);
@@ -210,19 +210,39 @@ function updateSliderRanges(){
   const nb=document.getElementById('bg_beta'); if(nb&&sl.beta){nb.min=sl.beta.min;nb.max=sl.beta.max;}
 }
 
-// GZ-Labels in Settings-Felder laden
+// ── Nachweisbeschriftungen: Matrix Fundamentart × Nachweistyp ───────────────────────────────────
+// Schlüssel in SETTINGS.gz_labels: <typ>_<system>, z. B. t2_block. `null` = das Modell führt diesen
+// Nachweistyp nicht (Zelle zeigt «—» mit Begründung im Tooltip).
+const GZ_TYPEN = [['t1','Typ 1','Lagesicherheit (Kippen) — SIA 260'],
+                  ['t2','Typ 2','Tragwiderstand von Baugrund und Bauteil — SIA 260'],
+                  ['gzg','GZG','Gebrauchstauglichkeit, charakteristische Lasten']];
+const GZ_MATRIX = {
+  block: { name:'Blockfundament',
+           t1:null, t1_grund:'Eingespannter Block: die Standsicherheit wird als Typ 2 nach Steckner Gl. 66 geführt, ein Kippnachweis entfällt.',
+           t2:'Grundbruch · Gleiten · Sohlsp. · Steckner GZT', gzg:'Schiefstellung (Steckner Gl.11–21)' },
+  flach: { name:'Flachfundament',
+           t1:'Kippen / Ausmitte', t2:'Grundbruch · Gleiten · Sohlspannung',
+           gzg:'Kernweite · Verkippung (SIA 267 Ziff. 8.5.4)' },
+  pfahl: { name:'Pfahlfundament',
+           t1:null, t1_grund:'Die Lagesicherheit ist über die Pfahlkräfte (Zug/Druck) im Typ 2 erfasst.',
+           t2:'Mantelreibung · Querschnitt · Knicken · lateral', gzg:'Schiefstellung · Verschiebung (SBB 0161.1011.0007)' },
+};
+function gzLabelDef(key){ const [typ,sys]=key.split('_'); return (GZ_MATRIX[sys]||{})[typ] || ''; }
+function gzLabel(key){ const l=(SETTINGS.gz_labels||{})[key]; return (l!=null && l!=='') ? l : gzLabelDef(key); }
 function loadGZLabels(){
-  const lbl = SETTINGS.gz_labels || {};
-  const defs = {
-    t2_block:'Grundbruch · Gleiten · Sohlsp. · Steckner GZT',
-    gzg_block:'Schiefstellung (Steckner Gl.11–21)',
-    t2_flach:'Grundbruch · Gleiten · Sohlspannung',
-    t1_flach:'Kippen / Ausmitte'
-  };
-  Object.entries(defs).forEach(([k,def])=>{
-    const el=document.getElementById('gz_'+k);
-    if(el) el.value = lbl[k]||def;
-  });
+  if(!SETTINGS.gz_labels) SETTINGS.gz_labels = {};
+  const el=document.getElementById('gz-matrix');
+  if(el){
+    el.innerHTML = `<table class="gz-mx"><thead><tr><th>Fundamentart</th>${GZ_TYPEN.map(([k,t,ti])=>`<th title="${ti}">${t}</th>`).join('')}</tr></thead><tbody>`
+      + Object.entries(GZ_MATRIX).map(([sys,m]) => `<tr><td class="gz-sys">${m.name}</td>`
+        + GZ_TYPEN.map(([typ]) => { const key=typ+'_'+sys;
+            return m[typ]==null
+              ? `<td class="gz-leer" title="${esc(m[typ+'_grund']||'')}">— <span>nicht geführt</span></td>`
+              : `<td><input id="gz_${key}" type="text" value="${esc(gzLabel(key))}" placeholder="${esc(m[typ])}"
+                   oninput="SETTINGS.gz_labels['${key}']=this.value;refreshMatrix()"/></td>`; }).join('')
+        + `</tr>`).join('')
+      + `</tbody></table>`;
+  }
   renderCustomGZList();
 }
 
@@ -297,7 +317,7 @@ function applySettings(){
   SETTINGS.nw = {
     block: { gzt:gc('nw-b-gzt'), gzg:gc('nw-b-gzg'), info:gc('nw-b-info') },
     flach: { sohlsp:gc('nw-f-sohlsp'), grundb:gc('nw-f-grundb'), gleiten:gc('nw-f-gleiten'),
-             kippen:gc('nw-f-kippen'), bishop:gc('nw-f-bishop') },
+             kippen:gc('nw-f-kippen'), gzg:gc('nw-f-gzg'), bishop:gc('nw-f-bishop') },
     pfahl: { geo:gc('nw-p-geo'), stahl:gc('nw-p-stahl'), knick:gc('nw-p-knick'),
              lat:gc('nw-p-lat'), gzg:gc('nw-p-gzg') },
     sich:  { lat:gc('nw-s-lat'), ax:gc('nw-s-ax'), stahl:gc('nw-s-stahl'), sys:gc('nw-s-sys'),
@@ -305,9 +325,7 @@ function applySettings(){
   };
   // GZ-Labels aus Feldern lesen
   if(!SETTINGS.gz_labels) SETTINGS.gz_labels = {};
-  ['t2_block','gzg_block','t2_flach','t1_flach'].forEach(k=>{
-    const el=document.getElementById('gz_'+k); if(el) SETTINGS.gz_labels[k]=el.value;
-  });
+  document.querySelectorAll('#gz-matrix input[id^="gz_"]').forEach(el=>{ SETTINGS.gz_labels[el.id.slice(3)]=el.value; });
   SETTINGS.sl = {
     gbx: {min:gv('sl-gbx-min'),  max:gv('sl-gbx-max')},
     gby: {min:gv('sl-gby-min'),  max:gv('sl-gby-max')},

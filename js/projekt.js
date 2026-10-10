@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════
 const FDS=['p_name','p_fundname','p_nr','p_km','p_mastnr','p_bearbeiter','p_datum','p_bemerk',
   'g_bx','g_by','g_hblock','g_kx','g_ky','g_hkopf','g_uberd','g_uberd_flach','g_ex','g_ey','g_gbeton','g_gauf','flach-material',
-  'bg_phi','bg_c','bg_gamma','bg_gamma2','bg_qu','bg_me','bg_c1','bg_koernig','bg_c1_methode','bg_delta_fac','bg_delta_sohle','bg_gw','bg_gwt',
+  'bg_phi','bg_c','bg_gamma','bg_gamma2','bg_qu','bg_me','bg_c1','bg_koernig','bg_c1_methode','bg_delta_fac','bg_delta_sohle','bg_c_gleit','bg_gw','bg_gwt',
   'bg_beta','bg_bfuss','bg_bhoehe','bg_btyp',
   'tw_phi','tw_c','tw_Ea','tw_Ep',
   'lw_G','lw_G_inf','lw_Q','lw_G1_sup','lw_G1_inf','lw_Q1','lw_G_gzg','lw_Q_gzg',
@@ -61,7 +61,7 @@ function applyState(st){
   if(st.pb_rot === undefined) si('pb_rot','0');
   // Felder vom Okt 2026 (Torsion, Stahlgüte, Spitzenwiderstand): ältere Stände bekommen die Vorgabe,
   // sonst bliebe der Wert des zuvor geladenen Projekts stehen.
-  [['l_TG','0'],['l_TW','0'],['pb_stahl','355'],['pb_qb','0'],['pb_spitze','stahl'],['pb_orient','quer'],['pb_einbau','ramm']]
+  [['bg_c_gleit','0'],['l_TG','0'],['l_TW','0'],['pb_stahl','355'],['pb_qb','0'],['pb_spitze','stahl'],['pb_orient','quer'],['pb_einbau','ramm']]
     .forEach(([id,v]) => { if(st[id] === undefined) si(id, v); });
   // Migration Altprojekte: Überdeckungs-Toggle (g_uberd_on) entfernt Jul 2026 → war er aus, ü auf 0 setzen
   if(st.g_uberd_on===false){ const uf=document.getElementById('g_uberd'), ur=document.getElementById('g_uberd_r'); if(uf) uf.value='0'; if(ur) ur.value='0'; }

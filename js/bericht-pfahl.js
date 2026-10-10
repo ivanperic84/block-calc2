@@ -135,6 +135,30 @@ function buildNachweisDocPfahl(r, piles, n){
     <div style="font-size:8px;color:var(--xdim);margin-top:4px">${r.skinModel==='ramm' ? 'Gerammtes/eingedrehtes Stahlprofil ohne Verpresskörper: q_s(z) = K₀·σ′v·tan(⅔·φ′) am Profilumriss (tiefenabhängig); Kohäsion nicht angesetzt.' : 'q_s,k = Erfahrungswert (EA-Pfähle, verpresster Mikropfahl, tiefenkonstant) bzw. Tabellen-/Probebelastungswert.'} Gruppenwirkungsgrad η_g aus mittlerem Achsabstand s̄/D (volle Effizienz ab 6·D). ${r.Rb_k>0 ? 'Spitzenwiderstand aus eingegebenem q_b,k = '+r.qb+' kPa (nur Druck).' : 'Spitzendruck nicht angesetzt.'}</div>
   </div>`;
 
+  // ── Herleitung der Bemessungslasten der massgebenden Kombination aus den charakteristischen Anteilen
+  const herleitung=(()=>{ const T=gL.teile; if(!T) return '';
+    const fE=gL.fE, fG=gL.fG, fQ=gL.fQ, f=(v,d)=>(+v||0).toFixed(d==null?1:d), h=T.hl||0, ein=_pbEinzel();
+    const z=(sym,formel,ein_,res,u)=>`<tr><td>${sym}</td><td>${formel}</td><td>${ein_}</td><td class="r"><b>${f(res)}</b> ${u}</td></tr>`;
+    const Necc=fG*T.NG+fE*T.Gkopf;
+    let rows='';
+    rows+=z('N_d', ein?'γ_G·N_G':'γ_G·N_G + γ_Eig·G_eig', ein?`${f(fG,2)}·${f(T.NG)}`:`${f(fG,2)}·${f(T.NG)} + ${f(fE,2)}·${f(T.Geig)}`, gL.N, 'kN');
+    rows+=z('H_xd', 'γ_G·H_Gx + γ_Q·H_Wx', `${f(fG,2)}·${f(T.HxG)} + ${f(fQ,2)}·${f(T.HxQ)}`, gL.Hx, 'kN');
+    rows+=z('H_yd', 'γ_G·H_Gy + γ_Q·H_Wy', `${f(fG,2)}·${f(T.HyG)} + ${f(fQ,2)}·${f(T.HyQ)}`, gL.Hy, 'kN');
+    rows+=z('M_yd', ein?'γ_G·M_Gy + γ_Q·M_Wy':'γ_G·(M_Gy + H_Gx·h) + γ_Q·(M_Wy + H_Wx·h) + N_exz·e_x',
+            ein?`${f(fG,2)}·${f(T.MyG)} + ${f(fQ,2)}·${f(T.MyQ)}`:`${f(fG,2)}·(${f(T.MyG)} + ${f(T.HxG)}·${f(h,2)}) + ${f(fQ,2)}·(${f(T.MyQ)} + ${f(T.HxQ)}·${f(h,2)}) + ${f(Necc)}·${f(T.ex,2)}`, gL.My, 'kNm');
+    rows+=z('M_xd', ein?'γ_G·M_Gx + γ_Q·M_Wx':'γ_G·(M_Gx + H_Gy·h) + γ_Q·(M_Wx + H_Wy·h) + N_exz·e_y',
+            ein?`${f(fG,2)}·${f(T.MxG)} + ${f(fQ,2)}·${f(T.MxQ)}`:`${f(fG,2)}·(${f(T.MxG)} + ${f(T.HyG)}·${f(h,2)}) + ${f(fQ,2)}·(${f(T.MxQ)} + ${f(T.HyQ)}·${f(h,2)}) + ${f(Necc)}·${f(T.ey,2)}`, gL.Mx, 'kNm');
+    if(Math.abs(T.TG)+Math.abs(T.TQ)>1e-9) rows+=z('T_d', 'γ_G·T_G + γ_Q·T_W', `${f(fG,2)}·${f(T.TG)} + ${f(fQ,2)}·${f(T.TQ)}`, gL.Mz, 'kNm');
+    return sh2('Herleitung der Bemessungswerte — '+(r.govCombo||''))
+      +`<div style="font-size:8px;color:var(--xdim);margin-bottom:6px">Beiwerte dieser Kombination: γ_Eig = ${f(fE,2)} (Eigengewicht Fundament) · γ_G = ${f(fG,2)} (ständige Mastlasten) · γ_Q = ${f(fQ,2)} (veränderlich). Eingesetzt sind die im Lastfall aktiven charakteristischen Anteile${ein?'':`; h = ${f(h,2)} m (OK Kopf → UK Bankett), N_exz = γ_G·N_G + γ_Eig·G_Kopf = ${f(Necc)} kN (exzentrischer Anteil), G_eig = ${f(T.Geig)} kN (Bankett + Kopf)`}.</div>`
+      +`<table class="np-tbl"><tr><th>Grösse</th><th>Formel</th><th>Einsetzen</th><th class="r">Bemessungswert</th></tr>${rows}</table>`; })();
+  // ── Alle Kombinationen mit Lasten und η (C1)
+  const kombTab=(()=>{ const K=r.kombs||[]; if(!K.length) return '';
+    const lfs=[...new Set(K.map(k=>k.lf))];
+    return lfs.map(lf=>sh2('Kombinationen — '+esc(lf))+_npKombTab(K.filter(k=>k.lf===lf).map(k=>({nr:k.nr, fE:k.load.fE, fG:k.load.fG, fQ:k.load.fQ, l:k.load, eta:k.eta})), [
+      {t:'N_d [kN]', v:k=>k.l.N, d:1}, {t:'H_xd [kN]', v:k=>k.l.Hx, d:1}, {t:'H_yd [kN]', v:k=>k.l.Hy, d:1},
+      {t:'M_xd [kNm]', v:k=>k.l.Mx, d:1}, {t:'M_yd [kNm]', v:k=>k.l.My, d:1},
+      {t:'η min', v:k=>k.eta, eta:true}], 'η min = kleinstes η aus Mantelreibung und Querschnitt über alle Pfähle; Knicken, laterale Bodentragfähigkeit'+(r.etaTors!=null?', Torsion':'')+' und Gebrauchstauglichkeit stehen in Kap. 5 und 6.')).join(''); })();
   // ── Kap 3: Einwirkungen
   const page3=`<div class="np-page np-pb">${ph()}
     ${ch('3','Einwirkungen')}
@@ -156,6 +180,7 @@ function buildNachweisDocPfahl(r, piles, n){
       <tr><th>Massgebend</th><th class="r">N_d [kN]</th><th class="r">H_xd [kN]</th><th class="r">H_yd [kN]</th><th class="r">|H_d| [kN]</th><th class="r">M_xd [kNm]</th><th class="r">M_yd [kNm]</th></tr>
       <tr class="hl"><td><b>${r.govCombo||'—'}</b></td><td class="r">${N(gL.N)}</td><td class="r">${N(gL.Hx)}</td><td class="r">${N(gL.Hy)}</td><td class="r"><b>${N(Hd)}</b></td><td class="r">${N(gL.Mx)}</td><td class="r">${N(gL.My)}</td></tr>
     </table>
+    ${herleitung}
   </div>`;
 
   // ── Kap 4: Pfahlkräfte
@@ -171,6 +196,7 @@ function buildNachweisDocPfahl(r, piles, n){
       <tr><th>Pfahl</th><th>Lastfall</th><th class="r">N [kN]</th><th>Art</th><th class="r">M [kNm]</th><th class="r">η</th></tr>
       ${pileRows}
     </table>
+    ${kombTab}
   </div>`;
 
   // ── Kap 5: GZT-Nachweise
@@ -253,7 +279,7 @@ function buildNachweisDocPfahl(r, piles, n){
 
   // ── Zusammenfassung
   const sumRow=(label,val,gov)=>`<tr${gov?' class="hl"':''}><td>${label}</td><td class="r ${isFinite(val)?(val>=1?'ok':'fail'):'ok'}">${isFinite(val)?val.toFixed(2):'∞'}</td></tr>`;
-  const summary=`<div class="np-page">${ph()}
+  const summary=`<div class="np-page np-pb">${ph()}
     ${ch('7','Ergebniszusammenfassung')}
     <div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">Übersicht der Nachweis-Ausnutzungsgrade η. Nachweis erbracht wenn η ≥ 1.0.</div>
     <table class="np-tbl" style="margin-bottom:14px">
@@ -273,7 +299,7 @@ function buildNachweisDocPfahl(r, piles, n){
     </div>
   </div>`;
 
-  return `<div class="np-wrap">${cover}${page1}${page2}${page3}${page4}${page5}${page6}${summary}</div>`;
+  return `<div class="np-wrap">${cover}${page1}${page2}${page3}${page4}${page5}${page6}${summary}${_npAnnahmen('pfahl', ph)}</div>`;
 }
 
 // d/k-Anzeige der Einwirkungen und Erddruck-Spannungen — wirkt NUR auf das 3D-Modell.

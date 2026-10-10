@@ -114,14 +114,24 @@ function _pbApplyModeUI(){
 // Querschnitt des Einzelpfahls aus Profil (HEB / Krinner V / Rammrohr) und Stahlgüte — EINE Quelle
 // für Rechnung, Panel und Bericht. Krinner bleibt S355 (Produktannahme), die Güte gilt für HEB und Rohr.
 function _pbEinzelProfil(){
-  const pt=(document.getElementById('pb_prof')||{}).value||'HEB200', ps=pfahlSection(pt);
+  const pt=(document.getElementById('pb_prof')||{}).value||'HEB200';
   const kr=!!KRINNER_PILES[pt], rr=!!RAMMROHRE[pt];
-  const fy=kr ? 355 : (STAHLGUETEN[(document.getElementById('pb_stahl')||{}).value] || 355);
+  // Krinner im Dauereinsatz: 1.5 mm Abrostung der Wanddicke (Z-34.15-253, Ziff. 2.4.1)
+  const ps=kr ? krinnerAbgerostet(pt, 1.5) : pfahlSection(pt);
+  const fy=kr ? (ps.fy||235) : (STAHLGUETEN[(document.getElementById('pb_stahl')||{}).value] || 355);
   const tor=profilTorsion(ps);
-  const grade=kr ? 'Krinner V · Stahlrohr S355' : rr ? 'Rammrohr Ø '+(ps.da*1000).toFixed(1)+' × '+(ps.t*1000).toFixed(1)+' mm · S'+fy : 'HEB · S'+fy;
+  const grade=kr ? 'Krinner V · Rohr Ø '+(KRINNER_PILES[pt].da*1000).toFixed(1)+' × '+(KRINNER_PILES[pt].tNenn*1000).toFixed(1)+' mm · S235 (−1.5 mm Abrostung)' : rr ? 'Rammrohr Ø '+(ps.da*1000).toFixed(1)+' × '+(ps.t*1000).toFixed(1)+' mm · S'+fy : 'HEB · S'+fy;
   const tdn={ bez:rr ? '' : pt, As:ps.A*1e6, da:ps.b*1000, fy, Ryk:ps.A*fy*1000, I:ps.Iy, Wpl:ps.Wply,
               round:!!ps.round, Iz:(ps.Iz!=null?ps.Iz:ps.Iy), Wplz:(ps.Wplz!=null?ps.Wplz:ps.Wply), Wt:tor.Wt };
-  return { pt, ps, fy, kr, rr, grade, tdn };
+  // Querschnittsklasse des Rohrs (SIA 263 / EN 1993-1-1, Biegung): d/t ≤ 50ε² Klasse 1, ≤ 70ε² Klasse 2,
+  // ≤ 90ε² Klasse 3, darüber 4 (ε² = 235/f_y). Ab Klasse 3 darf nicht plastisch bemessen werden →
+  // elastisches Widerstandsmoment. (Ø 610 und Ø 711 × 12.5 in S355 sind Klasse 3.) HEB 160–300 sind
+  // bis S460 in Biegung Klasse 1–2.
+  let klasse=1;
+  if(ps.round){ const t=(ps.t!=null)?ps.t:(ps.da-ps.di)/2, dt=ps.da/t, e2=235/fy;
+    klasse = dt<=50*e2 ? 1 : dt<=70*e2 ? 2 : dt<=90*e2 ? 3 : 4;
+    if(klasse>=3){ const Wel=ps.Iy/(ps.da/2); tdn.Wpl=Wel; tdn.Wplz=Wel; } }
+  return { pt, ps, fy, kr, rr, grade, tdn, klasse };
 }
 function onPbMode(){ _pbApplyModeUI(); if(typeof renderPfahlbock==='function') renderPfahlbock(); }
 // Randabstand Pfahlmitte → nächste Bankettkante (auf UK-Bankett-Niveau, am Pfahlkopf)
@@ -189,7 +199,13 @@ function renderPfahlbock(opt){
     _starkQuer=(document.getElementById('pb_orient')||{}).value!=='laengs';
     // Spitzenwiderstand (nur Druck): q_b,k frei einzugeben, 0 = nicht angesetzt. Fläche: Stahlquerschnitt
     // oder umschriebene Fläche (Pfropfenbildung bzw. geschlossene Spitze / Bohrlochquerschnitt).
-    _qb=Math.max(0,+gi('pb_qb')||0);
+    // Spitzenwiderstand erst ab 0.30 m Pfahlbreite (EA-Pfähle: darunter gilt der Pfahl als Mikropfahl,
+    // der nur über Mantelreibung trägt) — schmalere Profile: q_b,k wird NICHT angesetzt.
+    const _bSp=_einbau==='verpresst' ? _dGrout : Math.min(ps.b, ps.h||ps.b), _spOk=_bSp >= 0.30 - 1e-9;
+    _qb=_spOk ? Math.max(0,+gi('pb_qb')||0) : 0;
+    { const f=document.getElementById('pb_qb'), sp=document.getElementById('pb_spitze'), h=document.getElementById('pb_qb_hint');
+      [f,sp].forEach(el=>{ if(el){ el.disabled=!_spOk; el.style.opacity=_spOk?'':'0.5'; } });
+      if(h){ h.style.display=_spOk?'none':''; h.textContent='Spitzenwiderstand nicht ansetzbar: Pfahlbreite '+(_bSp*1000).toFixed(0)+' mm < 300 mm (EA-Pfähle — schlanke Pfähle tragen rechnerisch nur über Mantelreibung).'; } }
     { const voll=(document.getElementById('pb_spitze')||{}).value==='voll';
       _Ab = !voll ? ps.A : _einbau==='verpresst' ? Math.PI*_dGrout*_dGrout/4
                   : ps.round ? Math.PI*ps.b*ps.b/4 : ps.b*(ps.h||ps.b);
@@ -200,7 +216,9 @@ function renderPfahlbock(opt){
     const pi=document.getElementById('pb_prof_info');
     if(pi) pi.innerHTML=`${sys.grade} · A=${(ps.A*1e4).toFixed(1)} cm² · I_y=${(ps.Iy*1e8).toFixed(0)} cm⁴ · `
       +`W_pl=${(ps.Wply*1e6).toFixed(0)} cm³`
-      +(ps.round ? '' : ` · schwache Achse I_z=${((ps.Iz||ps.Iy)*1e8).toFixed(0)} cm⁴ / W_pl,z=${((ps.Wplz||ps.Wply)*1e6).toFixed(0)} cm³`)+` · N_pl,k=${(ps.A*fy*1000).toFixed(0)} kN · Breite/Ø=${(ps.b*1000).toFixed(0)} mm`;
+      +(ps.round ? '' : ` · schwache Achse I_z=${((ps.Iz||ps.Iy)*1e8).toFixed(0)} cm⁴ / W_pl,z=${((ps.Wplz||ps.Wply)*1e6).toFixed(0)} cm³`)+` · N_pl,k=${(ps.A*fy*1000).toFixed(0)} kN · Breite/Ø=${(ps.b*1000).toFixed(0)} mm`
+      +(_ep.klasse>=3 ? `<br><span style="color:var(--warn)">Querschnittsklasse ${_ep.klasse}: Biegung elastisch bemessen (W_el = ${(tdn.Wpl*1e6).toFixed(0)} cm³ statt W_pl)${_ep.klasse===4?' — Klasse 4: örtliches Beulen ist gesondert nachzuweisen':''}.</span>` : '')
+      +(_ep.kr ? `<br><span style="color:var(--warn)">${KRINNER_HINWEIS} Als biegebeanspruchter Einzelpfahl liegt die Anwendung ausserhalb der Genehmigung.${_ep.ps.zul?'':' Diese Baugrösse ist nicht Teil der Genehmigung (Abmessungen angenommen).'}</span>` : '');
   }
   const _Lfull=(opt && opt.L > 0) ? +opt.L : (+gi('pb_L')||10);                                  // Gesamtlänge (gestossen) — Axial/Bettung/Knicken
   const _LbendMax = sys.LelemMax || 0;                          // längstes Einzelelement → Biegelänge M+N (Stoss=Gelenk)
@@ -251,7 +269,7 @@ function renderPfahlbock(opt){
   // Torsionsmoment um die Mastachse (ständig / veränderlich). Es hat keine Komponenten-Maske und
   // wirkt in JEDEM Lastfall (sichere Seite). Nur das Pfahlfundament führt es.
   const TG=+gi('l_TG')||0, TQ=+gi('l_TW')||0;
-  const gGinf=+gi('lw_G_inf')||1.0;
+  const gGinf=+gi('lw_G_inf')||0.80;
   // Lastvektor auf UK Bankett aus den im LF aktiven Komponenten — dieselben drei Faktoren wie
   // beim Block (buildCombos, SIA 260 Typ 2): fE = Eigengewicht Fundament (Bankett + Kopf),
   // fG = ständige Mastlasten N_G/H_G/M_G GEMEINSAM (Einwirkungen gleichen Ursprungs tragen
@@ -268,7 +286,9 @@ function renderPfahlbock(opt){
       // Mast-Moment am OK Kopf (ohne H·Hebel) — für die 3D-Einwirkung, konsistent zum Block (inkl. Exzentrizität)
       MxApp:fG*MxG+fQ*MxW + Necc*eyK, MyApp:fG*MyG+fQ*MyW + Necc*exK,
       Mz:fG*TG+fQ*TQ,
-      NMast:fG*Ng, fE, fG, fQ }; };
+      NMast:fG*Ng, fE, fG, fQ,
+      // charakteristische Anteile für die Herleitung im Bericht (nur im Lastfall aktive Komponenten)
+      teile:{ NG:Ng, Geig:G_eig, Gkopf:G_kopf, HxG, HxQ:HxW, HyG, HyQ:HyW, MxG, MxQ:MxW, MyG, MyQ:MyW, TG, TQ, hl, ex:exK, ey:eyK } }; };
   const ulsLF=LF.filter(lf=>lf.nw!=='gzg'), gzgLF=LF.filter(lf=>lf.nw!=='gzt');
   const ulsCombos=[];
   const _gfU=getGF({nw:'gzt'});   // Tragsicherheit: immer die GZT-Beiwerte der Lastbeiwerte-Karte
@@ -276,7 +296,7 @@ function renderPfahlbock(opt){
   (ulsLF.length?ulsLF:LF).forEach(lf=>{
     const lc=lfLoad(lf,1,1,1);   // charakteristische Last (γ=1) für die k/d-Anzeige im 3D
     buildCombos(gGinf, _gfU.gG, _gfU.gW).forEach(cb=>
-      ulsCombos.push({label:lf.name+' · Komb. '+cb.nr, lf:lf.name, load:lfLoad(lf,cb.fE,cb.fG,cb.fQ), loadChar:lc}));
+      ulsCombos.push({label:lf.name+' · Komb. '+cb.nr, lf:lf.name, nr:cb.nr, load:lfLoad(lf,cb.fE,cb.fG,cb.fQ), loadChar:lc}));
   });
   const gzgFullC=(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,1,1,1)}));
   const gzgVarC =(gzgLF.length?gzgLF:LF).map(lf=>({label:lf.name, lf:lf.name, load:lfLoad(lf,0,0,1)}));

@@ -194,7 +194,7 @@ function calcPfahlsicherung(){
   const prof = pfahlSection(typ);
   const B    = prof.b;              // Profilbreite [m]
   const EI   = 210e6 * prof.Iy;    // [kNm²]
-  const Mpl  = 355e3 * prof.Wply;  // [kNm]  f_y=355 MPa=355000 kN/m²
+  const Mpl  = (prof.fy||355)*1e3 * prof.Wply;  // [kNm]  f_yk je Profil (HEB S355, Krinner S235)
 
   // ── Aushub: Einfluss auf Pfahlberechnung
   // Pfähle stehen IMMER auf der Gegenseite des Aushubs (3D-Viewer: pfahl_sign = [-ex_sign])
@@ -217,7 +217,8 @@ function calcPfahlsicherung(){
   // Profilinfo aktualisieren
   const eiEl = document.getElementById('pfahl-ei-row');
   if(eiEl) eiEl.textContent =
-    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${prof.round?'Ø':'B'} = ${(B*100).toFixed(0)} cm  ·  W_pl = ${(prof.Wply*1e6).toFixed(0)} cm³`;
+    `EI = ${(EI/1000).toFixed(0)} MNm²  ·  ${prof.round?'Ø':'B'} = ${(B*100).toFixed(0)} cm  ·  W_pl = ${(prof.Wply*1e6).toFixed(0)} cm³  ·  S${prof.fy||355}`
+    + (KRINNER_PILES[typ] ? '  ·  '+KRINNER_HINWEIS+(prof.zul?'':' Diese Baugrösse ist nicht Teil der Genehmigung (Abmessungen angenommen).') : '');
 
   // H_d, M_d und Block-GZT aus letztem Berechnungsergebnis (massgebender LF nach H)
   let H_d_bemessung = 0, M_d_bemessung = 0, lfName = '—';
@@ -528,7 +529,7 @@ function calcPfahlsicherung(){
   // da die Einwirkungsseite mit γ_G/γ_Q bemessen ist. Wirkt auf BEIDE Interaktionsterme.
   // Divergiert der p-y-Solve, ist M_max_1 = Infinity ⇒ util = Infinity ⇒ η = 0 (nicht erfüllt).
   const gamma_M   = Math.max(1.0, +(SETTINGS.sichGammaM ?? 1.05));
-  const N_pl      = 355e3 * (prof.A || 0) / gamma_M;    // [kN] N_pl,Rd Querschnitt
+  const N_pl      = (prof.fy||355)*1e3 * (prof.A || 0) / gamma_M;    // [kN] N_pl,Rd Querschnitt
   const M_pl_Rd   = Mpl / gamma_M;                      // [kNm] M_pl,Rd
   const N_ax_1    = Math.abs(V_pfahl) / n;              // [kN] Axialkraft je Pfahl (Zug ODER Druck)
   const utilN     = N_pl > 0.01 ? N_ax_1 / N_pl : 0;
@@ -858,7 +859,7 @@ function calcPfahlsicherung(){
       ${row('M_max,1 (p-y'+(pyBUse?((pyBUse.yielded?', plastisch':', elastisch')+', z='+(pyBUse.sMmax-e_eff).toFixed(2)+'m u.GOK'):(pyBDiverg?' — Grenzlast':' — Näherung'))+')', nfx(M_max_1), 'kNm')}
       ${pyBDiverg ? divNote : ''}
       ${spliced_p ? `<div style="font-size:9px;color:var(--xdim);padding:1px 0 2px">gestossen (Krinner): Stoss = Gelenk → M+N über längstes Element L_bend = ${Lbend_p.toFixed(2)} m (Grenzlast/Verformung über volle Länge L = ${L_emb.toFixed(2)} m)</div>` : ''}
-      ${row('M_pl,k (S355, f_yk = 355 N/mm²)', Mpl.toFixed(1), 'kNm')}
+      ${row('M_pl,k (S'+(prof.fy||355)+', f_yk = '+(prof.fy||355)+' N/mm²)', Mpl.toFixed(1), 'kNm')}
       ${row('γ_M (SIA 263, Querschnitt)', gamma_M.toFixed(2), '')}
       ${row('M_pl,Rd = M_pl,k / γ_M', M_pl_Rd.toFixed(1), 'kNm')}
       ${row('N_Pfahl'+(axial_pullout?' (Zug)':' (Druck)')+' = H_eff·tan(α)/n', N_ax_1.toFixed(1), 'kN')}

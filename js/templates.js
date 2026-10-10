@@ -17,7 +17,7 @@ const BUILTIN_TPLS = [
       bg_qu:'250', bg_me:'25', bg_c1:'7.8', bg_delta_fac:'0.667',
       bg_gw:'nein', bg_gwt:'3.0', bg_beta:'0', bg_bfuss:'0', bg_bhoehe:'0', bg_btyp:'none',
       tw_G:'1.35', tw_Q:'1.5', tw_phi:'1.20', tw_c:'1.5', tw_Ea:'1.35', tw_Ep:'1.40',
-      lw_G:'1.35', lw_G_inf:'1.00', lw_Q:'1.50',
+      lw_G:'1.35', lw_G_inf:'0.80', lw_Q:'1.50',
       lw_G1_sup:'1.20', lw_G1_inf:'0.80', lw_Q1:'1.50',
       lw_G_gzg:'1.00', lw_Q_gzg:'1.00',
       l_NG:'7', l_HGx:'0', l_HGy:'0', l_MGx:'0', l_MGy:'0',

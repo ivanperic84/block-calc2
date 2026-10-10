@@ -43,7 +43,7 @@ function buildNachweisDocFlach(results, G){
     '<div class="np-firma">'+esc(SETTINGS.firma||'BlockCalc SIA 267')+'</div>'+
     '<div class="np-ct">Standsicherheitsnachweis</div>'+
     '<div class="np-ct" style="font-size:13px;margin-bottom:4px">'+mat+' · Starre Methode · SIA 267:2013</div>'+
-    '<div class="np-cs">Nachweis der Standsicherheit (GZT) für ein Flachfundament nach starrer Methode (Hansen-Tragfähigkeitsformel)</div>'+
+    '<div class="np-cs">Nachweis der Standsicherheit (GZT) für ein Flachfundament nach starrer Methode (Grundbruchwiderstand nach EN 1997-1 Anhang D)</div>'+
     '<div class="np-cblock">'+
       '<div class="np-cmeta">'+
         '<span class="k">Bauteil / Objekt</span><span class="v">'+esc(st.p_name||'–')+'</span>'+
@@ -56,19 +56,20 @@ function buildNachweisDocFlach(results, G){
       sh2('Normgrundlagen')+
       '<table class="np-tbl" style="margin-bottom:14px">'+
         '<tr><th>Norm</th><th>Titel</th><th>Anwendung</th></tr>'+
-        '<tr><td>SIA 267:2013</td><td>Geotechnik</td><td>Grundbruch (Hansen), Gleiten, Ausmitte, Nachweisformate GZT Typ 1/2</td></tr>'+
+        '<tr><td>SIA 267:2013</td><td>Geotechnik</td><td>Gleiten, Ausmitte, Nachweisformate GZT Typ 1/2</td></tr>'+
+        '<tr><td>EN 1997-1 Anhang D</td><td>Geotechnik</td><td>Grundbruchwiderstand (Beiwerte N, s, i; ohne Tiefenbeiwerte)</td></tr>'+
         '<tr><td>SIA 261:2020</td><td>Einwirkungen auf Tragwerke</td><td>Lastfallkombinationen, γ_G,sup/inf, γ_Q</td></tr>'+
-        '<tr><td>Brinch Hansen (1970)</td><td>A Revised and Extended Formula for Bearing Capacity</td><td>Tragfähigkeitsbeiwerte Nq/Nc/Nγ, Form- und Tiefenbeiwerte</td></tr>'+
+        '<tr><td>Brinch Hansen (1970)</td><td>A Revised and Extended Formula for Bearing Capacity</td><td>Geländebeiwerte g bei Böschung</td></tr>'+
         '<tr><td>Meyerhof (1963)</td><td>Some Recent Research on the Bearing Capacity of Foundations</td><td>Effektive Fundamentbreite B\'= B−2|e_x|</td></tr>'+
       '</table>'+
       sh2('Berechnungskonzept')+
       '<div style="font-size:8.5px;color:var(--dim);line-height:1.7;margin-bottom:18px">'+
       'Das Flachfundament wird als starr betrachtet (lineare Sohldruckverteilung). '+
-      'Der Grundbruchnachweis erfolgt nach Hansen mit Form-, Tiefen- und Neigungsbeiwerten. '+
+      'Der Grundbruchwiderstand folgt EN 1997-1 Anhang D (Form- und Lastneigungsbeiwerte, keine Tiefenbeiwerte); nachgewiesen wird N_d ≤ R_d = σ_f,d·A\'. Geländebeiwerte bei Böschung nach Brinch Hansen. '+
       'Die effektive Fläche B\'×L\' berücksichtigt die Lastausmitte (Meyerhof). '+
       'Gleiten wird mit γ_G,inf auf der Widerstandsseite nachgewiesen (SIA 267 Typ 2). '+
       'Kippen/Ausmitte verwendet Typ-1-Faktoren (γ_G,sup='+st.lw_G1_sup+'/γ_G,inf='+st.lw_G1_inf+'). '+
-      (isStahl?'Stahlplatte γ=78.5 kN/m³, keine Tiefenbeiwerte (t/B << 1). ':'')+'</div>'+
+      (isStahl?'Stahlplatte γ=78.5 kN/m³. ':'')+'</div>'+
       '<table class="np-tbl" style="width:55%">'+
         '<tr><th>Rev.</th><th>Datum</th><th>Beschreibung</th><th>Visum</th></tr>'+
         '<tr><td>0</td><td>'+datStr+'</td><td>Erstausgabe</td><td>'+esc(st.p_bearbeiter||SETTINGS.bearbeiter||'')+'</td></tr>'+
@@ -114,14 +115,14 @@ function buildNachweisDocFlach(results, G){
     sh2('Bemessungswerte (GZT Typ 2)')+
     fml("φ'_d = arctan(tan φ'_k / γ_φ)","arctan(tan "+((phi_k0*180/Math.PI)||+st.bg_phi)+"° / "+st.tw_phi+")",(phi_d0*180/Math.PI).toFixed(2),"°")+
     fml("c'_d = c'_k / γ_c",st.bg_c+" / "+st.tw_c,c_d0.toFixed(2),"kPa")+
-    sh2('Tragfähigkeitsbeiwerte (Hansen)')+
+    sh2('Tragfähigkeitsbeiwerte (EN 1997-1 Anhang D)')+
     fml("N_q = e^(π·tan φ'_d) · tan²(45°+φ'_d/2)","–",Nq0.toFixed(3),"")+
     fml("N_c = (N_q−1)/tan φ'_d","–",Nc0.toFixed(3),"")+
-    fml("N_γ = 2·(N_q+1)·tan φ'_d","–",Ng0.toFixed(3),"")+
+    fml("N_γ = 2·(N_q−1)·tan φ'_d","–",Ng0.toFixed(3),"")+
     sh2('Grenzzustände und Lastbeiwerte')+
     '<table class="np-tbl">'+
       '<tr><th>GZT-Typ</th><th>Nachweis</th><th class="r">γ_G,sup</th><th class="r">γ_G,inf</th><th class="r">γ_Q</th></tr>'+
-      '<tr><td>Typ 2</td><td>Grundbruch · Gleiten · Sohlspannung</td><td class="r">'+st.lw_G+'</td><td class="r">'+st.lw_G_inf+'</td><td class="r">'+st.lw_Q+'</td></tr>'+
+      '<tr><td>Typ 2</td><td>Grundbruch · Gleiten · Sohlspannung</td><td class="r">'+st.lw_G+'</td><td class="r">1.00 <span style="color:var(--xdim)">(SIA 267 Ziff. 8.5.2.4)</span></td><td class="r">'+st.lw_Q+'</td></tr>'+
       '<tr><td>Typ 1</td><td>Kippen / Ausmitte</td><td class="r">'+st.lw_G1_sup+'</td><td class="r">'+st.lw_G1_inf+'</td><td class="r">'+st.lw_Q1+'</td></tr>'+
     '</table>'+
   '</div>';
@@ -163,6 +164,7 @@ function buildNachweisDocFlach(results, G){
   '</div>';
 
   // ── Nachweisseiten pro LF ──────────────────────────────────────
+  var NWgzg = nwOn('flach','gzg');
   var nwPages = results.filter(function(r){ return r.nw!=='gzg'; }).map(function(r){   // GZG-Lastfälle: kein Nachweis beim Flach
     var gf = getGF(LF.find(function(l){return l.name===r.name;})||{nw:'gzt'});
     var A = B*L;
@@ -176,6 +178,10 @@ function buildNachweisDocFlach(results, G){
     var rS=t2View(r,'sig'), rG=t2View(r,'gb'), rL=t2View(r,'gl');
     var kz=function(v){ return v&&v.komb ? '<div style="font-size:8.5px;color:var(--dim);margin:2px 0 6px">Massgebende Kombination: '+t2KombText(v)+' &ensp;→&ensp; N_d = '+v.Nd.toFixed(1)+' kN · H_d = '+v.Hd.toFixed(1)+' kN · e_x = '+v.ex.toFixed(3)+' m · e_y = '+v.ey.toFixed(3)+' m</div>' : ''; };
 
+    var kombTab = (r.t2 && r.t2.all) ? sh2('Kombinationen dieses Lastfalls')+_npKombTab(r.t2.all, [
+        {t:'N_d [kN]', v:function(k){return k.Nd;}, d:1}, {t:'H_d [kN]', v:function(k){return k.Hd;}, d:1},
+        {t:'η Sohlspannung', v:function(k){return k.etaSIG;}, eta:true}, {t:'η Grundbruch', v:function(k){return k.etaGB;}, eta:true},
+        {t:'η Gleiten', v:function(k){return k.etaGL;}, eta:true}], 'Jeder Nachweis hat seine eigene massgebende Kombination.') : '';
     return '<div class="np-page np-pb">'+ph()+
       '<div class="np-lfh">'+r.name+'</div>'+
       sh2('Eigengewicht Fundament')+
@@ -198,6 +204,7 @@ function buildNachweisDocFlach(results, G){
       '</table>'+
       (!r.t2?'':'<div style="font-size:8.5px;color:var(--dim);margin:-4px 0 8px">Die Nachweise 1–3 (Typ 2) werden über alle 8 Kombinationen geführt (Eigengewicht inf/sup × ständig inf/sup × veränderlich 0/γ_Q, SIA 260); massgebend ist je Nachweis das kleinste η. Die jeweilige Kombination steht beim Nachweis.</div>')+
 
+      kombTab+
       // ── Nachweis 1: Sohlspannung ──────────────────────────────
       (NW.sohlsp?
         '<div class="np-nw">'+
@@ -213,16 +220,30 @@ function buildNachweisDocFlach(results, G){
       // ── Nachweis 2: Grundbruch ────────────────────────────────
       (NW.grundb?
         '<div class="np-nw">'+
-        nwh('2.','Grundbruch (Hansen)','SIA 267 §7.2 — GZT Typ 2')+kz(rG)+
+        nwh('2.','Grundbruch','EN 1997-1 Anhang D — GZT Typ 2')+kz(rG)+
         sh2('Effektive Fläche (Meyerhof)')+
         fml("B' = B − 2|e_x|  /  L' = L − 2|e_y|",
           B+"−2·"+Math.abs(rG.ex).toFixed(3)+" / "+L+"−2·"+Math.abs(rG.ey).toFixed(3),
           "B'="+rG.Be.toFixed(3)+"m  /  L'="+rG.Le.toFixed(3)+"m","")+
         diagWrap((function(){try{return buildGrundbDiagram(r,G,false);}catch(e){return '';}})(), true)+
         sh2('Tragfähigkeit')+
-        fml("R_d = c'_d·Nc·ic·sc·dc + q₀·Nq·iq·sq·dq + 0.5·γ·B'·Nγ·iγ·sγ",
-          "q₀="+rG.q0.toFixed(1)+" kPa  Nq="+rG.Nq.toFixed(2)+" Nc="+rG.Nc.toFixed(2),
+        fml("N_q = e^(π·tanφ_d)·tan²(45°+φ_d/2)   N_c = (N_q−1)·cotφ_d   N_γ = 2·(N_q−1)·tanφ_d",
+          "φ_d = "+(rG.phi_d*180/Math.PI).toFixed(2)+"°",
+          "N_q="+rG.gbD.Nq.toFixed(2)+"  N_c="+rG.gbD.Nc.toFixed(2)+"  N_γ="+rG.gbD.Ng.toFixed(2),"")+
+        fml("s_q = 1+(B'/L')·sinφ_d   s_γ = 1−0.3·B'/L'   s_c = (s_q·N_q−1)/(N_q−1)",
+          "B'/L' = "+(rG.gbD.Bp/rG.gbD.Lp).toFixed(3),
+          "s_q="+rG.gbD.sq.toFixed(3)+"  s_γ="+rG.gbD.sg.toFixed(3)+"  s_c="+rG.gbD.sc.toFixed(3),"")+
+        fml("i_q = [1 − H_d/(N_d + A'·c'_d·cotφ_d)]^m   i_γ = [...]^(m+1)   i_c = i_q − (1−i_q)/(N_c·tanφ_d)",
+          "H_d="+rG.Hd.toFixed(1)+" kN  N_d="+rG.Nd.toFixed(1)+" kN  m="+rG.gbD.m.toFixed(3),
+          "i_q="+rG.gbD.iq.toFixed(3)+"  i_γ="+rG.gbD.ig.toFixed(3)+"  i_c="+rG.gbD.ic.toFixed(3),"")+
+        fml((rG.gb_q<0.9995||rG.gb_g<0.9995) ? "σ_f,d = c'_d·N_c·s_c·i_c·g_c + q₀·N_q·s_q·i_q·g_q + 0.5·γ·B'·N_γ·s_γ·i_γ·g_γ   (g = Geländebeiwerte bei Böschung, Brinch Hansen)"
+                                              : "σ_f,d = c'_d·N_c·s_c·i_c + q₀·N_q·s_q·i_q + 0.5·γ·B'·N_γ·s_γ·i_γ",
+          "c'_d="+rG.c_d.toFixed(1)+" kPa  q₀="+rG.q0.toFixed(1)+" kPa  γ="+rG.gbD.gam.toFixed(1)+" kN/m³  B'="+rG.gbD.Bp.toFixed(3)+" m"
+            +((rG.gb_q<0.9995||rG.gb_g<0.9995) ? "  g_q="+rG.gb_q.toFixed(3)+"  g_γ="+rG.gb_g.toFixed(3) : ""),
           rG.Rd.toFixed(1),"kPa")+
+        fml("R_d = σ_f,d · A'   →   η = R_d / N_d",
+          rG.Rd.toFixed(1)+" · "+rG.gbD.Aeff.toFixed(3)+" = "+rG.gbD.RdKN.toFixed(1)+" kN  /  "+rG.Nd.toFixed(1)+" kN",
+          rG.etaGB.toFixed(2),"")+
         eta(rG.etaGB)+
         '</div>'
       :'')+
@@ -230,9 +251,12 @@ function buildNachweisDocFlach(results, G){
       // ── Nachweis 3: Gleiten ───────────────────────────────────
       (NW.gleiten?
         '<div class="np-nw">'+
-        nwh('3.','Gleiten','SIA 267 §7.3 — GZT Typ 2')+kz(rL)+
-        fml("R_gl = N_d · tan(δ_Sohle) + c'_d·A",
-          (rL.Nd_gl||rL.Nd).toFixed(1)+"·tan("+((+st.bg_delta_sohle||+st.bg_delta_fac||0.667)*phi_d0*180/Math.PI).toFixed(1)+"°) + "+(rL.c_d||0).toFixed(1)+"·"+A.toFixed(2),
+        nwh('3.','Gleiten','SIA 267 Ziff. 8.5.3.4, Gl. (31) — GZT Typ 2')+kz(rL)+
+        fml("δ_k = Faktor · φ'_k ≤ 35°     δ_d = arctan(tan δ_k / γ_φ)",
+          (+st.bg_delta_sohle||+st.bg_delta_fac||0.667)+" · "+(Math.atan(Math.tan(rL.phi_d)*(+st.tw_phi||1.2))*180/Math.PI).toFixed(1)+"° = "+(rL.glD.dK*180/Math.PI).toFixed(2)+"°     arctan(tan "+(rL.glD.dK*180/Math.PI).toFixed(2)+"° / "+st.tw_phi+")",
+          "δ_d = "+(rL.glD.dD*180/Math.PI).toFixed(2),"°")+
+        fml("R_gl = N_d · tan δ_d + A' · c'_d",
+          (rL.Nd_gl||rL.Nd).toFixed(1)+"·tan("+(rL.glD.dD*180/Math.PI).toFixed(2)+"°) + "+(rL.glD.cAn ? rL.glD.Aeff.toFixed(2)+"·"+(rL.c_d||0).toFixed(1) : "0 (Kohäsion nicht angesetzt, Ziff. 8.4.1.2)"),
           rL.Rgl.toFixed(1),"kN")+
         fml("η = R_gl / H_d",rL.Rgl.toFixed(1)+" / "+rL.Hd.toFixed(1),rL.etaGL.toFixed(2),"")+
         eta(rL.etaGL)+
@@ -312,7 +336,7 @@ function buildNachweisDocFlach(results, G){
     var secBase = 5+i;
     return tocRowF(secBase+'.', r.name, false)+
       (NW.sohlsp  ? tocRowF(secBase+'.1', 'Sohlspannung (informativ)',true):'') +
-      (NW.grundb  ? tocRowF(secBase+'.2', 'Grundbruch — GZT Typ 2 (Hansen)',true):'') +
+      (NW.grundb  ? tocRowF(secBase+'.2', 'Grundbruch — GZT Typ 2 (EN 1997-1 Anh. D)',true):'') +
       (NW.gleiten ? tocRowF(secBase+'.3', 'Gleiten — GZT Typ 2',true):'') +
       (NW.kippen  ? tocRowF(secBase+'.4', 'Kippnachweis — GZT Typ 1',true):'');
   }).join('');
@@ -342,12 +366,12 @@ function buildNachweisDocFlach(results, G){
   }
   var minEta = results.reduce(function(a,b){
     var k=b.eta_klaf!==undefined?b.eta_klaf:Math.min(b.etaKx||99,b.etaKy||99);
-    return Math.min(a, b.etaGB||99, b.etaGL||99, k);
+    return Math.min(a, b.etaGB||99, b.etaGL||99, k, (NWgzg && b.gzgF) ? b.etaGZG : 99);
   }, 99);
   var _bishOK = !!(_bish && _bish.ok && isFinite(_bish.eta));
   if(_bishOK) minEta = Math.min(minEta, _bish.eta);
   if(_bishOK && _bish.eta < 1) allOk = false;
-  var summary = '<div class="np-page">'+ph()+
+  var summary = '<div class="np-page np-pb">'+ph()+
     ch((5+nwCount+(bishPage?1:0))+'.','Ergebniszusammenfassung')+
     '<div style="font-size:8.5px;color:var(--dim);margin-bottom:10px">'+
     'Übersicht aller Nachweis-Ausnutzungsgrade η je Lastfall. Nachweis erbracht wenn η ≥ 1.0.'+
@@ -355,7 +379,8 @@ function buildNachweisDocFlach(results, G){
     '<table class="np-tbl" style="margin-bottom:14px">'+
       '<thead><tr><th>Nachweis / Grenzzustand</th>'+sumHead+'</tr></thead><tbody>'+
       sumRow('Sohlspannung (informativ)', function(r){return r.etaSIG;}, NW.sohlsp, true)+
-      sumRow('Grundbruch — GZT Typ 2 (Hansen)', function(r){return r.etaGB;}, NW.grundb, false)+
+      sumRow('Grundbruch — GZT Typ 2 (EN 1997-1 Anh. D)', function(r){return r.etaGB;}, NW.grundb, false)+
+      sumRow('Gebrauchstauglichkeit — Kernweite / Verkippung (SIA 267 Ziff. 8.5.4)', function(r){return r.gzgF ? r.etaGZG : Infinity;}, NWgzg, false)+
       sumRow('Gleiten — GZT Typ 2', function(r){return r.etaGL;}, NW.gleiten, false)+
       sumRow('Kippnachweis — GZT Typ 1', function(r){return r.eta_klaf!==undefined ? r.eta_klaf : Math.min(r.etaKx||99,r.etaKy||99);}, NW.kippen, false)+
       (_bishOK ? '<tr><td>Globale Böschungsstandsicherheit (Bishop)</td>'+
@@ -368,7 +393,37 @@ function buildNachweisDocFlach(results, G){
     '</div>'+
   '</div>';
 
-  return cover + toc + page2 + page3 + nwPages.join('') + bishPage + summary;
+  // ── Gebrauchstauglichkeit je Lastfall (SIA 267 Ziff. 8.5.4): Kernweite + Verkippung
+  var zu1=function(v){ return v>1e-9 ? '1:'+Math.round(1/v) : '–'; };
+  var gzgPages = !NWgzg ? [] : results.filter(function(r){ return r.gzgF; }).map(function(r){
+    var z=r.gzgF, D=z.quer?z.X:z.Y, Mm=Math.abs(z.quer?z.May:z.Max);
+    return '<div class="np-page np-pb">'+ph()+
+      '<div class="np-lfh">'+r.name+' — Gebrauchstauglichkeit</div>'+
+      '<div style="font-size:8.5px;color:var(--dim);margin:-2px 0 8px">Charakteristische Lasten (SIA 267 Ziff. 5.3.3.6: γ_F = 1.0): '+
+        'γ_G = '+z.gamG.toFixed(2)+' · γ_Q = '+z.gamQ.toFixed(2)+' · Eigengewicht 1.00. Baugrundwerte charakteristisch (Ziff. 5.3.2.8).</div>'+
+      '<div class="np-nw">'+nwh('G1.','Lastexzentrizität — einfache Kernweite','SIA 267 Ziff. 8.5.4.7')+
+        fml("e_x = M_y,k / N_k     e_y = M_x,k / N_k",
+            Math.abs(z.May).toFixed(1)+" / "+z.N.toFixed(1)+"     "+Math.abs(z.Max).toFixed(1)+" / "+z.N.toFixed(1),
+            "e_x = "+z.ex.toFixed(3)+" m   e_y = "+z.ey.toFixed(3)+" m","")+
+        fml("|e_x|/B + |e_y|/L ≤ 1/6", z.ex.toFixed(3)+"/"+B+" + "+z.ey.toFixed(3)+"/"+L, z.kern.toFixed(4), z.kern<=1/6+1e-9 ? "≤ 0.1667" : "> 0.1667")+
+        fml("η = (1/6) / (|e_x|/B + |e_y|/L)", "0.1667 / "+z.kern.toFixed(4), isFinite(z.etaKern)?z.etaKern.toFixed(2):"∞","")+
+        eta(z.etaKern)+
+        (z.kern>1/6 ? '<div style="font-size:8.5px;color:var(--fail);margin-top:4px">Die Sohlfuge klafft unter Gebrauchslasten. Ziff. 8.5.4.7 verlangt einen besonderen Nachweis; die folgende Verkippung setzt eine geschlossene Sohlfuge voraus und ist hier zu klein.</div>' : '')+
+      '</div>'+
+      '<div class="np-nw">'+nwh('G2.','Verkippung','SIA 267 Ziff. 8.5.4.1 · Grenzwert SBB 0161.1011.0007')+
+        fml("G = M_E·(1−2ν) / (2·(1−ν))", D.ME.toFixed(1)+" MN/m² · (1−2·"+z.nu+") / (2·(1−"+z.nu+"))", (D.G/1000).toFixed(2), "MN/m²")+
+        fml("r = (4·I/π)^¼    mit I = "+(z.quer?"L·B³/12":"B·L³/12"), "Ersatzradius gleichen Trägheitsmoments", D.r.toFixed(3), "m")+
+        fml("tan α = 3·(1−ν)·M_k / (8·G·r³)", "3·(1−"+z.nu+")·"+Mm.toFixed(1)+" / (8·"+D.G.toFixed(0)+"·"+D.r.toFixed(3)+"³)", (z.tan*1000).toFixed(3)+" ‰ = "+zu1(z.tan), "")+
+        fml("η = tan α_zul / tan α", zu1(z.tanZul)+" / "+zu1(z.tan), isFinite(z.etaTilt)?z.etaTilt.toFixed(2):"∞","")+
+        eta(z.etaTilt)+
+        '<table class="np-tbl" style="margin-top:6px"><tr><th>Richtung</th><th class="r">M_k [kNm]</th><th class="r">M_E [MN/m²]</th><th class="r">r [m]</th><th class="r">tan α</th></tr>'+
+          '<tr><td>quer (um y)</td><td class="r">'+Math.abs(z.May).toFixed(1)+'</td><td class="r">'+z.X.ME.toFixed(1)+'</td><td class="r">'+z.X.r.toFixed(3)+'</td><td class="r">'+zu1(z.X.tan)+'</td></tr>'+
+          '<tr><td>längs (um x)</td><td class="r">'+Math.abs(z.Max).toFixed(1)+'</td><td class="r">'+z.Y.ME.toFixed(1)+'</td><td class="r">'+z.Y.r.toFixed(3)+'</td><td class="r">'+zu1(z.Y.tan)+'</td></tr></table>'+
+        '<div style="font-size:8px;color:var(--xdim);margin-top:4px">Starres Fundament auf dem elastischen Halbraum (Borowicka), ν = '+z.nu+'; M_E = harmonisches Mittel der Schichten von der Sohle bis 1.5·Breite darunter. Einbindung und seitliche Stützung sind nicht angesetzt. Die SIA 267 regelt das Berechnungsverfahren nicht; der Grenzwert '+(z.perm?'1:100 (ständig + veränderlich)':'1:200 (nur veränderlich)')+' stammt aus der SBB-Vorgabe.</div>'+
+      '</div>'+
+      '<div style="font-size:9.5px;margin-top:8px"><b>Gebrauchstauglichkeit: η = min(Kernweite, Verkippung) = '+(isFinite(r.etaGZG)?r.etaGZG.toFixed(2):'∞')+'</b></div>'+
+    '</div>'; });
+  return cover + toc + page2 + page3 + nwPages.join('') + gzgPages.join('') + bishPage + summary + _npAnnahmen('flach', ph);
 }
 
 // ════════════════════════════════════════════════════════════════

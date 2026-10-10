@@ -618,7 +618,7 @@ function buildPfahlbockViz(){
   const _lt=document.documentElement.getAttribute('data-theme')==='light';
   const _dim=showStr||showVec;
   const grp=new THREE.Group(); grp.name='pb3d';
-  const viz=(RESULT.pfahlbock&&RESULT.pfahlbock.viz)||{}; const pr=viz.pileRes||null;
+  const viz=_vcPbViz((RESULT.pfahlbock&&RESULT.pfahlbock.viz)||{}); const pr=viz.pileRes||null;
   const C=vizStyle();   // zentrale Darstellungs-Farben (Block-Konvention, via SETTINGS.viz konfigurierbar)
 
   // ── Bankett (OK an −ü, eingebettet) + Fundamentkopf darauf (ragt durch GOK)
@@ -820,6 +820,7 @@ function buildPfahlbockViz(){
 
 function rebuildScene(){
   invalidateViewer();   // Szene ändert sich → nächster Frame rendert (Render-on-Demand)
+  try{ syncLFSel(); }catch(_){}   // gezeigter Lastfall/Kombination folgt dem Ergebnis
   const bx=+gi('g_bx'),by=+gi('g_by'),hb=+gi('g_hblock');
   const kx=+gi('g_kx'),ky=+gi('g_ky'),hk=+gi('g_hkopf');
   _clampKopfEcc('g_bx','g_kx','g_by','g_ky','g_ex','g_ey');   // Kopf innerhalb Blockkante halten
@@ -1046,7 +1047,7 @@ function rebuildScene(){
     const HGx=c_.HGx?HGx_:0, HGy=c_.HGy?HGy_:0;
     const HWx=c_.HWx?HWx_:0, HWy=c_.HWy?HWy_:0;
     const NG=(c_.NG??true)?NG_:0;
-    const {gG, gW}=getGF(lf_);
+    const _kf=_vcFak(lf_), gG=_kf.fG, gW=_kf.fQ;
     const Hxd=gG*HGx+gW*HWx, Hyd=gG*HGy+gW*HWy;
     const Ht=Math.sqrt(Hxd**2+Hyd**2);
     const _gb=+gi('g_gbeton'),_ga=+gi('g_gauf'),_ue=Math.max(0,+gi('g_uberd')||0);
@@ -1054,7 +1055,7 @@ function rebuildScene(){
     const _kx=+gi('g_kx'),_ky=+gi('g_ky');
     // Nur Betonkörper (Block + Kopf inkl. ü-Bereich); seitliche Auffüllung zählt nicht zur ständigen Vertikallast (wie im Rechenkern).
   const _Gk=_gb*(bx*by*hb+(_kpf?_kx*_ky*hk:0));
-    const Nd=gG*(NG+_Gk);   // Anzeige-Kombination: alles ungünstig
+    const Nd=_kf.fG*NG+_kf.fE*_Gk;   // gezeigte Kombination (Vorgabe: massgebende)
     const S_MIN=0.55, S_MAX=2.0; // Mindest- / Maximallänge Vektoren [m] (N kappt bei grossen Lasten, z. B. 150 kN)
     // OK Fundamentkopf (Lastangriff) in Welt-y — Einwirkung setzt IMMER hier an, inkl. Kopf-Exzentrizität (ex/ey).
     // Block: H_Kopf ist die Gesamthöhe ab OK Block → OK Kopf über GOK = H_Kopf − ü.
@@ -1180,7 +1181,7 @@ function rebuildScene(){
     const MGx_=+gi('l_MGx'),MGy_=+gi('l_MGy'),MWx_=+gi('l_MWx'),MWy_=+gi('l_MWy');
     const lfIdx=Math.min(_vcLfIdx, Math.max(0, LF.length-1));
     const lf_=LF[lfIdx]||LF[0]; const c_=lf_.comp||{};
-    const {gG, gW}=getGF(lf_);
+    const _kf=_vcFak(lf_), gG=_kf.fG, gW=_kf.fQ;
     const Mx=(c_.MGx?gG*MGx_:0)+(c_.MWx?gW*MWx_:0);
     const My=(c_.MGy?gG*MGy_:0)+(c_.MWy?gW*MWy_:0);
     const Mres=Math.sqrt(Mx*Mx+My*My);
@@ -1232,7 +1233,10 @@ function _getGZTData(){
   const lfIdx=Math.min(_vcLfIdx, Math.max(0, LF.length-1));
   const lf=LF[lfIdx]; if(!lf) return null;
   const dat=window['_gzt_'+lf.name.replace(/\W/g,'_')];
-  return (dat&&dat.R&&dat.G)?{...dat,lf,lfIdx}:null;
+  if(!(dat&&dat.R&&dat.G)) return null;
+  // Einzelkombination gewählt → deren Erddrücke, Nulllinie und Sohlkräfte zeigen
+  const k=_vcKomb>0 && dat.R.kombs_GZT && dat.R.kombs_GZT.find(x=>x.nr===_vcKomb);
+  return {...dat, R: k ? gztKombView(dat.R,k) : dat.R, lf, lfIdx};
 }
 
 function buildStress(){
@@ -1567,20 +1571,110 @@ function toggleText(){showText=!showText;document.getElementById('vc-txt').class
 function toggleLabels(){showLabels=!showLabels;document.getElementById('vc-lbl').classList.toggle('on',showLabels);rebuildScene();}
 function toggleLyr(){showLyr=!showLyr;document.getElementById('vc-lyr').classList.toggle('on',showLyr);rebuildScene();}
 
-let _vcLfIdx = 0;  // im Viewer gewählter Lastfall
+let _vcLfIdx = 0;        // im Viewer gezeigter Lastfall
+let _vcLfMode = 'global'; // 'global' | 'quer' | 'laengs' = massgebender Lastfall (folgt dem Ergebnis) · 'lf' = fest gewählt
+let _vcKomb = 0;          // 0 = massgebende Kombination · 1–8 = Einzelkombination nach SIA 260
+// Richtung eines Lastfalls aus seinen aktiven Komponenten
+function _lfRichtung(lf){ const c=(lf&&lf.comp)||{};
+  const x=!!(c.HGx||c.HWx||c.MGy||c.MWy), y=!!(c.HGy||c.HWy||c.MGx||c.MWx);
+  return x&&!y ? 'quer' : y&&!x ? 'laengs' : 'beide'; }
+// Kleinstes η eines Lastfalls über seine aktiven Nachweise (aus dem letzten Ergebnis)
+function _lfEtaMin(i){ const lf=LF[i]; if(!lf) return Infinity;
+  try{
+    if(CALC_MODEL==='pfahlbock'){ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r; if(!r||!r.kombs) return Infinity;
+      const e=r.kombs.filter(k=>k.lf===lf.name).map(k=>k.eta); return e.length?Math.min(...e):Infinity; }
+    const R=curResult(), r=R&&R.results&&R.results.find(x=>x.name===lf.name); if(!r) return Infinity;
+    const gzt=r.nw!=='gzg', gzg=r.nw!=='gzt', e=[];
+    if(CALC_MODEL==='block'){ if(gzt&&nwOn('block','gzt')) e.push(r.etaGZT); if(gzg&&nwOn('block','gzg')) e.push(r.etaGZG); }
+    else { if(r.gzgF && nwOn('flach','gzg')) e.push(r.etaGZG); }
+    if(CALC_MODEL!=='block' && gzt){ if(nwOn('flach','sohlsp')) e.push(r.etaSIG); if(nwOn('flach','grundb')) e.push(r.etaGB);
+                  if(nwOn('flach','gleiten')) e.push(r.etaGL); if(nwOn('flach','kippen')&&r.eta_klaf!=null) e.push(r.eta_klaf); }
+    const f=e.filter(v=>v!=null&&!isNaN(v)); return f.length?Math.min(...f):Infinity;
+  }catch(_){ return Infinity; } }
+// Modus «massgebend»: Lastfall mit dem kleinsten η (global bzw. innerhalb der Richtung) bestimmen
+let _vcOhneTreffer = false;
+function _vcResolveLf(){
+  if(_vcLfIdx>=LF.length) _vcLfIdx=0;
+  _vcOhneTreffer = false;
+  if(_vcLfMode==='lf') return;
+  let best=-1, be=Infinity;
+  LF.forEach((lf,i)=>{ const d=_lfRichtung(lf);
+    if(_vcLfMode==='quer' && d==='laengs') return;
+    if(_vcLfMode==='laengs' && d==='quer') return;
+    const e=_lfEtaMin(i); if(best<0 || e<be){ best=i; be=e; } });
+  _vcOhneTreffer = best<0;   // kein Lastfall in der gewählten Richtung definiert
+  if(best>=0) _vcLfIdx=best; }
+// Kombinationen des gezeigten Lastfalls: [{nr,fE,fG,fQ,eta?}] + Nummer der massgebenden
+function _vcKombListe(){
+  const lf=LF[_vcLfIdx]; if(!lf || lf.nw==='gzg') return {list:[], gov:0};
+  try{
+    if(CALC_MODEL==='pfahlbock'){ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r, ks=(r&&r.kombs||[]).filter(k=>k.lf===lf.name);
+      if(!ks.length) return {list:[], gov:0};
+      const g=ks.reduce((a,b)=>b.eta<a.eta?b:a);
+      return { list:ks.map(k=>({nr:k.nr, fE:k.load.fE, fG:k.load.fG, fQ:k.load.fQ, eta:k.eta})), gov:g.nr }; }
+    const R=curResult(), r=R&&R.results&&R.results.find(x=>x.name===lf.name);
+    if(CALC_MODEL==='block' && r && r.kombs_GZT && r.kombs_GZT.length)
+      return { list:r.kombs_GZT.map(k=>({nr:k.nr, fE:k.fE, fG:k.fG, fQ:k.fQ, eta:k.eta})), gov:r.komb_GZT||8 };
+    // Flach: die Typ-2-Nachweise haben je eine eigene massgebende Kombination → Anzeige = Komb. 8 (alles ungünstig)
+    const gf=getGF({nw:'gzt'});
+    return { list:buildCombos(gGinfT2('flach'), gf.gG, gf.gW).map(k=>({...k})), gov:8 };
+  }catch(_){ return {list:[], gov:0}; } }
+// Lastbeiwerte der gezeigten Kombination (für die Einwirkungs-Pfeile im d-Modus)
+function _vcFak(lf){
+  const g=getGF(lf);
+  if(!lf || lf.nw==='gzg') return { fE:g.gG, fG:g.gG, fQ:g.gW };
+  const K=_vcKombListe(), k=K.list.find(x=>x.nr===(_vcKomb||K.gov));
+  return k ? { fE:k.fE, fG:k.fG, fQ:k.fQ } : { fE:g.gG, fG:g.gG, fQ:g.gW }; }
+// Ergebnis-Sicht einer Einzelkombination des Blockfundaments (Spannungsbild, Resultierende)
+function gztKombView(R, k){ const r=k.r||{};
+  return { ...R, etaGZT:k.eta, komb_GZT:k.nr, Nd_GZT:k.Nd, Hxd:k.Hxd, Hyd:k.Hyd,
+    Mu_GZT:r.Mu, y_NL_GZT:r.y_nl, Ew_GZT:r.Ew, Ea_GZT:r.Ea_d, E0b_GZT:r.E0b, E0a_GZT:r.E0a, Epb_GZT:r.Epb,
+    Nu_GZT:r.Nu, Ru_GZT:r.Ru, Epa_GZT:r.Epa, Ra_v_GZT:r.Ra_v, Rp_va_GZT:r.Rp_va, Rp_vb_GZT:r.Rp_vb,
+    u_ecc_GZT:r.u_ecc, arm_v_GZT:r.arm_v, arm_vp_GZT:r.arm_vp }; }
+// Pfahlfundament: Lasten und Pfahlkräfte der gezeigten Kombination statt der global massgebenden
+function _vcPbViz(viz){
+  try{ const r=RESULT.pfahlbock&&RESULT.pfahlbock.r; if(!r||!r.kombs||!r.kombs.length) return viz;
+    if(_vcLfMode==='global' && !_vcKomb) return viz;
+    const lf=LF[_vcLfIdx], ks=r.kombs.filter(k=>lf&&k.lf===lf.name); if(!ks.length) return viz;
+    const k=(_vcKomb&&ks.find(x=>x.nr===_vcKomb)) || ks.reduce((a,b)=>b.eta<a.eta?b:a);
+    if(!k.F) return viz;
+    return { ...viz, pileRes:k.F.map(F=>({F:+F.toFixed(1), zug:F<0})), govLoad:k.load, govLoadChar:k.loadChar, govCombo:k.label,
+             mastN:{ k:Math.max(0,(k.loadChar&&k.loadChar.NMast)||0), d:Math.max(0,k.load.NMast||0) } };
+  }catch(_){ return viz; } }
 function syncLFSel(){
-  const wrap=document.getElementById('vc-lf-btns');
-  if(!wrap)return;
-  if(_vcLfIdx>=LF.length)_vcLfIdx=0;
+  _vcResolveLf();
+  const wrap=document.getElementById('vc-lf-btns'); if(!wrap) return;
+  const mw=document.getElementById('vc-lf-mode');
+  if(mw) mw.innerHTML=[['global','Massg.','Massgebender Lastfall über alle Richtungen (kleinstes η) — folgt dem Ergebnis'],
+                       ['quer','Quer','Massgebender Lastfall quer zum Gleis'],['laengs','Längs','Massgebender Lastfall längs zum Gleis']]
+    .map(([m,t,ti])=>`<button class="vc-lf-btn${_vcLfMode===m?' on':''}" title="${ti}" onclick="selectVcMode('${m}')">${t}</button>`).join('');
   wrap.innerHTML=LF.map((lf,i)=>
-    `<button class="vc-lf-btn${i===_vcLfIdx?' on':''}" title="${lf.name}" onclick="selectVcLF(${i})">LF ${i+1}</button>`
+    `<button class="vc-lf-btn${i===_vcLfIdx?(_vcLfMode==='lf'?' on':' akt'):''}" title="${esc(lf.name)}" onclick="selectVcLF(${i})">LF ${i+1}</button>`
   ).join('');
+  // Kombinationswahl
+  const sel=document.getElementById('vc-komb'), info=document.getElementById('vc-komb-info');
+  const K=_vcKombListe(); if(_vcKomb && !K.list.some(k=>k.nr===_vcKomb)) _vcKomb=0;
+  const fz=v=>(+v).toFixed(2).replace(/\.?0+$/,'')||'0', et=k=>(k.eta!=null&&isFinite(k.eta))?' · η '+k.eta.toFixed(2):'';
+  if(sel){
+    const h = K.list.length
+      ? `<option value="0">Komb. massg.${K.gov?' ('+K.gov+')':''}</option>`+K.list.map(k=>`<option value="${k.nr}">Komb. ${k.nr}${et(k)}</option>`).join('')
+      : `<option value="0">ohne Kombination</option>`;
+    if(sel._h!==h){ sel.innerHTML=h; sel._h=h; }
+    sel.value=String(_vcKomb); sel.disabled=!K.list.length;
+    sel.classList.toggle('on', _vcKomb>0);
+  }
+  if(info){ const lf=LF[_vcLfIdx], k=K.list.find(x=>x.nr===(_vcKomb||K.gov));
+    info.textContent = !lf ? '' : ((_vcOhneTreffer ? 'Kein Lastfall '+(_vcLfMode==='quer'?'quer':'längs')+' zum Gleis definiert — gezeigt: ' : '') + lf.name + (k
+      ? ` · Komb. ${k.nr}${_vcKomb?'':' (massgebend)'}: Eigengewicht ${fz(k.fE)} · ständig ${fz(k.fG)} · veränderlich ${fz(k.fQ)}${et(k)}`
+      : ' · charakteristisch (Gebrauchstauglichkeit)')); }
 }
+function selectVcMode(m){ _vcLfMode=m; _vcKomb=0; syncLFSel(); updateViewer(); }
 function selectVcLF(i){
-  _vcLfIdx=i;
+  _vcLfIdx=i; _vcLfMode='lf'; _vcKomb=0;
   syncLFSel();
   updateViewer();
 }
+function selectVcKomb(n){ _vcKomb=+n||0; syncLFSel(); updateViewer(); }
 function toggleStress(){
   showStr=!showStr;
   document.getElementById('vc-str').classList.toggle('on',showStr);
